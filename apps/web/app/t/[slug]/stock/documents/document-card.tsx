@@ -36,9 +36,10 @@ export interface DocumentCardView {
 
 const STATUS_TON: Readonly<Record<string, KalipEtiket["ton"]>> = { APPROVED: "amber", POSTED: "ok", CANCELLED: "kirmizi" };
 
-export function DocumentCard({ slug, document: doc, permissions }: { slug: string; document: DocumentCardView; permissions: { create: boolean; approve: boolean; post: boolean } }) {
+export function DocumentCard({ slug, document: doc, permissions, labelHref }: { slug: string; document: DocumentCardView; permissions: { create: boolean; approve: boolean; post: boolean };labelHref?:string|null }) {
   const t = useTranslations("stockDocuments");
   const locale = useLocale();
+  const tl=useTranslations("labelPrint");
   const path = `/t/${encodeURIComponent(slug)}/stock/documents`;
   const giris = doc.kind === "STOCK_IN";
   const kindLabel = t(giris ? "in" : "out");
@@ -101,6 +102,7 @@ export function DocumentCard({ slug, document: doc, permissions }: { slug: strin
             <b className="stkbas">{t("k.state")}</b>
             <DocumentControls key={`${doc.id}:${doc.version}`} slug={slug} document={doc} permissions={permissions} />
           </div>
+          {labelHref&&<Link className="more" href={labelHref} data-testid="document-labels">{tl("title")}</Link>}
           {doc.related.length === 0 ? null : (
             <div data-testid="document-related" className="kbolum">
               <b className="stkbas">{t("k.related")}</b>

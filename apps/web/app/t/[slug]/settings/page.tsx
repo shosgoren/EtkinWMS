@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getSampleDataStatus, hasActiveSample, type SampleDataStatus } from "@wms/domain/onboarding/sample-data";
 import { getTenantSettings } from "@wms/domain/onboarding/settings-queries";
+import { runTenantQuery } from "@wms/domain/identity/access";
 import { AppError } from "@wms/shared/errors";
 import { TIME_ZONES } from "../../../../lib/timezones.ts";
 import { temaKoyu, temaTercihi } from "../../../design/theme.ts";
@@ -48,6 +49,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
     if (e.code !== "FORBIDDEN") throw e;
   }
 
+  let canLabels=false;try{canLabels=await runTenantQuery({db:getAppDb(),principal,tenantSlug:slug,permission:'labels.view'},async()=>true);}catch(e){if(!(e instanceof AppError)||e.code!=='FORBIDDEN')throw e;}
   const errorCode = SHOWN.find((c) => c === first(query.error))?.toLowerCase();
   const locked = settings === null;
   // Örnek veri durumu (T-996): yalnız ayar yetkisi olana; etkin örnek kayıt yoksa satır çizilmez.
@@ -86,6 +88,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
       dark={dark}
       theme={theme}
       locked={locked}
+      canLabels={canLabels}
       values={values}
       addressSlug={settings?.slug ?? null}
       timeZones={TIME_ZONES}

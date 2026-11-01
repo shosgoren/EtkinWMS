@@ -87,9 +87,10 @@ describe("Düzenle: eklenebilir işler (T-1128)", () => {
     const a = adaylar(["TENANT_ADMIN"]);
     const k = a.map((x) => x.key);
     expect(k.slice(0, 8)).toEqual(["giris", "satis", "stok", "urun", "cari", "depo", "excel", "kayit"]);
-    expect(k.slice(8)).toEqual(["topla", "trans", "uret", "qr", "koli", "tara", "sayim", "fis", "ekip", "ayar"]);
+    expect(k.slice(8)).toEqual(["topla", "trans", "uret", "qr", "koli", "tara", "sayim", "fis", "etiket", "ekip", "ayar"]);
     expect(new Set(k).size).toBe(k.length);
-    for (const yok of ["home", "satin", "ayin", "ses", "abone", "etiket"]) expect(k).not.toContain(yok);
+    for (const yok of ["home", "satin", "ayin", "ses", "abone"]) expect(k).not.toContain(yok);
+    expect(a.find((x) => x.key === "etiket")).toMatchObject({ href: "/t/demo/label-designs" });
     // Tuval kutusu modül rengi taşımaz; modül kutusu Modüller sayfasının bağlantısı, rengi ve ikonuyla.
     expect(a[0]).toEqual({ key: "giris", href: "/t/demo/field/receive" });
     expect(a.find((x) => x.key === "trans")).toMatchObject({ href: "/t/demo/stock/documents?new=TRANSFER", mod: { color: "6C4BD8" } });
@@ -105,7 +106,7 @@ describe("Düzenle: eklenebilir işler (T-1128)", () => {
 
   it("yetki süzgeci: salt okunur yazma / yönetim modülü göremez; özel grup ekranı listede yoksa modül yok", () => {
     const r = adaylar(["READ_ONLY"]).map((x) => x.key);
-    for (const yok of ["giris", "excel", "kayit", "topla", "trans", "sayim", "ekip", "ayar"]) expect(r).not.toContain(yok);
+    for (const yok of ["giris", "excel", "kayit", "topla", "trans", "sayim", "ekip", "etiket", "ayar"]) expect(r).not.toContain(yok);
     expect(r).toEqual(expect.arrayContaining(["fis", "koli", "tara", "qr", "uret"]));
     const g = adaylar(["WAREHOUSE_MANAGER"], [], ["count"]).map((x) => x.key);
     expect(g).toContain("sayim");
@@ -114,6 +115,8 @@ describe("Düzenle: eklenebilir işler (T-1128)", () => {
 
   it("saha personeli: mal girişi (kendi izni) + yalnız saha modülleri", () => {
     expect(adaylar(["PICKER"]).map((x) => x.key)).toEqual(["giris", "topla", "koli", "tara"]);
+    expect(adaylar(["PICKER"], ["labels.print"]).some(x => x.key === "etiket")).toBe(false);
+    expect(adaylar(["PICKER"], ["labels.view"]).find(x => x.key === "etiket")).toMatchObject({ href: "/t/demo/label-designs" });
   });
 });
 

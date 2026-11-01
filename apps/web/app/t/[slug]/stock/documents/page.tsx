@@ -1,3 +1,4 @@
+import { customLabelHref } from "../../custom-labels/routing.ts";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -60,11 +61,12 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
   const newMain = { label: t("k.newShort"), aria: t("k.pickLabel"), d: LICON.plus, href: `${path}?new=SEC`, disabled: !list.permissions.create && !list.permissions.post, testId: "documents-new" };
 
   if (doc) {
+    const labelHref=doc.kind==='STOCK_OUT'&&doc.status==='POSTED'?await customLabelHref({db:getAppDb(),principal,tenantSlug:slug},{kind:'SHIPMENT',documentId:doc.id}):null;
     // T-1091: belge kartı (STANDART §3) — ortak `kalip/kart.tsx` parçaları; eylemler (`DocumentControls`) değişmedi.
     return (
       <main className="flex w-full min-w-0 flex-col">
         <KalipEkran kind="detay" dark={dark} title={t("title")} icon={BOLUM_ICON.documents} heading={false} testId="document-detail" bar={{ back: { href: path, aria: t("k.back") }, main: newMain }}>
-          <DocumentCard slug={slug} document={doc} permissions={list.permissions} />
+          <DocumentCard slug={slug} document={doc} permissions={list.permissions} labelHref={labelHref} />
         </KalipEkran>
       </main>
     );

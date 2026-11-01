@@ -180,3 +180,5 @@ describe("ekran hedefi ek durumlar (T-1110)", () => {
     expect(openTarget("stok hareketleri")).toEqual({ id: "fis" });
   });
 });
+
+it("etiket tasarımı ve yazıcı ayarı yetkiyle süzülmüş etiket modülüne gider",()=>{expect(openTarget("ürün etiket tasarımı")).toEqual({id:"etiket"});expect(openTarget("etiket şablonları")).toEqual({id:"etiket"});expect(openTarget("yazıcı ayarları")).toEqual({id:"etiket",suffix:"?tab=printers"});expect(openTarget("barkodlar")).toEqual({id:"qr"});});

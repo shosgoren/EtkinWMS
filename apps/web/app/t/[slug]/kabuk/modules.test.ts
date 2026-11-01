@@ -28,7 +28,8 @@ describe("Kabuk modülleri (T-958)", () => {
     expect(all.find((m) => m.id === "ayar")?.href).toBe("/t/demo/settings");
     expect(all.find((m) => m.id === "kayit")?.href).toBe("/t/demo/audit");
     const soon = all.filter((m) => m.href === null).map((m) => m.id);
-    expect(soon).toEqual(["satin", "ayin", "ses", "abone", "etiket"]);
+    expect(soon).toEqual(["satin", "ayin", "ses", "abone"]);
+    expect(all.find((m) => m.id === "etiket")?.href).toBe("/t/demo/label-designs");
     expect(all.find((m) => m.id === "ekip")?.href).toBe("/t/demo/team");
     // T-1094: Excel'den aktar Modüller'de yok (yalnız Ayarlar › Entegrasyonlar).
     expect(all.some((m) => m.id === "excel")).toBe(false);
@@ -78,3 +79,5 @@ describe("Kabuk modülleri (T-958)", () => {
     expect(ids(["GHOST"])).toEqual(["home", "ses"]);
   });
 });
+
+it("etiket modülü özel görüntüleme hakkıyla açılır; yazma veya genel ayar hakkı vermez",()=>{expect(ids(["PICKER"],["labels.view"])).toContain("etiket");expect(ids(["READ_ONLY"],["labels.print"])).not.toContain("etiket");expect(ids(["READ_ONLY"],["labels.view"])).toContain("etiket");});

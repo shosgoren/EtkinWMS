@@ -1,3 +1,4 @@
+import { customLabelHref } from "../custom-labels/routing.ts";
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -77,6 +78,8 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
       const source = await loadProductLabelBatch(call, { ...domainExtraFilters(extra), status, ...(type === undefined ? {} : { cardType: type as "HM" | "YM" | "MM" | "TM" }), ...(one(sp.q) === undefined ? {} : { q: one(sp.q)! }), ...(one(sp.after) === undefined ? {} : { after: one(sp.after)! }), limit: 100 });
       if (source.datas.length === 0) return shell(<LabelNotice title={tp("empty")} action={backAction} />);
       if (source.datas.length * copies > MAX_LABELS_PER_DOCUMENT) return shell(<LabelNotice title={t("errors.copies", { max: MAX_LABELS_PER_DOCUMENT })} action={backAction} />);
+      const nextCustom = new URLSearchParams(qs);if(source.nextCursor!==null)nextCustom.set('after',source.nextCursor);
+      const custom = await customLabelHref(call,{kind:'PRODUCT',ids:source.itemIds},{copies,...(source.nextCursor===null?{}:{batchNext:nextCustom.toString()})});if(custom!==null)redirect(custom);
       let document: ReturnType<typeof productQrDocument>;
       try { document = productQrDocument(source.datas, copies); }
       catch (e) { if (e instanceof AppError && e.code === "VALIDATION_FAILED") return shell(<LabelNotice title={tp("invalidBarcode")} hint={tp("invalidBarcodeHint")} action={backAction} />); throw e; }
@@ -84,6 +87,8 @@ export default async function LabelsPage({ params, searchParams }: { params: Pro
       if (source.nextCursor !== null) next.set("after", source.nextCursor);
       return main(<LabelPreview dark={dark} back={back} pages={document.pages} minWidth={document.minWidth} minHeight={document.minHeight} zpl="" fileName="urun-qr.zpl" templateVersion="product-qr-v1" bridgeEnabled={false} batchSummary={tp("batch", { count: source.datas.length, total: source.total })} {...(source.nextCursor === null ? {} : { nextHref: `${home}/labels?${next.toString()}` })} />);
     }
+    const customSource = itemId!==undefined?{kind:'PRODUCT' as const,ids:[itemId]}:warehouseId!==undefined?{kind:'LOCATION' as const,warehouseId,...(one(sp.location)?{locationId:one(sp.location)!}:{}),subtree:one(sp.subtree)==='1'}:null;
+    if(customSource){const custom=await customLabelHref(call,customSource,{copies});if(custom!==null)redirect(custom);}
     const source = await loadLabelSource(call, { itemId, warehouseId, locationId: one(sp.location), subtree: one(sp.subtree) === "1" });
     if (source === null) {
       return shell(<LabelNotice title={t("noSource")} hint={t("noSourceAction")} action={{ label: t("toItems"), href: `${home}/items` }} />);
