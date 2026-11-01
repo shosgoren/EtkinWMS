@@ -6,6 +6,7 @@ import { getAppDb } from "@wms/db";
 import { getParty } from "@wms/domain/catalog/parties";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { cardRights } from "@wms/domain/identity/permissions";
+import { getSourceLock } from "@wms/domain/integrations";
 import { AppError } from "@wms/shared/errors";
 import { temaKoyu } from "../../../../design/theme.ts";
 import { PartyCard } from "./party-card.tsx";
@@ -35,9 +36,11 @@ export default async function PartyCardPage({ params }: { params: Promise<{ slug
     if (current === undefined) notFound();
     const rights = cardRights(current.roles, current.grants, "parties");
     const party = await getParty({ db, principal, tenantSlug: slug }, partyId);
+    // T-1201: "Paraşüt'ten al" bölümünde bağlı carinin kaynak kilidi (yalnız gösterim; karar domain komutunda).
+    const kaynak = await getSourceLock({ db, principal, tenantSlug: slug }, "PARTY", party.id);
     return (
       <main className="flex w-full min-w-0 flex-col">
-        <PartyCard slug={slug} dark={temaKoyu(await cookies())} rights={rights} party={party} />
+        <PartyCard slug={slug} dark={temaKoyu(await cookies())} rights={rights} kaynak={kaynak} party={party} />
       </main>
     );
   } catch (e) {

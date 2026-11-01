@@ -54,6 +54,8 @@ export type IssueCode =
   | "UNIT_UNKNOWN"
   | "ITEM_UNIT_MISMATCH"
   | "ITEM_ARCHIVED"
+  // T-1201: ürün bölümü Paraşüt'ten alınıyor — yeni ürün / bağlı ürünün adı (import-apply.ts `withSourceIssues`).
+  | "SOURCE_MANAGED"
   | "ITEM_UNKNOWN"
   | "ITEM_TRACKED"
   | "PACK_QTY_INVALID"

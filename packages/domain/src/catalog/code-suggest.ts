@@ -13,6 +13,7 @@ import { runTenantCommand, runTenantQuery } from "../identity/access.ts";
 import type { Permission } from "../identity/permissions.ts";
 import { assertWarehouseVisible } from "../warehouse/scope.ts";
 import { DEFAULT_CARD_TYPE, createItem, parseCardType } from "./items.ts";
+import { assertSourceCreateAllowed } from "../integrations/source-guard.ts";
 import { parseCode, parseName, parseUuid, type CatalogCommandParams } from "./units.ts";
 
 export const CODE_SUGGEST_KINDS = ["item", "warehouse", "location", "party"] as const;
@@ -199,6 +200,8 @@ export async function createItemWithDefaultUnit(
   const cardType = input.cardType === undefined ? DEFAULT_CARD_TYPE : parseCardType(input.cardType);
   const { requestId, ...access } = params;
   return runTenantCommand({ ...access, permission: "items.create" }, async (tx, actor) => {
+    // T-1201: ürün bölümü Paraşüt'ten alınıyorsa yeni ürün açılmaz (createItem ile aynı kural, aynı kilit).
+    await assertSourceCreateAllowed(tx, actor.tenantId, "ITEM");
     const activeAdet = async (): Promise<{ readonly id: string | undefined; readonly anyActive: boolean }> => {
       const active = await tx.execute<{ id: string; code: string }>(
         sql`SELECT id, code FROM public.units WHERE tenant_id = ${actor.tenantId}::uuid AND status = 'ACTIVE' ORDER BY code`,

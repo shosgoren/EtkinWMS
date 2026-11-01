@@ -20,6 +20,7 @@ import { AppError } from "@wms/shared/errors";
 import { addBarcode } from "../catalog/barcodes.ts";
 import { createItem, updateItem } from "../catalog/items.ts";
 import { createUnit, setUnitConversion } from "../catalog/units.ts";
+import { readSourceRule, sourceLinkedIds } from "../integrations/source-guard.ts";
 import { runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
 import { resolveWarehouseScope } from "../warehouse/scope.ts";
 import { executeStockCommand, type StockCommandResult } from "../stock/index.ts";
@@ -265,6 +266,35 @@ async function evaluate(params: ImportCallParams, text: string): Promise<Evaluat
   return { kind: c.kind, result: validateStock(c.records, withPairs), stockCtx: withPairs, tenantHasStock };
 }
 
+/**
+ * T-1201: ürün bölümü "Paraşüt'ten al" yönündeyse Excel de yeni ürün açmaz ve Paraşüt'e bağlı ürünün adını değiştirmez: bu satırlar
+ * önizlemede `SOURCE_MANAGED` sorunudur (sorun varken hiçbir şey yazılmaz). Koli/barkod tamamlama (Etkin'e özgü) açık kalır. Karar yazımda
+ * yine `createItem` / `updateItem` içinde kilit altında verilir; burası yalnız kullanıcıya önceden söyler.
+ */
+async function withSourceIssues(params: ImportCallParams, ev: Evaluated, mode: { readonly update: boolean; readonly addMissing: boolean }): Promise<Evaluated> {
+  if (ev.kind !== "PRODUCTS" || ev.productCtx === undefined) return ev;
+  const ctx = ev.productCtx;
+  const plans = ev.result.plans as readonly ProductPlan[];
+  const extra = await runTenantQuery({ ...params, permission: "data.import" }, async (tx, m) => {
+    const rule = await readSourceRule(tx, m.tenantId, "ITEM", { lock: false });
+    if (!rule.managed) return [] as ImportIssue[];
+    const linked = await sourceLinkedIds(tx, m.tenantId, "ITEM", rule);
+    const out: ImportIssue[] = [];
+    for (const pl of plans) {
+      const cur = ctx.items.get(pl.code);
+      if (cur === undefined) {
+        if (mode.addMissing) out.push({ row: pl.row, column: "kod", code: "SOURCE_MANAGED", params: {} });
+      } else if (mode.update && cur.name !== pl.name && linked.has(cur.id.toLowerCase())) {
+        out.push({ row: pl.row, column: "ad", code: "SOURCE_MANAGED", params: {} });
+      }
+    }
+    return out;
+  });
+  if (extra.length === 0) return ev;
+  const issues = [...ev.result.issues, ...extra].sort((a, b) => a.row - b.row);
+  return { ...ev, result: { ...ev.result, issues } as Evaluated["result"] };
+}
+
 const dec = (v: string): string => (v.includes(".") ? v.replace(/0+$/, "").replace(/\.$/, "") : v);
 
 interface PairStateMut {
@@ -320,9 +350,10 @@ async function loadPairStates(params: ImportCallParams, itemIds: readonly string
 }
 
 export async function previewImport(params: ImportCallParams, text: string, modeIn?: ImportMode): Promise<ImportPreview> {
-  const ev = await evaluate(params, text);
-  if ("early" in ev) return ev.early;
-  const mode = checkMode(ev.kind, modeIn);
+  const ev0 = await evaluate(params, text);
+  if ("early" in ev0) return ev0.early;
+  const mode = checkMode(ev0.kind, modeIn);
+  const ev = await withSourceIssues(params, ev0, mode);
   const { result } = ev;
   const issues = result.issues.slice(0, PREVIEW_ISSUE_LIMIT);
   const headerLevel = result.issues.some((i) => i.row <= 1);
@@ -422,9 +453,11 @@ const isCodeTaken = (e: unknown): boolean => e instanceof AppError && e.code ===
  */
 export async function applyImportChunk(params: ImportCallParams, input: { readonly text: string; readonly chunk: number; readonly digest: string; readonly mode?: ImportMode }): Promise<ChunkReport> {
   if (!Number.isSafeInteger(input.chunk) || input.chunk < 0 || typeof input.digest !== "string") throw new AppError("VALIDATION_FAILED");
-  const ev = await evaluate(params, input.text);
-  if ("early" in ev || ev.result.issues.length > 0) throw new AppError("VALIDATION_FAILED"); // hata varken HİÇBİR şey yazılmaz
-  const mode = checkMode(ev.kind, input.mode);
+  const ev0 = await evaluate(params, input.text);
+  if ("early" in ev0 || ev0.result.issues.length > 0) throw new AppError("VALIDATION_FAILED"); // hata varken HİÇBİR şey yazılmaz
+  const mode = checkMode(ev0.kind, input.mode);
+  const ev = await withSourceIssues(params, ev0, mode);
+  if (ev.result.issues.length > 0) throw new AppError("VALIDATION_FAILED", { detail: "SOURCE_MANAGED_CREATE" }); // T-1201
   // Önizlemedeki içerik özeti: önizleme ile uygulama arasında dosya içeriği ya da bağlı veri değiştiyse reddedilir (HİÇBİR şey yazılmaz).
   if (modeDigest(digestOf(ev.kind, ev.result.plans), mode) !== input.digest) throw new AppError("VALIDATION_FAILED");
   const chunkCount = Math.ceil(ev.result.plans.length / IMPORT_CHUNK_SIZE);

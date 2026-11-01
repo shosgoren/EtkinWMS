@@ -67,6 +67,10 @@ export const ERROR_DETAILS = [
   "SEPARATION_OF_DUTIES",
   // T-1144: reddedilmiş demo talebinin aynı e-postasında açık ya da onaylı başka talep var (ikinci deneme alanı açılmaz).
   "DEMO_EMAIL_TAKEN",
+  // T-1201: bölüm "Paraşüt'ten al" yönünde — yeni kart açılmaz / sağlayıcı alanı değişmez / bağlı kart arşivlenmez.
+  "SOURCE_MANAGED_CREATE",
+  "SOURCE_MANAGED_FIELD",
+  "SOURCE_MANAGED_ARCHIVE",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -106,6 +110,9 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   NOT_CREATOR: "FORBIDDEN",
   SEPARATION_OF_DUTIES: "FORBIDDEN",
   DEMO_EMAIL_TAKEN: "VERSION_CONFLICT",
+  SOURCE_MANAGED_CREATE: "VALIDATION_FAILED",
+  SOURCE_MANAGED_FIELD: "VALIDATION_FAILED",
+  SOURCE_MANAGED_ARCHIVE: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

@@ -4,8 +4,12 @@
 // Aktarım (`importParties`): aynı kod varsa güncellenir (boş hücre mevcut değeri silmez), dosyada tekrarlayan kod → ilki alınır, sonrakiler sorunlu.
 // `dryRun`: hiçbir şey yazılmaz; aynı kurallarla satır başına sonuç döner (kontrol adımı).
 // T-1117 (`0064_party_details`): Kısa ad (listede görünen ad), İlçe ve Varsayılan teslimat (`OWN` kendi personelim / `CARRIER` kargo firması).
+// T-1201: cari bölümü "Paraşüt'ten al" yönündeyse (integrations/source-guard.ts) yeni cari açılmaz (ekran ve Excel); Paraşüt'e bağlı caride
+// Paraşüt'ün yazdığı alanlar (kod, ünvan, tür, vergi no/dairesi, telefon, e-posta, il, ilçe, adres, kısa ad) değişmez, cari arşivlenmez /
+// geri açılmaz. Teslimat (Etkin'e özgü) açık kalır. Excel'de bu satırlar `SOURCE_MANAGED` sorunudur (diğer satırlar yazılır).
 import { sql } from "drizzle-orm";
 import { releaseSourceArchive } from "../integrations/source-archive.ts";
+import { assertSourceCreateAllowed, readSourceRule, sourceLinked, sourceLinkedIds, sourceManagedError } from "../integrations/source-guard.ts";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type TenantAccessParams } from "../identity/access.ts";
@@ -67,7 +71,9 @@ export type PartyIssue =
   | "EMAIL_INVALID"
   | "TEXT_TOO_LONG"
   | "DELIVERY_UNKNOWN"
-  | "CODE_DUPLICATE_FILE";
+  | "CODE_DUPLICATE_FILE"
+  // T-1201: bölüm Paraşüt'ten alınıyor (yeni cari ya da bağlı caride Paraşüt alanı).
+  | "SOURCE_MANAGED";
 /** Uyarı: kayıt yazılır, kullanıcıya gösterilir. */
 export type PartyWarning = "TAX_NO_LENGTH";
 
@@ -212,6 +218,26 @@ const toRow = (r: DbParty): PartyRow => ({
   version: Number(r.version),
 });
 
+/** T-1201: Paraşüt'ün yazdığı cari alanları (source-guard `SOURCE_OWNED_FIELDS.PARTY`; kod ayrıca karşılaştırılır). */
+type OwnedParty = Pick<DbParty, "name" | "kind" | "tax_no" | "tax_office" | "phone" | "email" | "city" | "address" | "short_name" | "district">;
+const OWNED_PARTY_KEYS: readonly (keyof OwnedParty)[] = ["name", "kind", "tax_no", "tax_office", "phone", "email", "city", "address", "short_name", "district"];
+
+/** Kayıtlı değeri girişle AYNI temizlikten geçirir (karşılaştırma biçim farkına takılmasın); temizlenemezse ham değer. */
+function ownedOf(cur: DbParty): OwnedParty {
+  const c = cleanParty({
+    code: cur.code, name: cur.name, kind: cur.kind, taxNo: cur.tax_no ?? "", taxOffice: cur.tax_office ?? "", phone: cur.phone ?? "", email: cur.email ?? "",
+    city: cur.city ?? "", address: cur.address ?? "", shortName: cur.short_name ?? "", district: cur.district ?? "",
+  });
+  if (!c.ok) return cur;
+  const v = c.value;
+  return { name: v.name ?? cur.name, kind: v.kind ?? cur.kind, tax_no: v.taxNo, tax_office: v.taxOffice, phone: v.phone, email: v.email, city: v.city, address: v.address, short_name: v.shortName, district: v.district };
+}
+
+const ownedDiffers = (cur: DbParty, next: OwnedParty): boolean => {
+  const base = ownedOf(cur);
+  return OWNED_PARTY_KEYS.some((k) => (next[k] ?? null) !== (base[k] ?? null));
+};
+
 /** Cari listesi (`stock.view`): ad / kod / vergi no / telefon içinde arama; arşivliler yalnız istenirse. */
 // T-1058: liste keyset ile sayfalanır (OFFSET yok, I-14). Sıra `(name, code, id)`; imleç opaktır (base64url JSON) ve sunucuda sıkı doğrulanır.
 const PARTY_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -303,6 +329,7 @@ export async function saveParty(params: PartyCommandParams, input: PartyInput & 
   const { requestId, ...access } = params;
   return runTenantCommand<SavePartyResult>({ ...access, permission: input.id === undefined ? "parties.create" : "parties.edit" }, async (tx, m) => {
     if (input.id === undefined) {
+      await assertSourceCreateAllowed(tx, m.tenantId, "PARTY");
       const rows = await tx.execute<{ id: string; version: number }>(sql`
         INSERT INTO public.parties (tenant_id, id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, created_by)
         VALUES (${m.tenantId}::uuid, gen_random_uuid(), ${v.code}, ${v.codeKey}, ${v.name}, ${v.kind ?? "CUSTOMER"}, ${v.taxNo}, ${v.taxOffice}, ${v.phone}, ${v.email}, ${v.city}, ${v.address},
@@ -315,6 +342,17 @@ export async function saveParty(params: PartyCommandParams, input: PartyInput & 
       return { ok: true, id: row.id, version: Number(row.version) } as const;
     }
     if (!/^[0-9a-f-]{36}$/i.test(input.id) || input.expectedVersion === undefined) throw new AppError("VALIDATION_FAILED");
+    // T-1201: akış satırı (FOR SHARE) → cari satırı (FOR UPDATE) sırası; bağlı caride Paraşüt alanı değişiyorsa hiçbir şey yazılmaz.
+    const rule = await readSourceRule(tx, m.tenantId, "PARTY", { lock: true });
+    if (await sourceLinked(tx, m.tenantId, "PARTY", input.id, rule)) {
+      const curRows = await tx.execute<DbParty>(sql`
+        SELECT id, code, code_key, name, kind, tax_no, tax_office, phone, email, city, address, short_name, district, delivery_mode, archived_at::text, version
+          FROM public.parties WHERE tenant_id = ${m.tenantId}::uuid AND id = ${input.id}::uuid FOR UPDATE`);
+      const cur = curRows[0];
+      if (cur === undefined) throw new AppError("NOT_FOUND");
+      const next: OwnedParty = { name: v.name ?? cur.name, kind: v.kind ?? "CUSTOMER", tax_no: v.taxNo, tax_office: v.taxOffice, phone: v.phone, email: v.email, city: v.city, address: v.address, short_name: v.shortName, district: v.district };
+      if (v.code !== cur.code || ownedDiffers(cur, next)) throw sourceManagedError("FIELD");
+    }
     const rows = await tx.execute<{ id: string; version: number; delivery_mode: PartyDeliveryMode }>(sql`
       UPDATE public.parties SET code = ${v.code}, code_key = ${v.codeKey}, name = ${v.name}, kind = ${v.kind ?? "CUSTOMER"}, tax_no = ${v.taxNo},
              tax_office = ${v.taxOffice}, phone = ${v.phone}, email = ${v.email}, city = ${v.city}, address = ${v.address},
@@ -342,6 +380,9 @@ export async function setPartyArchived(params: PartyCommandParams, input: { read
   if (!/^[0-9a-f-]{36}$/i.test(input.id)) throw new AppError("VALIDATION_FAILED");
   const { requestId, ...access } = params;
   return runTenantCommand({ ...access, permission: "parties.archive" }, async (tx, m) => {
+    // T-1201: Paraşüt'e bağlı cari Paraşüt'te arşivlenir; Etkin kendiliğinden uyar (T-1140 yaşam döngüsü).
+    const rule = await readSourceRule(tx, m.tenantId, "PARTY", { lock: true });
+    if (await sourceLinked(tx, m.tenantId, "PARTY", input.id, rule)) throw sourceManagedError("ARCHIVE");
     const rows = await tx.execute<{ version: number }>(sql`
       UPDATE public.parties SET archived_at = CASE WHEN ${input.archived}::boolean THEN now() ELSE NULL END
        WHERE tenant_id = ${m.tenantId}::uuid AND id = ${input.id}::uuid AND version = ${input.expectedVersion}
@@ -380,6 +421,8 @@ export async function importParties(
   const run = input.dryRun ? runTenantQuery : runTenantCommand;
   return run({ ...access, permission: "data.import" }, async (tx, m) => {
     const personal = hasPermission(m.roles, "settings.manage", m.grants);
+    // T-1201: kontrol adımı da aynı kuralla (kilit yazımda; deneme salt okur).
+    const rule = await readSourceRule(tx, m.tenantId, "PARTY", { lock: !input.dryRun });
     const out: { row: number; status: PartyImportStatus; issue?: PartyIssue; warning?: PartyWarning }[] = [];
     const seen = new Set<string>();
     const cleaned: { row: number; v: Clean; warning?: PartyWarning }[] = [];
@@ -404,12 +447,17 @@ export async function importParties(
           FROM public.parties WHERE tenant_id = ${m.tenantId}::uuid AND code_key = ANY(${`{${keys.map((k) => `"${k.replace(/["\\]/g, (c) => `\\${c}`)}"`).join(",")}}`}::text[])`);
       for (const r of rows) existing.set(r.code_key, r);
     }
+    const linked = await sourceLinkedIds(tx, m.tenantId, "PARTY", rule, [...existing.values()].map((r) => r.id));
     for (const x of cleaned) {
       const v = x.v;
       const cur = existing.get(v.codeKey);
       const w = x.warning === undefined ? {} : { warning: x.warning };
       if (cur === undefined && input.addMissing === false) {
         out.push({ row: x.row, status: "SKIPPED", ...w });
+        continue;
+      }
+      if (cur === undefined && rule.managed) {
+        out.push({ row: x.row, status: "INVALID", issue: "SOURCE_MANAGED" });
         continue;
       }
       if (cur === undefined) {
@@ -445,6 +493,16 @@ export async function importParties(
         delivery_mode: v.deliveryMode ?? cur.delivery_mode,
       };
       const changed = (Object.keys(next) as (keyof typeof next)[]).some((k) => next[k] !== cur[k]);
+      // Bağlı caride dosyada DOLU olup Paraşüt alanından farklı hücre varsa satır yazılmaz (boş hücre zaten dokunmaz).
+      const given: Readonly<Record<keyof OwnedParty, string | null>> = {
+        name: v.name, kind: v.kind, city: v.city, short_name: v.shortName, district: v.district,
+        tax_no: p ? v.taxNo : null, tax_office: p ? v.taxOffice : null, phone: p ? v.phone : null, email: p ? v.email : null, address: p ? v.address : null,
+      };
+      const base = linked.has(cur.id.toLowerCase()) ? ownedOf(cur) : null;
+      if (changed && base !== null && OWNED_PARTY_KEYS.some((k) => given[k] !== null && given[k] !== base[k])) {
+        out.push({ row: x.row, status: "INVALID", issue: "SOURCE_MANAGED" });
+        continue;
+      }
       if (!changed) {
         out.push({ row: x.row, status: "UNCHANGED", ...w });
         continue;

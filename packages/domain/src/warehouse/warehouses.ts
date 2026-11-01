@@ -11,9 +11,12 @@
 //   `archiveLocation` sayım kilidini `acquireStockLocks` ile `FOR SHARE` alır (T-243) — bu, stok komutunun aynı kipteki kilidiyle
 //   ÇAKIŞMAZ. Serileşmeyi stok yazıcısı sağlar: T-217 yazıcıları `acquireStockLocks` sonrası lokasyon satırını `FOR SHARE` ile okuyup
 //   `ACTIVE` denetler (arşivin `FOR NO KEY UPDATE`'iyle çakışır; sıra sayım kilidi → lokasyon). T-217 kartı + kapı testi zorunlu.
+// - T-1201: depo bölümü "Paraşüt'ten al" yönündeyse (integrations/source-guard.ts) yeni depo açılmaz; Paraşüt'e bağlı depoda ad ve kod
+//   değişmez, depo arşivlenmez. Raf yerleri (lokasyonlar) Etkin'e özgüdür, açık kalır. Akış satırı depo satırından ÖNCE kilitlenir.
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { releaseSourceArchive } from "../integrations/source-archive.ts";
+import { assertSourceCreateAllowed, readSourceRule, sourceLinked, sourceManagedError } from "../integrations/source-guard.ts";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx, type TenantAccessParams } from "../identity/access.ts";
@@ -96,6 +99,7 @@ export async function createWarehouse(params: WarehouseCallParams, input: Create
   const code = normalizeCode(input.code);
   const name = normalizeName(input.name);
   return runTenantCommand({ ...params, permission: "warehouses.create" }, async (tx, m) => {
+    await assertSourceCreateAllowed(tx, m.tenantId, "WAREHOUSE");
     const id = randomUUID();
     const rows = await tx.execute<{ id: string }>(
       sql`INSERT INTO public.warehouses (tenant_id, id, code, name)
@@ -157,6 +161,7 @@ export async function renameWarehouse(params: WarehouseCallParams, input: Rename
   const code = input.code === undefined ? undefined : normalizeCode(input.code);
   return runTenantCommand({ ...params, permission: "warehouses.edit" }, async (tx, m) => {
     await assertWarehouseVisible(tx, m, [warehouseId]);
+    const rule = await readSourceRule(tx, m.tenantId, "WAREHOUSE", { lock: true });
     const cur = await tx.execute<{ name: string; code: string; status: string }>(
       sql`SELECT name, code, status FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid FOR NO KEY UPDATE`,
     );
@@ -168,6 +173,7 @@ export async function renameWarehouse(params: WarehouseCallParams, input: Rename
     const nameChanged = newName !== row.name;
     const codeChanged = newCode !== row.code;
     if (!nameChanged && !codeChanged) return { changed: false };
+    if (await sourceLinked(tx, m.tenantId, "WAREHOUSE", warehouseId, rule)) throw sourceManagedError("FIELD");
     try {
       await tx.execute(
         sql`UPDATE public.warehouses SET name = ${newName}, code = ${newCode} WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid`,
@@ -210,6 +216,9 @@ export async function archiveWarehouse(params: WarehouseCallParams, input: Archi
   const warehouseId = parseUuid(input.warehouseId);
   return runTenantCommand({ ...params, permission: "warehouses.archive" }, async (tx, m) => {
     await assertWarehouseVisible(tx, m, [warehouseId]);
+    // T-1201: bağlı depo Paraşüt'te arşivlenir; Etkin kendiliğinden uyar (T-1140).
+    const rule = await readSourceRule(tx, m.tenantId, "WAREHOUSE", { lock: true });
+    if (await sourceLinked(tx, m.tenantId, "WAREHOUSE", warehouseId, rule)) throw sourceManagedError("ARCHIVE");
     // FOR NO KEY UPDATE (stok komutlarının FK KEY SHARE'iyle çakışmaz, FOR SHARE ile çakışır): eşzamanlı `createLocation` (depo satırını FOR SHARE okur) ile serileştirir; kontroller kilitten SONRA yeni görüntüyle çalışır.
     const cur = await tx.execute<{ status: string }>(
       sql`SELECT status FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid AND id = ${warehouseId}::uuid FOR NO KEY UPDATE`,

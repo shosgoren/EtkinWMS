@@ -15,6 +15,7 @@ import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type TenantAccessParams } from "../identity/access.ts";
 import { resolveWarehouseScope } from "../warehouse/scope.ts";
 import { createWarehouse, normalizeCode, normalizeName, renameWarehouse } from "../warehouse/warehouses.ts";
+import { readSourceRule, sourceLinkedIds } from "../integrations/source-guard.ts";
 import { createLocation, renameLocation, setLocationKind, type LocationKindValue } from "../warehouse/locations.ts";
 
 export const MASTER_IMPORT_MAX_ROWS = 500;
@@ -35,7 +36,9 @@ export type MasterIssue =
   | "KIND_UNKNOWN"
   | "IN_USE"
   | "CODE_TAKEN"
-  | "TOO_MANY";
+  | "TOO_MANY"
+  // T-1201: depo bölümü Paraşüt'ten alınıyor (yeni depo ya da bağlı deponun adı).
+  | "SOURCE_MANAGED";
 
 export interface MasterRowResult {
   readonly row: number;
@@ -111,6 +114,7 @@ function name(raw: string | undefined): { ok: true; v: string | null } | { ok: f
 function rowIssue(e: unknown): MasterIssue {
   if (e instanceof AppError && e.code === "VALIDATION_FAILED") {
     if (e.detail === "CODE_TAKEN") return "CODE_TAKEN";
+    if (e.detail === "SOURCE_MANAGED_CREATE" || e.detail === "SOURCE_MANAGED_FIELD" || e.detail === "SOURCE_MANAGED_ARCHIVE") return "SOURCE_MANAGED";
     if (e.detail === "PARENT_INVALID") return "PARENT_INVALID";
     if (e.detail === "IN_USE") return "IN_USE";
     if (e.detail === "DOCUMENT_TOO_LARGE") return "TOO_MANY";
@@ -152,11 +156,16 @@ export async function importWarehouses(params: MasterImportParams, input: { read
   const addMissing = !input.update || input.addMissing !== false;
   const { requestId, ...access } = params;
   // Mevcut depolar (kapsam dışı depo yok sayılır: varlığı sızmaz; aynı koda ekleme komutta CODE_TAKEN olur).
-  const existing = await runTenantQuery({ ...access, permission: "settings.manage" }, async (tx, m) => {
+  const snapshot = await runTenantQuery({ ...access, permission: "settings.manage" }, async (tx, m) => {
     const scope = await resolveWarehouseScope(tx, m);
     const r = await tx.execute<{ id: string; code: string; name: string; status: string }>(sql`SELECT id, code, name, status FROM public.warehouses WHERE tenant_id = ${m.tenantId}::uuid`);
-    return new Map(r.filter((x) => scope === null || scope.includes(x.id.toLowerCase())).map((x) => [x.code, x] as const));
+    // T-1201: kontrol adımı da yazımla aynı kuralı söylesin (yazımda karar yine komutta, kilit altında).
+    const rule = await readSourceRule(tx, m.tenantId, "WAREHOUSE", { lock: false });
+    const linked = await sourceLinkedIds(tx, m.tenantId, "WAREHOUSE", rule);
+    return { managed: rule.managed, linked, map: new Map(r.filter((x) => scope === null || scope.includes(x.id.toLowerCase())).map((x) => [x.code, x] as const)) };
   });
+  const source = { managed: snapshot.managed, linked: snapshot.linked };
+  const existing = snapshot.map;
   const out: MasterRowResult[] = [];
   const seen = new Set<string>();
   for (const r of input.rows) {
@@ -185,6 +194,10 @@ export async function importWarehouses(params: MasterImportParams, input: { read
         out.push({ row: r.row, status: "INVALID", issue: "NAME_MISSING" });
         continue;
       }
+      if (source.managed) {
+        out.push({ row: r.row, status: "INVALID", issue: "SOURCE_MANAGED" });
+        continue;
+      }
       if (!input.dryRun) {
         try {
           await createWarehouse(access, { code: c.v, name: nm.v, requestId: requestId ?? null });
@@ -198,6 +211,10 @@ export async function importWarehouses(params: MasterImportParams, input: { read
     }
     if (!input.update || cur.status !== "ACTIVE" || nm.v === null || nm.v === cur.name) {
       out.push({ row: r.row, status: "UNCHANGED" });
+      continue;
+    }
+    if (source.linked.has(cur.id.toLowerCase())) {
+      out.push({ row: r.row, status: "INVALID", issue: "SOURCE_MANAGED" });
       continue;
     }
     if (!input.dryRun) {

@@ -28,6 +28,7 @@ import type { KartYetki as CardRights } from "../kalip/kart-yetki.ts";
 import { KalipUyari } from "../kalip/uyari.tsx";
 import { eskiSurumBildir, eskiSurumMu } from "../kalip/surum.tsx";
 import { kdz } from "../kalip/tokens.ts";
+import { KAYNAK_YOK, useKaynakKilit, useKaynakYeniUyarisi, type KartKaynak } from "../kalip/kaynak-kilit.tsx";
 import { archiveWarehouseAction, createWarehouseAction, loadMoreWarehousesAction, renameWarehouseAction, suggestCodeAction } from "./actions.ts";
 
 /** Sunucu eylem hatası (`ActionResult.error`): yalnızca kod + ayrıntı + istek kimliği kullanılır. */
@@ -49,6 +50,10 @@ const DETAILED = [
   "validation_failed_parent_invalid",
   "validation_failed_document_too_large",
   "validation_failed_idempotency_key_required",
+  // T-1201: depo bölümü Paraşüt'ten alınıyor.
+  "validation_failed_source_managed_create",
+  "validation_failed_source_managed_field",
+  "validation_failed_source_managed_archive",
 ];
 
 /**
@@ -308,6 +313,8 @@ export function WarehousesView({
   slug,
   dark,
   rights,
+  kaynak = KAYNAK_YOK,
+  linkedIds = [],
   warehouses: ilkDepolar,
   nextAfter,
   q = "",
@@ -318,6 +325,9 @@ export function WarehousesView({
   dark: boolean;
   /** T-1141: kart bölümü yetkileri (yalnız gösterim; karar domain'de). */
   rights: CardRights;
+  /** T-1201: depo bölümü Paraşüt'ten alınıyorsa yeni depo kilitli; bağlı depoların kimlikleri (ad/kod/arşiv kilidi; yalnız gösterim). */
+  kaynak?: KartKaynak;
+  linkedIds?: readonly string[];
   warehouses: readonly WarehouseView[];
   /** Sonraki sayfa imleci (son görülen kod); yoksa `null`. */
   nextAfter: string | null;
@@ -377,8 +387,13 @@ export function WarehousesView({
   const [error, setError] = useState<ServerError | null>(null);
   const [version, setVersion] = useState(0);
   // T-1141: ekle `warehouses.create`, kod değiştir `warehouses.edit`, arşivle `warehouses.archive`; yetkisiz işlem kilitli düğme + neden.
-  const kilitGerekce = useKartKilitGerekce("warehouses");
-  const canCreate = rights.create;
+  const kilitGerekceYetki = useKartKilitGerekce("warehouses");
+  // T-1201: kaynak kilidi yetki kilidinden önce söylenir (daha özel). Satır kilidi: bölüm yönetiliyor + depo Paraşüt'e bağlı.
+  const kk = useKaynakKilit(slug, "warehouses", kaynak);
+  const linkedSet = useMemo(() => new Set(linkedIds.map((id) => id.toLowerCase())), [linkedIds]);
+  const bagli = useCallback((w: { readonly id: string }): boolean => kaynak.managed && linkedSet.has(w.id.toLowerCase()), [kaynak.managed, linkedSet]);
+  const kilitGerekce = useCallback((a: "create" | "edit" | "archive"): string => (a === "create" && kk.create ? kk.createReason : kilitGerekceYetki(a)), [kk.create, kk.createReason, kilitGerekceYetki]);
+  const canCreate = rights.create && !kk.create;
   const progress = useSetupProgress(slug, canCreate, version);
   const params = useSearchParams();
   const { say, node: toast } = useKalipToast("liste");
@@ -402,8 +417,9 @@ export function WarehousesView({
   })();
   const withParam = (k: string, val: string): string => `${listHref}${listHref.includes("?") ? "&" : "?"}${k}=${encodeURIComponent(val)}`;
   const creating = params.get("new") === "1" && canCreate;
+  useKaynakYeniUyarisi(params.get("new") === "1" && kk.create, kk.createReason, kk.eylem);
   const kodId = params.get("kod");
-  const editing = kodId === null || !rights.edit ? undefined : warehouses.find((w) => w.id === kodId && w.status === "ACTIVE");
+  const editing = kodId === null || !rights.edit ? undefined : warehouses.find((w) => w.id === kodId && w.status === "ACTIVE" && !bagli(w));
   const toList = (): void => router.push(listHref);
 
   async function changeCode(id: string, code: string) {
@@ -468,38 +484,38 @@ export function WarehousesView({
                 w.status !== "ACTIVE" ? null : (
                   <span className="ktacts" role="group" aria-label={t("actionsFor", { name: w.name })}>
                     <KalipKilitliDugme
-                      kilitli={!rights.edit}
-                      gerekce={kilitGerekce("edit")}
+                      kilitli={!rights.edit || bagli(w)}
+                      gerekce={bagli(w) ? kk.fieldReason : kilitGerekce("edit")}
                       kilitIkonu={false}
                       className="ktact"
                       aria-label={t("codeEdit.for", { name: w.name })}
-                      title={t("codeEdit.button")}
+                      title={bagli(w) ? kk.fieldReason : t("codeEdit.button")}
                       onClick={() => {
                         feedback.minor();
                         router.push(`${listHref}${listHref.includes("?") ? "&" : "?"}kod=${encodeURIComponent(w.id)}`);
                       }}
                     >
-                      <Ico d={rights.edit ? LICON.pencil : LICON.lock} size={18} />
+                      <Ico d={rights.edit && !bagli(w) ? LICON.pencil : LICON.lock} size={18} />
                     </KalipKilitliDugme>
                     <KalipKilitliDugme
-                      kilitli={!rights.archive}
-                      gerekce={kilitGerekce("archive")}
+                      kilitli={!rights.archive || bagli(w)}
+                      gerekce={bagli(w) ? kk.archiveReason : kilitGerekce("archive")}
                       kilitIkonu={false}
                       className="ktact del"
                       aria-label={`${t("archive")} · ${w.name}`}
-                      title={t("archive")}
+                      title={bagli(w) ? kk.archiveReason : t("archive")}
                       onClick={() => {
                         feedback.minor();
                         setArchiving(w);
                       }}
                     >
-                      <Ico d={rights.archive ? LICON.trash : LICON.lock} size={18} />
+                      <Ico d={rights.archive && !bagli(w) ? LICON.trash : LICON.lock} size={18} />
                     </KalipKilitliDugme>
                   </span>
                 ),
             },
     ],
-    [t, rights, kilitGerekce, router, listHref],
+    [t, rights, kilitGerekce, router, listHref, bagli, kk.fieldReason, kk.archiveReason],
   );
   const sutunSecim = useKalipSutunlar<WarehouseView>("warehouses", sutunlar);
 
@@ -571,11 +587,11 @@ export function WarehousesView({
         testId="warehouses"
         bar={{
           back: { href: home },
-          main: { label: tk("add"), aria: t("create"), d: LICON.plus, locked: !rights.create, disabledReason: kilitGerekce("create"), onClick: openCreate, testId: "warehouses-add" },
+          main: { label: tk("add"), aria: t("create"), d: LICON.plus, locked: !canCreate, disabledReason: kilitGerekce("create"), lockedAction: kk.create ? kk.eylem : undefined, onClick: openCreate, testId: "warehouses-add" },
         }}
         overlays={toast}
       >
-        {!rights.create ? (
+        {!canCreate ? (
           <p className="sr" id={lockedId}>
             {kilitGerekce("create")}
           </p>
@@ -600,9 +616,9 @@ export function WarehousesView({
         ) : warehouses.length === 0 ? (
           <KalipBos
             title={t("empty")}
-            hint={canCreate ? t("emptyAction") : t("emptyReadOnly")}
+            hint={canCreate ? t("emptyAction") : kk.create ? kk.createReason : t("emptyReadOnly")}
             iconD={LICON.depo}
-            action={canCreate ? { label: tk("stepWarehouseCta"), onClick: openCreate, kind: "add" } : { label: tr("home"), href: home, kind: "go" }}
+            action={canCreate ? { label: tk("stepWarehouseCta"), onClick: openCreate, kind: "add" } : kk.create && kk.eylem !== undefined ? { label: kk.eylem.etiket, kind: "go", onClick: () => void kk.eylem?.yap() } : { label: tr("home"), href: home, kind: "go" }}
           />
         ) : (
           <>
@@ -646,10 +662,10 @@ export function WarehousesView({
                     {active ? (
                       <div role="group" aria-label={t("actionsFor", { name: w.name })} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         <KalipKilitliDugme
-                          kilitli={!rights.edit}
-                          gerekce={kilitGerekce("edit")}
+                          kilitli={!rights.edit || bagli(w)}
+                          gerekce={bagli(w) ? kk.fieldReason : kilitGerekce("edit")}
                           className="btn"
-                          style={actBtn("172E42", !rights.edit)}
+                          style={actBtn("172E42", !rights.edit || bagli(w))}
                           aria-label={t("codeEdit.for", { name: w.name })}
                           data-testid="warehouse-code-edit"
                           onClick={() => {
@@ -661,10 +677,10 @@ export function WarehousesView({
                           {t("codeEdit.button")}
                         </KalipKilitliDugme>
                         <KalipKilitliDugme
-                          kilitli={!rights.archive}
-                          gerekce={kilitGerekce("archive")}
+                          kilitli={!rights.archive || bagli(w)}
+                          gerekce={bagli(w) ? kk.archiveReason : kilitGerekce("archive")}
                           className="btn"
-                          style={actBtn("C62828", !rights.archive)}
+                          style={actBtn("C62828", !rights.archive || bagli(w))}
                           data-testid="warehouse-archive"
                           onClick={() => {
                             feedback.minor();
@@ -687,7 +703,7 @@ export function WarehousesView({
       </KalipEkran>
 
       <KalipOnay
-        open={archiving !== null && rights.archive}
+        open={archiving !== null && rights.archive && !bagli(archiving)}
         title={t("confirmArchive.title", { name: archiving?.name ?? "" })}
         description={t("confirmArchive.description", { name: archiving?.name ?? "", code: archiving?.code ?? "" })}
         confirmLabel={t("confirmArchive.button")}

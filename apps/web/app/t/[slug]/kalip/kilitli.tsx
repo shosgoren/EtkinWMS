@@ -4,7 +4,7 @@
 // Satırlar (`KalipSatir`, `KalipAnahtar`) `locked` iken aynı işlevi kullanır.
 import { useTranslations } from "next-intl";
 import { useCallback, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { balonGoster, sesCal } from "@wms/ui";
+import { balonGoster, sesCal, type BalonEylem } from "@wms/ui";
 import { LICON } from "../../../design/kalip-icons.ts";
 import type { KartBolum as CardSection } from "./kart-yetki.ts";
 
@@ -15,10 +15,13 @@ export function kilitliMetniAyarla(m: string): void {
   if (m !== "") metin = m;
 }
 
-/** Kilitli öğeye dokunuldu: sarı balon + hata sesi. */
-export function kilitliDokunus(ozel?: string): void {
+/**
+ * Kilitli öğeye dokunuldu: sarı balon + hata sesi. T-1201: `eylem` verilirse balonda tek düğme (ör. "Şimdi eşitle"); eylemli balon
+ * okunacak kadar uzun kalır.
+ */
+export function kilitliDokunus(ozel?: string, eylem?: BalonEylem): void {
   sesCal("hata");
-  balonGoster({ tur: "warn", metin: ozel ?? metin, ses: false });
+  balonGoster({ tur: "warn", metin: ozel ?? metin, ses: false, ...(eylem === undefined ? {} : { eylem, sure: 6000 }) });
 }
 
 export interface KalipKilitliDugmeProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "disabled"> {
@@ -29,11 +32,13 @@ export interface KalipKilitliDugmeProps extends Omit<ButtonHTMLAttributes<HTMLBu
   readonly gerekce?: string;
   /** Kilit ikonunu düğmenin sonuna ekle (varsayılan evet). */
   readonly kilitIkonu?: boolean;
+  /** T-1201: kilitli balondaki tek eylem (ör. "Şimdi eşitle"). */
+  readonly eylem?: BalonEylem | undefined;
   readonly children: ReactNode;
 }
 
 /** Ortak kilitli düğme: kilitliyken dokunuş balon + ses verir, işlem çağrılmaz. */
-export function KalipKilitliDugme({ kilitli, onClick, gerekce, kilitIkonu = true, children, type = "button", ...rest }: KalipKilitliDugmeProps) {
+export function KalipKilitliDugme({ kilitli, onClick, gerekce, kilitIkonu = true, eylem, children, type = "button", ...rest }: KalipKilitliDugmeProps) {
   const t = useTranslations("kural");
   return (
     <button
@@ -45,7 +50,7 @@ export function KalipKilitliDugme({ kilitli, onClick, gerekce, kilitIkonu = true
       onClick={(e) => {
         if (kilitli) {
           e.preventDefault();
-          kilitliDokunus(gerekce);
+          kilitliDokunus(gerekce, eylem);
           return;
         }
         onClick?.();

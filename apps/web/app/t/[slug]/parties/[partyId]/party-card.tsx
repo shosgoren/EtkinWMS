@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import { LICON } from "../../../../design/kalip-icons.ts";
 import { SICON } from "../../../../design/standart-icons.ts";
 import { KalipEkran } from "../../kalip/ekran.tsx";
-import { KalipBilgiIzgara, KalipKartSerit, KalipKayitKart, type KalipBilgi, type KalipEtiket, type StTon } from "../../kalip/kart.tsx";
+import { KalipBilgiIzgara, KalipKartNot, KalipKartSerit, KalipKayitKart, type KalipBilgi, type KalipEtiket, type StTon } from "../../kalip/kart.tsx";
+import { KAYNAK_YOK, useKaynakKilit, type KartKaynak } from "../../kalip/kaynak-kilit.tsx";
 import type { PartyView } from "../parties-view.tsx";
 import { useKartKilitGerekce } from "../../kalip/kilitli.tsx";
 import type { KartYetki as CardRights } from "../../kalip/kart-yetki.ts";
@@ -22,12 +23,15 @@ function mailtoHref(email: string): string {
   return at <= 0 ? `mailto:${encodeURIComponent(email)}` : `mailto:${encodeURIComponent(email.slice(0, at))}@${encodeURIComponent(email.slice(at + 1))}`;
 }
 
-export function PartyCard({ slug, dark, rights, party }: { slug: string; dark: boolean; rights: CardRights; party: PartyView }) {
+export function PartyCard({ slug, dark, rights, kaynak = KAYNAK_YOK, party }: { slug: string; dark: boolean; rights: CardRights; /** T-1201: Paraşüt'ten alınan bölümde bağlı carinin kaynak kilidi (yalnız gösterim). */ kaynak?: KartKaynak; party: PartyView }) {
   const t = useTranslations("parties");
   // T-1141: düzenleme formu değiştirme (`parties.edit`) ve arşiv / geri al (`parties.archive`) işlemlerini taşır; ikisi de yoksa kilitli.
   const kilitGerekce = useKartKilitGerekce("parties");
   const formLocked = !rights.edit && !rights.archive;
   const tk = useTranslations("parties.kart");
+  const tkk = useTranslations("kaynakKilit");
+  // T-1201: bağlı caride Paraşüt alanları kilitli satır + gerekçe; teslimat (Etkin'e özgü) açık. Düzenleme formu yine açılır.
+  const kk = useKaynakKilit(slug, "parties", kaynak);
   const list = `/t/${encodeURIComponent(slug)}/parties`;
   const editHref = `${list}?edit=${encodeURIComponent(party.id)}`;
   const vis = KIND_VIS[party.kind];
@@ -54,6 +58,8 @@ export function PartyCard({ slug, dark, rights, party }: { slug: string; dark: b
     ...(party.address === null ? [] : [{ key: "address", etiket: t("f.address"), deger: party.address, d: LICON.depo, ton: "gri" as const }]),
     { key: "deliveryMode", etiket: t("f.deliveryMode"), deger: t(`delivery.${party.deliveryMode}`), d: SICON.kamyon, ton: "turuncu" as const },
   ];
+  const OWNED = new Set(["kind", "shortName", "taxNo", "taxOffice", "phone", "email", "city", "district", "address"]);
+  const satirlar: KalipBilgi[] = kk.field ? bilgiler.map((b) => (OWNED.has(b.key) ? { ...b, kilit: kk.fieldReason } : b)) : bilgiler;
   return (
     <KalipEkran
       kind="detay"
@@ -70,7 +76,12 @@ export function PartyCard({ slug, dark, rights, party }: { slug: string; dark: b
       <KalipKayitKart
         testId="party-kart"
         serit={<KalipKartSerit etiket={tk("hero")} ad={party.name} d={vis.d} tur={party.archived ? "gri" : vis.ton} etiketler={etiketler} kutular={[]} islemler={[]} islemEtiket={tk("quick")} />}
-        ana={<KalipBilgiIzgara baslik={tk("info")} bilgiler={bilgiler} kilitD={SICON.kilit} />}
+        ana={
+          <>
+            {kk.field ? <KalipKartNot metin={tkk("linkedNote")} d={SICON.kilit} renk="parasut" testId="party-source-note" /> : null}
+            <KalipBilgiIzgara baslik={tk("info")} bilgiler={satirlar} kilitD={SICON.kilit} />
+          </>
+        }
       />
     </KalipEkran>
   );

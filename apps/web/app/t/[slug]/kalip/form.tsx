@@ -86,6 +86,8 @@ export interface KalipSatirProps {
   readonly open: boolean;
   readonly changed?: boolean;
   readonly locked?: boolean;
+  /** T-1201: kilitliyken balondaki özel gerekçe (yoksa ortak "yetkin yok" cümlesi). */
+  readonly lockedReason?: string | undefined;
   readonly onToggle: () => void;
   readonly onClose: () => void;
   /** Düzenleyici başlığı (telefonda alt sayfa başlığı). */
@@ -96,14 +98,14 @@ export interface KalipSatirProps {
 }
 
 /** Kaynak `.srw`: dokununca açılan satır + düzenleyici. */
-export function KalipSatir({ id, title, value, d, color, open, changed = false, locked = false, onToggle, onClose, editorTitle, children, testId }: KalipSatirProps) {
+export function KalipSatir({ id, title, value, d, color, open, changed = false, locked = false, lockedReason, onToggle, onClose, editorTitle, children, testId }: KalipSatirProps) {
   const t = useTranslations("kalip");
   const style = { "--c": c(color) } as CSSProperties;
   const cls = `sr2${open ? " open" : ""}${changed ? " chg" : ""}${locked ? " lock" : ""}`;
   const head = editorTitle ?? title;
   return (
     <div className="srw" data-row={id}>
-      <button type="button" className={cls} style={style} aria-expanded={open} aria-label={`${title}: ${value}`} aria-disabled={locked ? "true" : undefined} data-kilitli={locked ? "true" : undefined} onClick={locked ? () => kilitliDokunus() : onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
+      <button type="button" className={cls} style={style} aria-expanded={open} aria-label={`${title}: ${value}`} aria-disabled={locked ? "true" : undefined} data-kilitli={locked ? "true" : undefined} onClick={locked ? () => kilitliDokunus(lockedReason) : onToggle} data-testid={testId} data-changed={changed ? "true" : undefined}>
         <span className="ri">
           <Ico d={d} size={20} />
         </span>
@@ -217,7 +219,47 @@ export function KalipSecenek({ options, value, color, onPick, label }: { options
  * Kaynak `.fld` (etiketli metin alanı). T-990: ortak form bağlamında (`KalipFormEkran`) `name` ile alan hatası taşır — kırmızı çerçeve,
  * kısa sarsılma, altında tek satır neden (`aria-invalid` + `aria-describedby`); `hint` alanın altında kısa açıklama.
  */
-export function KalipAlan({ label, hint, error, multiline = false, ikon, ...input }: { label: string; hint?: string | undefined; error?: string | undefined; multiline?: boolean; /** T-1117 (STANDART §4): etiketin başında küçük renkli simge. */ ikon?: { readonly d: string; readonly color: string } | undefined } & InputHTMLAttributes<HTMLInputElement>) {
+/** T-1201: kilitli metin alanı (KalipAlan `kilitli`). Gerçek `disabled` değil (dokunuş yakalansın): salt okunur + kilit ikonu + gerekçe. */
+function KalipKilitliAlan({ label, reason, ikon, multiline, input }: { label: string; reason: string; ikon: { readonly d: string; readonly color: string } | undefined; multiline: boolean; input: InputHTMLAttributes<HTMLInputElement> }) {
+  const id = useId();
+  const hid = `${id}-h`;
+  const tap = (): void => kilitliDokunus(reason);
+  const shown = label.replace(/\s*\*\s*$/, "");
+  const common = { id: input.id, name: input.name, value: input.value, readOnly: true, "aria-readonly": true, "aria-describedby": hid, "data-kilitli": "true", onClick: tap, onKeyDown: (e: { key: string }) => (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete" ? tap() : undefined), "data-testid": input["data-testid" as keyof typeof input] as string | undefined };
+  return (
+    <>
+      <label className="fld" data-alan={input.name} data-kilitli="true">
+        {ikon === undefined ? (
+          <span>{shown}</span>
+        ) : (
+          <span className="kflds">
+            <i className="kfldi" style={{ background: c(ikon.color) }}>
+              <Ico d={ikon.d} size={12} />
+            </i>
+            {shown}
+          </span>
+        )}
+        {multiline ? <textarea {...(common as unknown as TextareaHTMLAttributes<HTMLTextAreaElement>)} /> : <input {...common} />}
+      </label>
+      <small id={hid} className="khint" data-kilit-neden="true">
+        <Ico d={LICON.lock} size={14} />
+        {reason}
+      </small>
+    </>
+  );
+}
+
+type KalipAlanProps = { label: string; hint?: string | undefined; error?: string | undefined; multiline?: boolean; /** T-1117 (STANDART §4): etiketin başında küçük renkli simge. */ ikon?: { readonly d: string; readonly color: string } | undefined; /** T-1201 (ALTIN-KURAL 17): alan değiştirilemez — gerekçe alanın altında yazar, dokununca sarı balon + hata sesi; değer gönderilmeye devam eder. */ kilitli?: string | undefined } & InputHTMLAttributes<HTMLInputElement>;
+
+export function KalipAlan(props: KalipAlanProps) {
+  const { kilitli, ...rest } = props;
+  if (kilitli !== undefined) {
+    return <KalipKilitliAlan label={rest.label} reason={kilitli} ikon={rest.ikon} multiline={rest.multiline === true} input={rest} />;
+  }
+  return <KalipAcikAlan {...rest} />;
+}
+
+function KalipAcikAlan({ label, hint, error, multiline = false, ikon, ...input }: Omit<KalipAlanProps, "kilitli">) {
   const id = useId();
   const ctxErr = useAlanHata(typeof input.name === "string" ? input.name : undefined);
   const salla = useSalla();

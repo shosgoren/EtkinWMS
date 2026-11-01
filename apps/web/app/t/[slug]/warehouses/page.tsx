@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
+import { getSourceLinkedIds, getSourceLock } from "@wms/domain/integrations";
+import { KAYNAK_YOK, type KartKaynak } from "../kalip/kaynak-kilit.tsx";
 import { cardRights, type CardRights } from "@wms/domain/identity/permissions";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
@@ -58,6 +60,8 @@ export default async function WarehousesPage({ params, searchParams }: { params:
   let nextAfter: string | null;
   let total: number | undefined;
   let rights: CardRights;
+  let kaynak: KartKaynak = KAYNAK_YOK;
+  let linkedIds: readonly string[] = [];
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
@@ -67,6 +71,9 @@ export default async function WarehousesPage({ params, searchParams }: { params:
     rows = page.rows;
     nextAfter = page.nextAfter;
     total = page.total;
+    // T-1201: "Paraşüt'ten al" bölümünde yeni depo kilitli; listedeki bağlı depoların ad/kod/arşiv kilidi (yalnız gösterim).
+    kaynak = await getSourceLock(call, "WAREHOUSE");
+    if (kaynak.managed && rows.length > 0) linkedIds = await getSourceLinkedIds(call, "WAREHOUSE", rows.map((w) => w.id));
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "NOT_FOUND") notFound();
@@ -81,7 +88,7 @@ export default async function WarehousesPage({ params, searchParams }: { params:
 
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <WarehousesView slug={slug} dark={await isDark()} rights={rights} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} archived={archived} {...(total === undefined ? {} : { total })} />
+      <WarehousesView slug={slug} dark={await isDark()} rights={rights} kaynak={kaynak} linkedIds={linkedIds} warehouses={rows} nextAfter={nextAfter} firstPage={after === undefined || after === ""} q={q} archived={archived} {...(total === undefined ? {} : { total })} />
     </main>
   );
 }
