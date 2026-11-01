@@ -6606,8 +6606,7 @@
       "excel": "Excel",
       "reports": "Reports",
       "settings": "Settings",
-      "integrations": "Integrations",
-      "labels": "Label designer"
+      "integrations": "Integrations"
     },
     "sectionSub": "{on}/{n} on",
     "sectionFixed": "Comes with the role · not grantable to groups",
@@ -6657,13 +6656,6 @@
       },
       "integrations": {
         "manage": "Paraşüt and integrations"
-      },
-      "labels": {
-        "view": "View templates",
-        "design": "Edit designs",
-        "publish": "Publish and assign",
-        "print": "Print custom labels",
-        "printers": "Manage printer preferences"
       }
     },
     "mfaNote": "Requires two-step verification",

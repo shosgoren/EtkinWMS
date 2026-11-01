@@ -32,12 +32,6 @@ const PERMISSION_LIST = [
   "locations.create",
   "locations.edit",
   "locations.archive",
-  // T-1149: custom label module; legacy stock.view label routes remain compatible.
-  "labels.view",
-  "labels.design",
-  "labels.publish",
-  "labels.print",
-  "labels.printers",
 ] as const;
 export type Permission = (typeof PERMISSION_LIST)[number];
 /** Derin dondurulmuş (çalışma anında değiştirilemez). */
@@ -92,11 +86,6 @@ export const GRANTABLE: readonly Permission[] = Object.freeze([
   "locations.create",
   "locations.edit",
   "locations.archive",
-  "labels.view",
-  "labels.design",
-  "labels.publish",
-  "labels.print",
-  "labels.printers",
 ] as const);
 /**
  * Taşıyana MFA zorunlu kılan yetkiler (rolde MFA_REQUIRED_ROLES ile aynı gerekçe: onay, ters kayıt, toplu yazma).
@@ -118,8 +107,6 @@ export const MFA_GRANTS: readonly Permission[] = Object.freeze([
   "warehouses.create",
   "warehouses.edit",
   "warehouses.archive",
-  "labels.publish",
-  "labels.printers",
 ] as const);
 
 /**
@@ -207,7 +194,7 @@ export function cardRights(roles: readonly string[], grants: readonly string[], 
  * Satır kimliği `<bölüm>.<işlem>` web dil dosyasında `yetkiler.rows.<bölüm>.<işlem>` etiketidir. Entegrasyon ayrı anahtar değildir
  * (`settings.manage`); satır yalnız bilgi verir.
  */
-export const PERMISSION_SECTIONS = Object.freeze(["items", "parties", "warehouses", "locations", "stock", "documents", "excel", "reports", "settings", "integrations", "labels"] as const);
+export const PERMISSION_SECTIONS = Object.freeze(["items", "parties", "warehouses", "locations", "stock", "documents", "excel", "reports", "settings", "integrations"] as const);
 export type PermissionSection = (typeof PERMISSION_SECTIONS)[number];
 
 export interface PermissionRow {
@@ -252,11 +239,6 @@ export const PERMISSION_CATALOGUE: readonly PermissionRow[] = Object.freeze([
   row("settings", "manage", "settings.manage"),
   row("settings", "users", "users.manage"),
   row("integrations", "manage", "settings.manage"),
-  row("labels", "view", "labels.view"),
-  row("labels", "design", "labels.design"),
-  row("labels", "publish", "labels.publish"),
-  row("labels", "print", "labels.print"),
-  row("labels", "printers", "labels.printers"),
 ]);
 
 /**
