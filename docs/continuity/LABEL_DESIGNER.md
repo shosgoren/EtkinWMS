@@ -63,6 +63,8 @@ Mevcut ürün/raf/toplu ürün/kabul/üretim düğmeleri yetkili özel varsayıl
 | Gerçek DB | tests/integration/labels/ + ac/ac-04-api-slug.int.test.ts |
 | Gerçek tarayıcı | tests/e2e/label-designer.spec.ts |
 
+Test izolasyonu: etiket tasarım/yazıcı varsayılanı ve yarış testleri ayrı gerçek `label-design`/`label-race` signup+MFA aktörlerini kullanır; eski receiving müşterisine varsayılan bırakmaz. İlk rehber perdesi kapatılıp sunucu audit kabulü beklenir. Giriş/MFA alanları hydration bitene kadar kapalıdır ve native fallback POST'tur; test sır alanına yazmadan gerçek hazır durumunu bekler. Auth/MFA/hız politikası değişmez.
+
 1Kasım yerel kanıt:158 hedef birim;26 gerçek DB (store9/printer4/print13); ayrı A/B/oturum yükleyici AC04 392. QR/Code128/EAN13×203/300/600×4dönüş Chromium→ZXing36/36. Gerçek PDF6etiket A4→2sayfa,100×50mm rulo→6sayfa görüntülendi. Fiziksel yazıcı/GS1 kalite sertifikası kanıtı yok.
 
 Tarayıcı aday app commit6d62903: desktop/mobile tasarım/logo/sürükleme/klavye/tema,5 gerçek paketQR, tercihler, değişmez yeniden baskı ve>50 keyset; ölçü yarışı/unmount/busy/legacyyetki kabulü tek tam koşuda4/4 geçti.100×150mm ürün etiketi seçimi, gerçek standart barkodun QR/Code128/EAN13 olarak hazırlanması ve kayıtlı203DPI'da gerçek jobSVG'sinin Chromium→ZXing çözümü de bu koşuda.96DPI ekran küçük resmi fiziksel barkod kalite kanıtı sayılmaz. Mevcut derleme kimliği/uygulama değişmezliği yerel kanıtla doğrulandı. Exact-head final CI ve receiver/imaj/DB doğrulaması her yayında ayrıca gerekir; geçmiş yeşil log güncel yayın sayılmaz.

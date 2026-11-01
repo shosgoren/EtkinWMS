@@ -30,6 +30,10 @@ export const PACKAGE_ACTORS = [
   { workflow: "transfer", fixture: "transferMobile", prefix: "E2E_PACKAGE_TRANSFER_MOBILE", mobile: true, clientIp: "198.51.100.86" },
   { workflow: "production", fixture: "productionDesktop", prefix: "E2E_PACKAGE_PRODUCTION_DESKTOP", mobile: false, clientIp: "198.51.100.87" },
   { workflow: "production", fixture: "productionMobile", prefix: "E2E_PACKAGE_PRODUCTION_MOBILE", mobile: true, clientIp: "198.51.100.88" },
+  { workflow: "label-design", fixture: "labelDesignDesktop", prefix: "E2E_PACKAGE_LABEL_DESIGN_DESKTOP", mobile: false, clientIp: "198.51.100.91" },
+  { workflow: "label-design", fixture: "labelDesignMobile", prefix: "E2E_PACKAGE_LABEL_DESIGN_MOBILE", mobile: true, clientIp: "198.51.100.92" },
+  { workflow: "label-race", fixture: "labelRaceDesktop", prefix: "E2E_PACKAGE_LABEL_RACE_DESKTOP", mobile: false, clientIp: "198.51.100.93" },
+  { workflow: "label-race", fixture: "labelRaceMobile", prefix: "E2E_PACKAGE_LABEL_RACE_MOBILE", mobile: true, clientIp: "198.51.100.94" },
 ] as const;
 export type PackageWorkflow = (typeof PACKAGE_ACTORS)[number]["workflow"];
 type TenantFixture = "empty" | "pilot" | "stockDesktop" | "stockMobile" | "multi" | "erp" | "tour" | (typeof PACKAGE_ACTORS)[number]["fixture"];
