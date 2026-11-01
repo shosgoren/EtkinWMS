@@ -212,3 +212,6 @@ Büyük alan seçicisi küçük tuval nesnesini hedefleme zorunluluğunu kaldır
 - Safsnapshot/kaynak/hazırmodel13birim; domain/sharedtsc ve ESLint kontrol edilir. GerçekDB stokdeğişmezliği/izolasyon/int/yenidenbasım, UI/PDF/e2e, güvenlik, prepush/CI/canlı henüz bekler; paket bunlar bitmeden teslim sayılmaz.
 
 T1164 baskı geometri ekkontrolü: büyükEAN13kutusunda modül0.660mmüstüne çıkmaz, rakamlar kodun altında kalır (GS1primarysource renderercomment). 25motor/snapshotbirim ve gerçekChromiumPNG→ZXing36/36 (3semboloji×3DPI×4dönüş) yeniden geçti. Fiziksel cihaz/GS1 kalite sertifikası kanıtı değildir.
+
+### T-1167 — Gerçek DB kabulü (yerel)
+İki tenantlı izole DB, 73 migration ve gerçek wms_app: 11/11 test geçti. Beş mevcut ambalaj QR kimliği/lot/tarih/miktar, stok defteri-bakiye-seri-HU değişmezliği, tek auditli eşzamanlı replay, eski varsayılan sürümü, eski veriyle tekrar baskı, değişen ürün barkodunda yeni fiziksel baskının reddi, genel/şablon/kişisel cihaz yazıcı sırası ve kapalı profilde durma doğrulandı. Etiket yetkisi stok okuma hakkını vermez; depo kapsamı geçmişte de uygulanır. Fiziksel yazıcı, üretim/sevk gerçek kaynak kabulü ve tarayıcı akışı henüz yapılmadı.
