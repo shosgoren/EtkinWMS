@@ -177,3 +177,7 @@ Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol iç
 - Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
 
 **Renderer son önkontrol:** Güncel main7037d6d üstünde gerçek5kart/30dosya birleşmesi; tam prepush YEŞİL (verify5487birim, tüm bekçiler, AC04 387). İlk scope hatası, merge konularındaki eksik dal adları ve STACK sharedQR kayıtları düzeltilerek kapandı; kontroller gevşetilmedi. Bağımsız0/0/0 @f985154. PR/CI/deploy ayrı bekler; workspace ve gerçek baskı ekranı sonraki paketlerdir.
+### T-1161 gerçek çalışma alanı (yerel)
+- /label-designs sunucu oturum/yetki kontrolü ve yalnız seçili taslağın kanonik logoları. Ortak liste/context/arşiv/arama/keyset; hazır tasarım → gerçek action kayıt → yetkili yayın/varsayılan. Yarım iş çıkış koruması; sürüm çakışmasında sessiz üzerine yazma yok. Taslak kaydı açık Kaydet eylemidir; otomatik kayıt iddiası yok.
+- Ad/ölçü/yayın/sürüm ayarları ortak özellik panelinde; logo yerel JPG/WebP/PNG'den sınırlı PNG'ye dönüşür, sunucu yeniden doğrular. Kullanımda olan sürüm taslak değişiminden etkilenmez; tarihsel sürüm yalnız taslağa alınır. Kaynak/gerçek barkod üretimi bu ekranın işi değildir.
+- Webtypegen/tsc/hedefESLint ve mevcut parite/UI/action417birim geçti. Henüz gerçek UI etkileşim e2e/bağımsız inceleme/prepush/CI/canlı yok. Yazıcı paneli ve gerçek işlem etiketleri sıradadır.
