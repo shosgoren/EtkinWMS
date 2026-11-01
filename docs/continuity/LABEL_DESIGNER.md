@@ -1,6 +1,6 @@
 # Etiket tasarım editörü — B-166 uygulama planı
 
-Tarih: 1 Kasım 2026. Durum: GELİŞTİRME BAŞLADI; T-1146 tasarım kaynağı GitHub PR282 ile main'de; T-1147 saf sözleşme geliştiriliyor. Henüz uygulama/yayın yok.
+Tarih: 1 Kasım 2026. Durum: GELİŞTİRME BAŞLADI; T-1146 tasarım kaynağı GitHub PR282 ile main'de; T-1147 saf sözleşme PR283 ile main’de (23a1aa5). T-1148…1150 kalıcıkatman paketi yerel doğrulamada. Henüz uygulama/yayın yok.
 Plan kartı: [T-1145](../tasks/T-1145.md). Başlangıç kaynak main: `9c046c6f015aa2448cbc82bff86fbbbd88ac6c20`.
 Otorite: kullanıcı kararı + ALTIN-KURAL, STANDART, DESIGN-PARITY, INVARIANTS ve ADR-022. Bu belge onların istisnası değildir.
 
@@ -129,4 +129,4 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 ## T-1148…T-1150 kalıcı katman (geliştirme)
 - 0072 yedi tenanttablosu: taslak/sürüm, PNGvarlık, yalnızsistemdiyaloğuyazıcıprofili, şablon/genelcihaz/firma tercihi, bağlamvarsayılanı, değişmezbaskısnapshotı. Uygulama rolü yayımlanansürüm/varlık/baskıyı güncelleyemez/silemez; snapshot hazırlama fizikselbaskıkanıtı değildir.
 - 0073 + yetkikataloğu: labels.view/design/publish/print/printers; Yönetici tümü, özelgrupta ayrıaçılır. Yayın/yazıcıyönetimi MFA. Mevcut stock.view etiket yolu korunur, yeniözelleştirilmişmodüle yetki kendiliğinden verilmez.
-- GeçiciDockerDB: yenişema6test ve öncekimigration4testi geçti; birimkatalog22test/roottsc geçti. Genelprepush, diğerregresyon, bağımsızinceleme/CI/yayın bekliyor; henüz API/UI/baskıbağlantısı yok.
+- GeçiciDockerDB: yenişema6test ve öncekimigration4testi geçti; birimkatalog22test/roottsc geçti. Bağımsızsecurity/QA0/0/0 (15birim+6int); öncekimigrationregresyonu179test, AC04 383test ve verify5421birim geçti. Kapsam/tabanmetadata kaydı düzeltildikten sonra genelprepush tekrar koşuyor; CI/yayın bekliyor; henüz API/UI/baskıbağlantısı yok.
