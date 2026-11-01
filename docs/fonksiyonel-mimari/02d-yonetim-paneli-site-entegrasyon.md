@@ -4,13 +4,14 @@
 > ekibinin müşteri yönetim paneli) ve **wms.etkinyazilim.com** içindeki firma ayarları, ERP bağlantısı, destek talebi, kurulum
 > rehberi. En sonda arka planda kendi kendine çalışan işler (worker) listelenir.
 >
-> Kaynak: main 2022915 · 29 Ekim 2026 dalındaki kod ve migration dosyaları (0038–0065; ilk sürüm 23 Ekim, main 36f3a13; 28 Ekim
-> sürümü main 8e2710d; T-1111…T-1131 29 Ekim'de işlendi). Tahmin yoktur;
+> Kaynak: main 008070a · 1 Kasım 2026 dalındaki kod ve migration dosyaları (0038–0070; ilk sürüm 23 Ekim, main 36f3a13; 28 Ekim
+> sürümü main 8e2710d; T-1111…T-1131 29 Ekim'de, T-1133…T-1142 1 Kasım'da işlendi). Tahmin yoktur;
 > her satırın yanında dosya yolu verilmiştir. **Canlı (VPS) durumu ayrıdır:** "Canlı notu" satırları `docs/STATE.md` ve `docs/changes/`
 > kayıtlarından alınmıştır; kodda olması canlıda olduğu anlamına gelmez.
 >
-> **28 Ekim canlı tabanı (STATE, T-1067/T-1068 satırları):** VPS'te doğrulanan son yayın `6b2f81d`, veritabanı migration defteri 0062/62.
-> Bu yayından sonra `main`'e giren işler (T-1100, T-1102–T-1106, T-1109 ve 0063) için STATE'te canlı kaydı yoktur → canlı UNKNOWN.
+> **1 Kasım canlı tabanı (STATE):** canlı main `008070a` (PR #279, deploy-vps ile yedek → migration → kuyruk → derin sağlık); şema
+> 0070. T-1133…T-1142 ve migration 0066–0070 STATE'e göre canlıdadır. Gerçek Paraşüt hesabıyla doğrulanmamış davranışlar (ortak uygulama
+> kaydı, webhook imzası, PUT alanları, `updated_at`) ayrıca UNKNOWN yazılır.
 
 **Etiketler:** [TAMAMLANDI] = kodda ekrandan veritabanına kadar bağlı · [GELİŞTİRİLİYOR] = bir kısmı var, bir kısmı eksik ya da
 yayın bekliyor · [PLANLANDI] = yalnız yapılacaklar listesinde (BACKLOG) veya tasarımda.
@@ -331,7 +332,7 @@ stateDiagram-v2
 - **Modül Durumu:** [TAMAMLANDI] (Firma · Kullanıcılar ve yetki · Entegrasyonlar · Görünüm) · Tuvaldeki "İş akışı" ve "Etiket ve yazıcı"
   sekmeleri [PLANLANDI] (ayar verisi yok; B-171, B-166)
 - **Canlı notu:** Sekmeli düzen T-1046 (PR #195) doğrulanan `6b2f81d` yayınının içindedir. "Etkin sesli yanıt" anahtarı (T-1109,
-  migration 0063) `main`'de; STATE'te canlı kaydı yok (UNKNOWN).
+  migration 0063) canlı şemadadır (STATE: şema 0070); gerçek cihazda sesli yanıt denemesi UNKNOWN.
 - **Ekranın Amacı:** Firma yöneticisinin çalışma alanı adını, dilini, saat dilimini, görev ayrılığı kuralını, Etkin'in sesli yanıtını,
   temayı ayarlaması; örnek verileri temizlemesi; kişilere/yetki gruplarına ve parola sıfırlamaya gitmesi. Ayarlar her kalıp ekranının
   Hesap menüsünden açılır (yalnız `settings.manage`, T-1039).
@@ -354,7 +355,7 @@ stateDiagram-v2
 | **Firma ›** Görev ayrılığı (aynı kişi hem yapıp hem onaylayamaz) | Anahtar | Açar/kapar | Aynı Kaydet → `setSeparationOfDuties` | `tenant_settings.separation_of_duties`; audit `tenant.settings_changed` | Yakın zamanda doğrulama ister (`sod=reauth` bandı); kural onay/sayım onayı/ters kayıt komutlarında uygulanır | [TAMAMLANDI] |
 | **Firma ›** Etkin sesli yanıt | Anahtar | Açar/kapar | Aynı Kaydet → `setVoiceReply` (`packages/domain/src/voice/ayar.ts`) | `tenant_settings.voice_reply` (0063, varsayılan KAPALI); audit `tenant.settings_changed` | `settings.manage`; yeniden giriş istemez; açıkken Etkin'in cevabı doğal Türkçe sesle okunur, kullanıcının cihazdaki "Sessiz" tercihi ayrıca kapatır | [TAMAMLANDI] (T-1109; canlı UNKNOWN, gerçek iPhone UNKNOWN) |
 | **Firma ›** Ad satırındaki mikrofon | Düğme (pasif) | Tıklar | — | — | "Sesle yakında" balonu | [PLANLANDI] |
-| **Kullanıcılar ve yetki ›** Kişiler, Yetki grupları | Bağlantı satırı | Tıklar | `/t/<alan>/members`, `/t/<alan>/groups` | — | Bu ekranlar ayrı modüldür | [TAMAMLANDI] |
+| **Kullanıcılar ve yetki ›** Kişiler, Yetki grupları, Yetkiler | Bağlantı satırı | Tıklar | `/t/<alan>/members`, `/t/<alan>/groups`, `/t/<alan>/yetkiler` (T-1142) | — | Bu ekranlar ayrı modüldür (02a) | [TAMAMLANDI] |
 | **Kullanıcılar ve yetki ›** İki adımlı doğrulama | Bilgi rozeti | — | — | — | Oturumun gerçek durumu (açık/kapalı) | [TAMAMLANDI] |
 | **Kullanıcılar ve yetki ›** Parola | Satır + bağlantı | Tıklar | `/reset-password` sayfası | (kimlik tabloları) | Bağlantıyı o sayfa e-postayla gönderir | [TAMAMLANDI] |
 | **Görünüm ›** Tema (Açık / Koyu / Otomatik) | Seçim | Seçer | Tarayıcı çerezi (`design/theme.ts` `temaYaz`) | — (sunucuya gitmez) | Cihaz tercihidir; "Otomatik" sistem temasını izler | [TAMAMLANDI] |
@@ -371,7 +372,9 @@ stateDiagram-v2
 
 - **Modül Durumu:** [TAMAMLANDI] (Excel toplu işlem + Paraşüt kısayolu) · Logo [PLANLANDI] (B-111). 29 Ekim: ERP yetkilisi bu ekrana
   Entegrasyon ekranının **Bağlantı ve veri kaynağı** bölümündeki "Excel aktarımı" bağlantısıyla gelir; Geri o bölüme döner (T-1112).
-  Excel ile Paraşüt'ün tek bölümde birleşmesi kalan iştir (B-196).
+  31 Ekim (T-1137): Entegrasyon ekranının kaynak listesinde Paraşüt'ün yanında **Excel** kartı var (bağlı değilken kart, bağlıyken
+  "Veri kaynağı: Excel" satırı); ikisi de bu ekranı açar. Aktarma mantığı hâlâ burada; Excel'in Entegrasyon ekranının içine alınması kalan
+  iştir (B-196).
 - **Canlı notu:** T-981b PR #146; ekran başlığı T-1046 ile "Entegrasyonlar" oldu ve ortak ayar sekmelerini çizer (doğrulanan `6b2f81d`
   yayınında).
 - **Ekranın Amacı:** Excel ile toplu içeri al / güncelle / dışarı aktar için tek giriş noktası; ERP bağlantısına geçiş.
@@ -388,23 +391,26 @@ stateDiagram-v2
 | Alt düğme: AKTAR'A GEÇ / GÜNCELLE | Buton | Tıklar | `/import?tur=&kip=` ekranı açılır (içe aktarma modülü) | — | Seçim eksikse uyarı sesi + balon (sessiz kalmaz) | [TAMAMLANDI] |
 | Alt düğme: İNDİR | Buton | Tıklar | `GET /api/t/<alan>/export/<tür>` → `exportData` | Okuma + `audit_log` (`data.exported`) | `data.import` izni; depo kapsamı dışındaki depolar görünmez; cari kişisel alanları yalnız `settings.manage`; kesilmiş/kişisel alansız sonuç balonda söylenir | [TAMAMLANDI] |
 | Boş şablon indir | Buton | Tıklar | Aynı uç `?template=1` | — | Önce alan seçilmeli | [TAMAMLANDI] |
-| Entegrasyonlar › Paraşüt satırı | Bağlantı | Tıklar | `/t/<alan>/integrations` açılır | — | Bağlantı durumu satırda gösterilmez (B-196) | [TAMAMLANDI] |
+| Entegrasyonlar › Paraşüt satırı | Bağlantı | Tıklar | `/t/<alan>/integrations` açılır | — | Bağlantı durumu satırda gösterilmez (B-196); durum ve sağlık bandı Entegrasyon ekranındadır (T-1137) | [TAMAMLANDI] |
 | Entegrasyonlar › Logo satırı | Etiket "YAKINDA" | — | — | — | Bağlantı kurulamaz (`available: false`) | [PLANLANDI] (B-111) |
 
 ---
 
 ## Modül: wms.etkinyazilim.com / ERP entegrasyonu (Paraşüt)
 
-- **Modül Durumu:** [TAMAMLANDI] (OAuth bağlantısı, ürün kartı alma, barkod tercihi, kaynak bilgisi, ürün yaşam döngüsü, açılış stoku,
-  onaylı tuvaldeki alt bölümlü düzen ve her zaman görünen yön seçimi — T-1112) · Cari/depo/stok/irsaliye akışlarının gerçek Paraşüt
-  hesabıyla doğrulanması [GELİŞTİRİLİYOR] (B-110) · Logo [PLANLANDI] (B-111) · Alan sahipliği, pasif/arşiv politikası, kayıt bazlı hata
-  listesi, satış faturasından iş [PLANLANDI] (veri; B-200, B-170, B-113)
-- **Canlı notu (STATE):** T-1066 (0061, müşteri bazlı OAuth + 30 sn zamanlayıcı) CANLIDA; gerçek Motive bağlantısı ve ilk kartlar
-  doğrulandı. T-1067/T-1068 (0062 ürün yaşam döngüsü) CANLIDA: release `6b2f81d`, DB 0062/62; Motive `CONNECTED`, `PRODUCTS/PULL`
-  ardışık otomatik koşular `SUCCESS`. Bu yayın 0059 (barkod tercihi, T-1061) ve 0060 (kaynak bilgisi, T-1062) kodunu da içerir. T-1104
-  (ekran sadeleştirme) yayından sonra birleşti → canlı UNKNOWN. Canlı tarayıcı / gerçek cihaz kontrolü UNKNOWN.
-- **Ekranın Amacı:** Paraşüt muhasebe programıyla bağlantı: ürün/cari/depo kartlarını almak-göndermek, sevk irsaliyesini ve stok
-  toplamını Etkin'den Paraşüt'e göndermek. **Altın kural (I-04):** ERP'den gelen kart Etkin'deki stok miktarını asla değiştirmez; stok ve
+- **Modül Durumu:** [TAMAMLANDI] (tek yol OAuth: Etkin'in ortak uygulaması ya da firmanın kendi uygulaması, 3 adımlı bağlanma — T-1133,
+  T-1139; ürün kartı alma, barkod tercihi, kaynak bilgisi, açılış stoku; onaylı tuvaldeki alt bölümlü düzen ve her zaman görünen yön seçimi
+  — T-1112, T-1134; yön seçiminin sonuç cümlesi + dolu katalogda onay — T-1136; güvenlik kilitleri stok ⟂ irsaliye, Devir kapısı, ondalık,
+  koşu günlüğü — T-1135; sağlık bandı + kuyruk çözüm düğmeleri — T-1137; anlık bildirim (webhook) — T-1138; gerçek iki yönlü kart eşitleme
+  ve cari/depo yaşam döngüsü — T-1140) · Gerçek Paraşüt hesabıyla doğrulama [GELİŞTİRİLİYOR] (ortak uygulama kaydı B-219, webhook B-229,
+  iki yönlü PUT ve `updated_at` B-235, irsaliye/stok B-110) · Logo [PLANLANDI] (B-111) · Alan sahipliği, pasif/arşiv politika seçimi,
+  satış faturasından iş [PLANLANDI] (veri; B-200, B-238, B-170)
+- **Canlı notu (STATE):** T-1066 (0061, müşteri bazlı OAuth + 30 sn zamanlayıcı) ve T-1067/T-1068 (0062 ürün yaşam döngüsü) 28 Ekim'de
+  canlıda doğrulandı (release `6b2f81d`; Motive `CONNECTED`, `PRODUCTS/PULL` koşuları `SUCCESS`). T-1133…T-1140 ve migration 0066–0069 STATE'e göre canlıdadır (canlı main `008070a`). Ortak uygulama ancak sahip
+  Paraşüt'te uygulamayı kaydedip sunucuya `PARASUT_OAUTH_CLIENT_ID/SECRET` girince çalışır (B-219; canlı UNKNOWN). 0068'in canlıda kaç
+  bağlantı kestiği OPERATIONS'taki sorguyla okunacak (UNKNOWN). Canlı tarayıcı / gerçek cihaz kontrolü UNKNOWN.
+- **Ekranın Amacı:** Paraşüt muhasebe programıyla bağlantı: ürün/cari/depo kartlarını almak-göndermek (iki yönlü dahil), sevk irsaliyesini
+  ya da stok toplamını (ikisi birlikte değil) Etkin'den Paraşüt'e göndermek. **Altın kural (I-04):** ERP'den gelen kart Etkin'deki stok miktarını asla değiştirmez; stok ve
   irsaliye yalnız Etkin → ERP yönündedir. Ürün aktarımı **miktarsız ve fiyatsızdır** (B-182). Tek istisna: bir kezlik "açılış stoku".
 - **Kod:** `apps/web/app/t/[slug]/integrations/{page,integrations-view,actions}.tsx|ts`, OAuth dönüşü
   `apps/web/app/api/integrations/parasut/callback/route.ts`; domain `packages/domain/src/integrations/{connections,oauth,catalog,apply,sync,
@@ -413,15 +419,18 @@ stateDiagram-v2
   worker `apps/worker/src/jobs/integration-sync.ts`. Anlık bildirim (T-1138): alıcı `apps/web/app/api/integrations/parasut/webhook/route.ts`,
   domain `webhook.ts` (ayrıştırma, imza, tek kart olayı) + `webhook-register.ts` (kayıt, kesmede silme, kademe), worker
   `apps/worker/src/jobs/integration-webhook.ts`; migration 0067 (`integration_webhooks`, `integrations.webhook_*`).
-- **Yetki:** `settings.manage` (yalnız hesap sahibi); diğer rollerde kilitli tam ekran (`KalipKilitliEkran`). Demo alanında bağlantı
+- **Yetki:** `settings.manage` (yalnız Yönetici); diğer rollerde kilitli tam ekran (`KalipKilitliEkran`). Demo alanında bağlantı
   kurulamaz. Bağlama, uygulama bilgisi kaydetme, şirket seçme ve kesme yakın zamanda doğrulama ister (yoksa ekranda "yeniden giriş"
-  düğmesi).
+  düğmesi). Eşitleme (worker ve webhook işi) bağlayan kişinin yetkisiyle yazar: bağlayan artık etkin Yönetici değilse bağlantı
+  `CONNECTOR_REVOKED` ile durur; webhook işi yazım anında bağlantıyı, bağlayanı ve akış yönünü yeniden doğrular.
 - **Ekran düzeni (T-1112, 28 Ekim; onaylı tuval `StandartAyarlarEntegrasyon.dc.html`, STANDART §5 ayar kalıbı):** üstte Ayarlar sekme
   şeridi (Entegrasyonlar seçili), Geri → Ayarlar. Solda **alt bölümler** (telefonda yatay çip satırı), sağda yalnız seçili bölüm; adres
   `?bolum=baglanti|akis|sahiplik|arsiv|hatalar` (bağlıyken varsayılan `akis`, değilken `baglanti`). Ortak kalıp parçaları
   `kalip/ayar.tsx`: `KalipAltBolumler`, `KalipAyarKart`, `KalipAyarSatir`, `KalipYonSecimi` (Paraşüt turuncusu STANDART §7).
-  1. **Bağlantı ve veri kaynağı:** ERP seçimi / bağlantı kartı (sına, kes, yeniden bağlan), barkod tercihi, açılış stoku, Excel aktarımı
-     bağlantısı, en altta "Gelişmiş: kendi Paraşüt uygulamanı kullan" satırı (T-1133).
+  1. **Bağlantı ve veri kaynağı:** kaynak listesi (bağlı değilken Paraşüt + **Excel** kartı, Logo YAKINDA; T-1137) / bağlantı kartı (sına,
+     kes, yeniden bağlan), bağlı bantta **sağlık bandı** (T-1137) ve **anlık bildirim satırı** (T-1138), barkod tercihi, açılış stoku,
+     "Veri kaynağı: Excel" satırı, en altta "Gelişmiş: kendi Paraşüt uygulamanı kullan" satırı (T-1133). Boş durum ortak kalıpta biçimli
+     (`.dzf/.dzd .nomatch`, T-1134).
 
   **Bağlanma (T-1133, kullanıcı kararı 30 Ekim):** Etkin TEK ortak Paraşüt uygulaması kaydeder (sunucu env `PARASUT_OAUTH_CLIENT_ID` /
   `PARASUT_OAUTH_CLIENT_SECRET`, dönüş `<BETTER_AUTH_URL>/api/integrations/parasut/callback`); müşteri anahtar girmez. Muhasebe programı
@@ -436,21 +445,27 @@ stateDiagram-v2
   `LEGACY_METHOD_REMOVED`; kimlik kutusu ve webhook anahtarları silindi; audit `integration.disconnected` via `migration_0068`). Müşteri
   verisi ve akış tercihleri yerindedir. Ekranda bağlı değil görünümünde Paraşüt kartının yerinde tek kırmızı bant "Paraşüt bağlantısı
   yenilendi; devam etmek için yeniden bağlan." ve tek "Yeniden bağlan" düğmesi (OAuth); yeniden bağlanınca akışlar olduğu gibi döner.
-  2. **Ne çekilsin, gönderilsin:** "Paraşüt bağlı · son eşitleme SS:DD"; akış başına satır ve **her zaman görünen yön seçimi** (yalnız
-     katalogun desteklediği yönler + "Yalnız Etkin WMS" = akış kapalı); "Şimdi çalıştır" açık akışın satırında. Kullanıcı kararı 28 Ekim:
-     Depolar satırında "İki yönlü" de gösterilir. Paraşüt'te karşılığı olmayan Siparişler yalnız "Yalnız Etkin WMS" ve nedeniyle görünür.
-  3. **Alan sahipliği:** veri yok → yalnız "Yakında" boş durumu (sahte denetim çizilmez).
+  2. **Ne çekilsin, gönderilsin:** "Paraşüt bağlı · son eşitleme SS:DD"; üstte aynı sağlık bandı; akış başına satır ve **her zaman görünen
+     yön seçimi** (yalnız katalogun desteklediği yönler + "Yalnız Etkin WMS" = akış kapalı; telefonda 2×2 ızgara, T-1134); seçili yönün
+     **sonucu satır altında tek cümle** (T-1136, metin T-1140 kuralıyla): al = "Paraşüt'ten gelir, ona uyar; buradan gitmez.", gönder =
+     "Eksikler ve düzeltmeler Paraşüt'e gider; oradan gelmez.", iki yönlü = "Değişiklik iki yana yansır; çakışmada son değişen kazanır.";
+     dolu katalogda yeni "al" ya da yeni "gönder" önce ortak `KalipOnay` sorar (yerel sayı sunucuda `countFlowRecords`; Vazgeç eski yönü
+     korur). "Şimdi çalıştır" (44 px) açık akışın satırında. Kullanıcı kararı 28 Ekim: Depolar satırında "İki yönlü" de gösterilir.
+     Paraşüt'te karşılığı olmayan Siparişler "Paraşüt'te sipariş yok · satış faturasıyla gelecek" nedeniyle yalnız "Yalnız Etkin WMS".
+  3. **Alan sahipliği:** solda "YAKINDA" rozeti; içeride tek cümle + "Yön seçimine git" (T-1134). Veri yok (B-200, B-238).
   4. **Pasif ve arşiv:** tek satır açıklama (T-1140: ürün, cari ve depo Paraşüt'te arşivlenince/silinince Etkin'de silinmez, arşive
      alınır) + Ürünler › Arşivli / Kaldırıldı süzgeci bağlantıları (sayı yok; okuma işlevi yok).
-  5. **Bekleyenler ve hatalar:** kontrol bekleyen / gönderilemeyen / bekleyen irsaliyeler, hatalı akışlar, son koşular; soldaki rozet =
-     CHECK + FAILED + hatalı akış sayısı.
+  5. **Bekleyenler ve hatalar:** satır satır karar bekleyen (CHECK) ve gönderilemeyen (FAILED) irsaliyeler ile bekletilen kartlar (en çok
+     50 + toplam) ve çözüm düğmeleri (T-1137: Yeniden gönder / Yeniden dene · Gönderildi say · Gönderme), hatalı akışlar, son koşular;
+     soldaki rozet = CHECK + FAILED + bekletilen kart + hatalı akış sayısı.
 
   Alt cam çubuğun ana düğmesi bağlı değilken **BAĞLAN**, bağlıyken **EŞİTLE** (açık akış yoksa nedenini söyler). Kurulum yolculuğu
   (açılış stoku) ve aktarma rehberi (akış adımları) doğru bölümü açar. Etkin'e "entegrasyon / Paraşüt" denince bu ekran açılır (T-1118).
 
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Sağlayıcı kartları (Paraşüt, Logo) + bağlantı şeridi | Kart + durum | Görüntülenir | `getIntegrationOverview` | `integrations` (`provider`, `status`, `account_label`, `last_checked_at`, `last_error_code`) — `credentials` **hiç okunmaz** | Ekrana yalnız "bağlı · şirket adı" gider | [TAMAMLANDI] |
+| Sağlayıcı kartları (Paraşüt, Excel, Logo) + bağlantı şeridi | Kart + durum | Görüntülenir | `getIntegrationOverview` | `integrations` (`provider`, `status`, `account_label`, `last_checked_at`, `last_error_code`) — `credentials` **hiç okunmaz** | Ekrana yalnız "bağlı · şirket adı" gider; Excel kartı (`data-provider="EXCEL"`, T-1137) mevcut `/settings/baglantilar` aktarımını açar | [TAMAMLANDI] |
+| **Sağlık bandı** (bağlı bant ve "Ne çekilsin" üstü) + sol rozet (T-1137) | Bant (`KalipBildirim` hata/uyarı/tamam) + tek düğme | Görüntülenir / tıklar | `getIntegrationOverview` içinde `classifyIntegrationHealth` (`health.ts`, saf) | Okuma, aynı işlemde: `integrations` (durum, hata kodu, webhook durumu, DB `now()`), `integration_flows` (`last_success_at`, `enabled_at`, `error_count`, `last_status`), son 15 `integration_runs` | Öncelik: AUTH (bağlantı ERROR, yeniden giriş, anahtar okunamadı, bağlayanın yetkisi kalktı, `LEGACY_METHOD_REMOVED`) → "Yeniden bağlan" · STUCK (15 dk'dan uzun RUNNING) → "Ayrıntı" · TIMEOUT (son koşu FAILED/TIMEOUT; sonra başarı varsa sayılmaz) → "Şimdi çalıştır" · FAILING (art arda 3 FAILED) → "Ayrıntı" · STALE (son başarı eşikten eski: taramada 10 dk, webhook açıkken ürün/cari 25 dk) → "Şimdi çalıştır" | [TAMAMLANDI] |
 | Gelişmiş: kendi Paraşüt uygulamanı kullan (3 adım: dönüş adresi + Kopyala · Paraşüt uygulama kimliği / gizli anahtarı · BAĞLAN) | Açılır satır + tam ekran form | Kopyalar, doldurur, Kaydet | `saveParasutOAuthSettingsAction` → `saveParasutOAuthSettings` | `integration_oauth_apps` (0061; firma başına, mühürlü; arayüzden geri okunmaz); audit `integration.oauth_configured` | T-1133: iki alan zorunlu (boş KAYDET → kırmızı + "2 alan eksik"); dönüş adresi yazılmaz, sunucunun gerçek callback'i (salt okunur); "Elle" anahtarı açıksa yetki kodu (OOB). Gizli anahtar kayıttan sonra gösterilmez | [TAMAMLANDI] |
 | BAĞLAN / "Paraşüt ile bağlan" | Buton | Tıklar | `beginParasutOAuthAction` → `beginParasutOAuth` → Paraşüt izin sayfası; dönüş `GET /api/integrations/parasut/callback` → `completeParasutOAuth` | `integration_oauth_attempts` (0061; kısa ömürlü, tek kullanımlık deneme, parola/düz belirteç yok); audit `integration.oauth_started` / `oauth_failed` | T-1133: önce firmanın kendi uygulaması, yoksa Etkin'in ortak uygulaması; ikisi de yoksa "henüz hazır değil" balonu + Gelişmiş açılır (anahtar alanı gösterilmez); deneme tarayıcıya HttpOnly çerezle bağlıdır, 10 dk geçerli; başarısız dönüşte sabit neden kodu `reasons.*` ile gösterilir | [TAMAMLANDI] |
 | Yetki kodu (OOB) formu | Tam ekran form | "Paraşüt'te izin ver" → kodu yapıştırır | `completeParasutOAuthCodeAction` | Aynı | Aynı tarayıcı denemesine bağlı | [TAMAMLANDI] |
@@ -464,26 +479,27 @@ stateDiagram-v2
 | Akış altı bilgi: son koşu zamanı / son hata, hata rozeti, "Şimdi çalıştır" | Metin + Buton | Tıklar | `runIntegrationAction` → `requestIntegrationRun` → kuyruk `integration.sync` (`trigger=MANUAL`) | `integration_runs` (yeni koşu) | Aynı bağlantı için kuyrukta/çalışan ikinci iş açılmaz | [TAMAMLANDI] |
 | Ürün kaynak bilgisi (kategori, GTİP, birim, kaynakta arşivli mi) | Arka plan | Ürün alma koşusunda | `productSourceInfo` (`product-info.ts`) | `items.source_product_info` (0060, jsonb; fiyat/stok alanı kabul edilmez) | Bilinmeyen/uyuşmayan birim reddedilir, yeni kart 6 ondalıkla açılır; mevcut kartın birimi değişmez (T-1060) | [TAMAMLANDI] (T-1062) |
 | Anlık bildirim satırı (bağlı bant): "Anlık bildirim açık · son bildirim SS:DD" / "kurulamadı · 30 sn'de bir taranıyor" | Durum satırı | Görüntülenir | `getWebhookStatus` | `integrations.webhook_status` (OFF/ACTIVE/FAILED), `webhook_last_event_at`, `webhook_checked_at` (0067) | Paraşüt webhook'u: ürün × {create, update, delete} ve cari × {create, update, delete} bağlanınca ve günde bir uzlaştırılır (kurulamazsa saatte bir yeniden denenir); alıcı `POST /api/integrations/parasut/webhook` (tenant yalnız şirket eşlememizden, imza tenant'ın mühürlü anahtarıyla, kart Paraşüt'ten kimliğiyle yeniden okunur, tekrar teslim `processed_events` ile tek etki). Kademe: anlık bildirim açıkken ürün/cari taraması 15 dk, depo 3 dk (Paraşüt'te depo bildirimi yok); kapalıyken 30 sn. Kesince Paraşüt'teki kayıt silinir, anahtar NULL. Anahtar atama ve imza yapısı gerçek hesapta UNKNOWN | [GELİŞTİRİLİYOR] (T-1138, kodda; canlı doğrulama B-110) |
-| Ürün yaşam döngüsü (kaynakta arşiv / silinme) | Arka plan + ürün listesi süzgeci | Ürün alma koşusunda | `observeProduct` (`product-lifecycle.ts`) | `items.source_state` (ACTIVE/ARCHIVED/DELETED), `source_disposition` (NONE/PENDING/ARCHIVED/REMOVED), `source_managed_archive`, `source_missing_since`, `source_checked_at` (0062); audit | Yalnız firma başına OAuth uygulaması + açık `PRODUCTS` PULL/BOTH akışı + bağlayan kişi o alanda hâlâ etkin üye ve **Yönetici** (TENANT_ADMIN) iken çalışır (hesap sahipliğini devretmek tek başına durdurmaz; yönetici rolü kalkarsa ya da üyelik biterse bağlantı `CONNECTOR_REVOKED` ile durur — `connectorAllowed`, `lifecycleBinding`). Bir kez görünmemek silme sayılmaz: aynı bağlamda ≥ 30 sn arayla ikinci yokluk gerekir; ağ hatası/eksik tarama silme sayılmaz. Stoğu ya da açık işi olan kart `PENDING` (yeni kullanım kapanır, iş bitince arşiv); kullanılmış kart `ARCHIVED`; hiç kullanılmamış silinen kart `REMOVED` ("Kaldırıldı" süzgeci). Kaynakta yeniden etkinleşince yalnız sistemin arşivlediği kart açılır. Geçmiş, QR, eşleme ve miktar korunur | [TAMAMLANDI] (T-1067/T-1068, B-183) |
-| İki yönlü kart eşitleme (T-1140) | Arka plan | Eşitleme koşusu + webhook | `syncRemoteCard` / `decideCardSync` (`card-sync.ts`), düzeltme turu `pushEdited` (`sync.ts`) → Paraşüt `PUT /v4/{şirket}/{products, contacts, warehouses}/{id}` | `integration_card_states` (0069: `local_hash`, `remote_hash`, `local_sig`, `synced_at`, `remote_updated_at`, `last_pulled_at`, `last_pushed_at`); `audit_logs` `integration.conflict_resolved` | Al: Paraşüt değeri; Gönder: yerel düzeltme gider, hiçbir şey alınmaz; İki yönlü: değişen taraf yansır, ikisi değiştiyse son değişen (Paraşüt `updated_at` ↔ son entegrasyon dışı audit), eşit/bilinmeyen zamanda Paraşüt; kesin 4xx kart bekletilir (`UPDATE_REJECTED`) | [KODDA VAR] (gerçek hesapta PUT/`updated_at` UNKNOWN) |
-| Cari / depo yaşam döngüsü (T-1140) | Arka plan | Cari/depo alma koşusu + cari webhook'u | `observeCard` (`card-lifecycle.ts`), kullanım `partyLifecycleBusy` / `warehouseLifecycleBusy` (salt SELECT) | `integration_card_states.source_*`; `parties.archived_at`, `warehouses.status/archived_at`; audit `party.archived/restored/updated`, `warehouse.archived/restored/updated` (`via: integration`) | Ürünle aynı: yalnız OAuth bağlantısı, ≥30 sn arayla iki yokluk, fiziksel silme yok; kullanımdaysa PENDING; yalnız sistemin arşivlediği geri açılır | [KODDA VAR] |
-| İrsaliye kuyruğu uyarısı | Bant | Görüntülenir | Okuma | `integration_outbox` (`status` sayıları: PENDING/CHECK/FAILED) | Yalnız CHECK ya da FAILED varsa kırmızı bant; kayıt bazlı liste ve CHECK'i çözme düğmesi yok (B-113) | [TAMAMLANDI] (sayı) |
+| Ürün yaşam döngüsü (kaynakta arşiv / silinme) | Arka plan + ürün listesi süzgeci | Ürün alma koşusunda | `observeProduct` (`product-lifecycle.ts`) | `items.source_state` (ACTIVE/ARCHIVED/DELETED), `source_disposition` (NONE/PENDING/ARCHIVED/REMOVED), `source_managed_archive`, `source_missing_since`, `source_checked_at` (0062); audit | Yalnız OAuth bağlantısı (firmanın kendi uygulaması ya da T-1133'ten beri ortak uygulama; bağlanma anını kapsayan tamamlanmış yetki kodu denemesi) + açık `PRODUCTS` PULL/BOTH akışı + bağlayan kişi o alanda hâlâ etkin üye ve **Yönetici** (TENANT_ADMIN) iken çalışır (hesap sahipliğini devretmek tek başına durdurmaz; yönetici rolü kalkarsa ya da üyelik biterse bağlantı `CONNECTOR_REVOKED` ile durur — `connectorAllowed`, `lifecycleBinding`). Bir kez görünmemek silme sayılmaz: aynı bağlamda ≥ 30 sn arayla ikinci yokluk gerekir; ağ hatası/eksik tarama silme sayılmaz. Stoğu ya da açık işi olan kart `PENDING` (yeni kullanım kapanır, iş bitince arşiv); kullanılmış kart `ARCHIVED`; hiç kullanılmamış silinen kart `REMOVED` ("Kaldırıldı" süzgeci). Kaynakta yeniden etkinleşince yalnız sistemin arşivlediği kart açılır. Geçmiş, QR, eşleme ve miktar korunur | [TAMAMLANDI] (T-1067/T-1068, B-183) |
+| İki yönlü kart eşitleme (T-1140) | Arka plan | Eşitleme koşusu + webhook | `syncRemoteCard` / `decideCardSync` (`card-sync.ts`), düzeltme turu `pushEdited` (`sync.ts`) → Paraşüt `PUT /v4/{şirket}/{products, contacts, warehouses}/{id}` | `integration_card_states` (0069: `local_hash`, `remote_hash`, `local_sig`, `synced_at`, `remote_updated_at`, `last_pulled_at`, `last_pushed_at`); `audit_logs` `integration.conflict_resolved` | Al: Paraşüt değeri; Gönder: yerel düzeltme gider, hiçbir şey alınmaz; İki yönlü: değişen taraf yansır, ikisi değiştiyse son değişen (Paraşüt `updated_at` ↔ son entegrasyon dışı audit), eşit/bilinmeyen zamanda Paraşüt; kesin 4xx kart bekletilir (`UPDATE_REJECTED`) | [TAMAMLANDI] (kod; gerçek hesapta PUT/`updated_at` UNKNOWN, B-235) |
+| Cari / depo yaşam döngüsü (T-1140) | Arka plan | Cari/depo alma koşusu + cari webhook'u | `observeCard` (`card-lifecycle.ts`), kullanım `partyLifecycleBusy` / `warehouseLifecycleBusy` (salt SELECT) | `integration_card_states.source_*`; `parties.archived_at`, `warehouses.status/archived_at`; audit `party.archived/restored/updated`, `warehouse.archived/restored/updated` (`via: integration`) | Ürünle aynı: yalnız OAuth bağlantısı, ≥30 sn arayla iki yokluk, fiziksel silme yok; kullanımdaysa PENDING; yalnız sistemin arşivlediği geri açılır | [TAMAMLANDI] (kod; cari `archived` alanı gerçek hesapta UNKNOWN) |
+| Yön seçiminin sonuç cümlesi + dolu katalogda onay (T-1136) | Satır altı not (`KalipAyarSatir` `note`, `aria-live`) + `KalipOnay` | Yön seçer | `yonSonucAnahtari`, `yonOnayGerekir` (`yon-sonuc.ts`); sayı `countFlowRecordsAction` → `countFlowRecords` (`settings.manage`, RLS; yalnız sayı) | Okuma: `items` / `parties` / `warehouses` + `external_refs` (eşlenmemiş yerel kart sayısı) | Yeni "al" ve yerel kayıt > 0, ya da yeni "gönder" ve eşlenmemiş yerel kayıt > 0 ise sorar; kapatma, boş katalog ve yeni bir şey başlatmayan geçiş sormaz. Pencere açılınca uyarı sesi; Vazgeç sessiz ve eski yön kalır; metin sayıyı ve gerçek eşleme kuralını söyler (ürün koduyla, cari vergi no / ad + şehirle, depo adla) | [TAMAMLANDI] |
+| Bekleyenler ve hatalar: kayıt bazlı liste + çözüm düğmeleri (T-1137) | `KalipAyarSatir` + `.frun` düğmeler | Tıklar | `getIntegrationOutboxIssues` (CHECK + elle çözülmemiş FAILED, en çok 50 + toplam); `retryIntegrationOutbox` (Yeniden gönder / Yeniden dene); `resolveIntegrationOutbox` (yalnız irsaliye: "Gönderildi say" → FAILED `MANUAL_SENT`, "Gönderme" → FAILED `MANUAL_SKIPPED`) | `integration_outbox` (`status`, `attempts`, `last_error_code`), bağlıysa o akışın koşusu kuyruğa; audit `integration.outbox_retried` / `integration.outbox_resolved` | `settings.manage`; tenant + kimlik ile satır kilidi; **idempotent** (aynı hedefte `changed:false`, audit yok). CHECK irsaliyesini yeniden gönderme ve elle çözüm onay ister (çift irsaliye / geri dönüşsüz); gönderilmiş, elle çözülmüş (MANUAL_*) ya da stok toplamına girmiş (`ALREADY_IN_STOCK_TOTAL`) satır yeniden gönderilemez. Elle çözülen satır sorun sayılmaz ve bir daha kuyruğa girmez. Bekletilen kart (ör. `EXTERNAL_ALREADY_LINKED`, `UPDATE_REJECTED`) "Yeniden dene" ile tekrar denenir; çakışma sürerse yine bekletilir (sonsuz deneme yok). Paraşüt irsaliye numarası girme ve eşlemeyi ekrandan düzeltme yok (B-227, B-228) | [TAMAMLANDI] |
 | Son koşular | Liste | Görüntülenir | Okuma | `integration_runs` (`status`, `trigger`, `created/updated/linked/skipped/failed_count`, `error_code`) | Biten koşu değiştirilemez | [TAMAMLANDI] |
-| "Açılış stokunu Paraşüt'ten al" | Anahtar | Açar/kapar | `setOpeningStockAction` → `setOpeningStockSetting` | `integrations.opening_stock_enabled` | Varsayılan KAPALI; kurulum yolculuğundaki "mevcut stoğu da alalım mı?" cevabı bağlanınca buraya işlenir; alındıktan sonra değişmez | [TAMAMLANDI] |
+| "Açılış stokunu Paraşüt'ten al" | Anahtar | Açar/kapar | `setOpeningStockAction` → `setOpeningStockSetting` | `integrations.opening_stock_enabled` | Varsayılan KAPALI; kurulum yolculuğundaki "mevcut stoğu da alalım mı?" cevabı OAuth dönüşünde (bağlanınca) buraya işlenir (T-1137); alındıktan sonra değişmez. Açılış stoku alınmadan (ya da Excel Devir işlenmeden) Stok miktarı akışı açılamaz (T-1135 Devir kapısı) | [TAMAMLANDI] |
 | Raf seçimi + "Açılış stokunu al" | Seçim + Buton | Seçer, tıklar | `pullOpeningStockAction` → `pullOpeningStock` → stok komutu (`postFieldDocument`, STOCK_IN) | `stock_documents`, `stock_ledger`, `stock_balances` (stok motoru üzerinden); `integrations.opening_stock_taken_at`, `opening_stock_document_id` | **Bir kez** (DB tetikleyicisi); tek belge ≤ 200 satır; tek rafa yazılır (depo bazlı miktar B-139); raf yoksa uyarı | [TAMAMLANDI] |
 | Logo bağlantısı | Kart "YAKINDA" | — | — | `integrations.provider='LOGO'` izinli ama kullanılamaz | Ürün bilgisi bekleniyor | [PLANLANDI] (B-111) |
 
-**Onaylı tuvale göre fark (Ayarlar › Entegrasyonlar; 29 Ekim güncellemesi — arayüz farkları T-1112 ile kapandı):**
+**Onaylı tuvale göre fark (Ayarlar › Entegrasyonlar; 1 Kasım güncellemesi — arayüz farkları T-1112, T-1134 ile kapandı):**
 
 | Tuvalde | Kodda bugün | Gereken | Durum |
 | :--- | :--- | :--- | :--- |
-| Solda alt bölüm listesi, sağda tek konu | **Kodda** (T-1112): beş alt bölüm, `?bolum=` | Excel toplu işlemin de Bağlantı bölümünün içine alınması (bugün ayrı ekrana bağlantı) | Kısmen (B-196) |
+| Solda alt bölüm listesi, sağda tek konu | **Kodda** (T-1112): beş alt bölüm, `?bolum=`; Excel kaynak kartı Paraşüt'ün yanında (T-1137) | Excel toplu işlemin Bağlantı bölümünün içinde çalışması (bugün kart ayrı ekranı açar) | Kısmen (B-196) |
 | Akış başına her zaman görünen yön seçici (… → Etkin / Etkin → … / İki yönlü / Yalnız Etkin WMS) | **Kodda** (T-1112) | — | [TAMAMLANDI] |
 | Depolar satırında "iki yönlü" | **Gösteriliyor** (kullanıcı kararı 28 Ekim) | — | Karar verildi |
 | Satış faturasından iş akışı (Paraşüt satış faturası → sevk görevi) | Satır çizilmez (katalogda yok; Paraşüt'te sipariş kaynağı yok) | Yeni akış + veri modeli | [PLANLANDI] (veri; B-200, B-169) |
-| **Alan sahipliği** (alan başına Paraşüt / depo; Paraşüt alanı kartta kilitli) | Bölüm "Yakında" boş durumu; veri yok, eşitleme ürün adını sessizce geri yazar | Migration + domain | [PLANLANDI] (veri; B-200, B-170) |
-| **Pasif ve arşiv** (iki yönlü yansıma politikası, varsayılan "hiçbir şey yapma"; PASİF durumu) | Bölüm var: açıklama + Arşivli / Kaldırıldı süzgeç bağlantıları; sayı, politika ayarı ve PASİF durumu yok | Sayılar: okuma işlevi; politika: migration | Kısmen (B-200, B-170, B-172) |
-| **Bekleyenler ve hatalar** | Bölüm var (T-1112): irsaliye kuyruk sayıları, hatalı akışlar, son koşular, rozet | Kayıt bazlı eşitleme hatası/durumu + CHECK kaydı için karar düğmesi: migration | Kısmen (B-113, B-170) |
+| **Alan sahipliği** (alan başına Paraşüt / depo; Paraşüt alanı kartta kilitli) | Bölüm "YAKINDA" rozetli boş durum + "Yön seçimine git" (T-1134); veri yok. T-1140'tan beri kart başına kural: iki yönlüde son değişen kazanır (ad artık sessizce geri yazılmaz) | Alan bazlı kural: migration + domain | [PLANLANDI] (veri; B-200, B-238, B-170) |
+| **Pasif ve arşiv** (iki yönlü yansıma politikası, varsayılan "hiçbir şey yapma"; PASİF durumu) | Bölüm var: açıklama (ürün, cari, depo arşive alınır — T-1140) + Arşivli / Kaldırıldı süzgeç bağlantıları; sayı, politika seçimi ve PASİF durumu yok. Kodda varsayılan "Etkin'de de arşivle" (kullanımdaysa bekler) | Sayılar: okuma işlevi; politika: migration | Kısmen (B-200, B-170, B-172) |
+| **Bekleyenler ve hatalar** | **Kodda** (T-1137): satır satır CHECK / FAILED irsaliye ve bekletilen kart + Yeniden gönder · Gönderildi say · Gönderme, hatalı akışlar, son koşular, rozet | Paraşüt irsaliye numarasını bağlama, eşlemeyi ekrandan düzeltme; kart başına eşitleme durumu ürün kartında (Paraşüt sekmesi) | Kısmen (B-113 BİTTİ; B-227, B-228, B-170) |
 
 ```mermaid
 sequenceDiagram
@@ -492,12 +508,15 @@ sequenceDiagram
     participant E as Entegrasyon ekranı
     participant DB as PostgreSQL
     participant P as Paraşüt
-    participant K as Worker (integration.sync; anlık bildirim açıkken 15 dk / depo 3 dk, değilse 30 sn)
-    Y->>E: Uygulama bilgileri (Application Id, Secret, Callback URL)
-    E->>DB: integration_oauth_apps (mühürlü)
-    Y->>E: BAĞLAN
+    participant K as Worker (integration.sync · anlık bildirim açıkken 15 dk / depo 3 dk, değilse 30 sn)
+    opt Gelişmiş: firmanın kendi uygulaması
+        Y->>E: Uygulama kimliği + gizli anahtar (dönüş adresi sunucudan, Kopyala)
+        E->>DB: integration_oauth_apps (mühürlü)
+    end
+    Y->>E: BAĞLAN (adım 1)
+    E->>E: Uygulama çöz: firmanın kendi uygulaması → Etkin ortak uygulaması (sunucu env) → yok ("henüz hazır değil")
     E->>DB: integration_oauth_attempts (tek kullanımlık, 10 dk)
-    E-->>Y: Paraşüt izin sayfası
+    E-->>Y: Paraşüt'te giriş + izin (adım 2)
     alt Otomatik dönüş (HTTPS)
         P-->>E: /api/integrations/parasut/callback (kod)
     else Yetki kodu (OOB)
@@ -505,9 +524,9 @@ sequenceDiagram
     end
     E->>P: Kod → erişim belirteci, şirket listesi
     opt Birden çok şirket
-        Y->>E: Şirketini seç
+        Y->>E: Şirketini seç (adım 3)
     end
-    E->>DB: integrations CONNECTED + 6 akış (ilk bağlantıda Ürün kartları PULL açık) + koşu işi
+    E->>DB: integrations CONNECTED + 6 akış (ilk bağlantıda Ürün kartları PULL açık) + koşu işi + webhook kayıt işi
     K->>P: Ürün kartlarını oku (miktarsız, fiyatsız)
     K->>DB: Kart/eşleme/kaynak bilgisi/yaşam döngüsü
 ```
@@ -531,7 +550,7 @@ sequenceDiagram
         K->>DB: SENT + external_id + sent_at (artık değişmez)
     else 401 / 429
         P-->>K: Oturum ya da hız sınırı
-        K->>DB: PENDING (geri çekilmeli yeniden deneme; 10 denemede FAILED)
+        K->>DB: PENDING (geri çekilmeli yeniden deneme · 10 denemede FAILED)
     else Kesin red (diğer 4xx)
         P-->>K: Hata
         K->>DB: FAILED + last_error_code
@@ -569,8 +588,11 @@ stateDiagram-v2
     end note
 ```
 
-*Bağlantı durumu (`integrations.status`):* CONNECTED → ERROR (sınama/senkron hatası; bağlayan kişi hesap sahibi değilse `CONNECTOR_REVOKED`)
-→ CONNECTED (başarılı sınama) ; her durumdan DISCONNECTED (bağlantıyı kes; şifreli bilgiler silinir). Koşu durumu
+*Bağlantı durumu (`integrations.status`):* CONNECTED → ERROR (sınama/senkron hatası; bağlayan kişi artık etkin Yönetici değilse
+`CONNECTOR_REVOKED`) → CONNECTED (başarılı sınama) ; her durumdan DISCONNECTED (bağlantıyı kes; şifreli bilgiler silinir, Paraşüt'teki
+webhook kayıtları önce silinir). 0068 eski parola bağlantılarını DISCONNECTED + `LEGACY_METHOD_REMOVED` yaptı; OAuth ile yeniden bağlanınca
+kod silinir ve DELETED satırdaki eski webhook kaydı Paraşüt'te de silinir. Anlık bildirim durumu (`integrations.webhook_status`): OFF →
+ACTIVE (kayıt kuruldu) / FAILED (kurulamadı; 30 sn tarama sürer). Koşu durumu
 (`integration_runs.status`): RUNNING → SUCCESS / PARTIAL / FAILED; 40 dk'yı aşan RUNNING → FAILED `TIMEOUT` (T-1135). Değişiklik getirmeyen
 başarılı zamanlı koşu satır bırakmaz (son kontrol anı `integration_flows.last_run_at`); 7 günden eski biten satırlar koşu başında budanır.
 
@@ -580,6 +602,72 @@ başarılı zamanlı koşu satır bırakmaz (son kontrol anı `integration_flows
 TRANSIT/STAGING hariç). Kesin 4xx reddi stok işaretine yazılır, aynı toplam yeniden denenmez; 401/429 koşuyu durdurur, sonra yeniden denenir.
 Miktarlar JSON'a ondalık metinden float aritmetiği olmadan sayı olarak yazılır (I-09). Gerçek Paraşüt'ün `new_total_inventory`/`quantity`
 için kesirli sayı kabulü UNKNOWN (B-110).
+
+*İki yönlü kart eşitleme (T-1140, kullanıcı kararı 31 Ekim):* bağlı her ürün / cari / depo için son eşitlemedeki iki tarafın kanonik
+özeti `integration_card_states`'te tutulur (0069). Kanonik alanlar: ürün ve depoda ad; caride ad, vergi no, vergi dairesi, e-posta,
+telefon, şehir, ilçe, adres, kısa ad. Değişen taraf bu özetle anlaşılır. Gönderim Paraşüt'e `PUT` ile gider (koşu başına en çok 50 kart,
+aynı 10 istek / 10 sn sınırı); boş alan gönderilmez (Paraşüt'teki değer silinmez; B-236), cari türü gönderilmez. Kesin 4xx kartı
+`UPDATE_REJECTED` ile bekletir ("Yeniden dene" Bekleyenler bölümünde). Ağ çağrıları veritabanı işlemi dışında, yazımlar kısa işlemde;
+stok tablosuna yazılmaz (I-04, I-15). Her çakışma çözümü `integration.conflict_resolved` audit'i yazar (kazanan, dayanak, iki zaman;
+değer ve dış kimlik yok). Gerçek Paraşüt'te PUT alanları, `updated_at` ve cari `archived` alanı UNKNOWN (B-235).
+
+```mermaid
+flowchart TD
+  A["Bağlı kart (ürün / cari / depo)"] --> Y{"Akış yönü?"}
+  Y -- "Paraşüt'ten al (PULL)" --> P1["Paraşüt değeri yazılır<br/>hiçbir şey gönderilmez"]
+  Y -- "Etkin'den gönder (PUSH)" --> P2{"Yerel taraf son eşitlemeden<br/>beri değişti mi?"}
+  P2 -- Evet --> G["PUT ile Paraşüt'e gönder"]
+  P2 -- Hayır --> N["Değişiklik yok"]
+  Y -- "İki yönlü (BOTH)" --> B{"Hangi taraf değişti?"}
+  B -- "Yalnız Paraşüt" --> P1b["Paraşüt değeri yazılır"]
+  B -- "Yalnız Etkin" --> G
+  B -- "İkisi de (ya da işaret yok ve farklı)" --> Z{"Son değişen kim?<br/>Paraşüt updated_at ↔ Etkin son<br/>entegrasyon dışı audit anı"}
+  Z -- "Paraşüt daha yeni / eşit / bilinmiyor" --> P1c["Paraşüt kazanır<br/>+ audit conflict_resolved"]
+  Z -- "Etkin daha yeni" --> G2["Etkin kazanır: aynı koşunun<br/>düzeltme turunda gönderilir<br/>+ audit conflict_resolved"]
+  G --> R{"Paraşüt yanıtı"}
+  G2 --> R
+  R -- "2xx" --> OK["İşaret yenilenir (iki özet)"]
+  R -- "Kesin 4xx" --> PK["Kart bekletilir: UPDATE_REJECTED"]
+  R -- "401 / geçici hata" --> ST["Koşu durur, sonra yeniden denenir"]
+```
+
+*Cari ve depo yaşam döngüsü (T-1140):* ürünle aynı kural (yukarıdaki durum şeması): yalnız OAuth bağlantısında ve ilgili akış Paraşüt'ten
+alırken; ≥30 sn arayla iki kimlik yokluğu silinme sayılır; fiziksel silme yok; `REMOVED` durumu yok (cari/depo arşive alınır).
+Kullanımdaysa PENDING: cari için açık sipariş, mal kabul ya da siparişten taslak/onaylı belge; depo için etkin raf yeri, sıfır olmayan
+bakiye, açık belge / kabul / iade / görev / sayım. Yalnız sistemin arşivlediği kart Paraşüt'te yeniden etkinleşince açılır; kullanıcı
+arşivden çıkarırsa ya da kendisi arşivlerse sistem sahipliği kalkar. Arşivli raf yerindeki stok Paraşüt'e giden toplama girmez.
+
+*Anlık bildirim (webhook, T-1138):* Paraşüt'te ürün ya da cari kartı değişince Etkin beklemeden öğrenir. Bildirim içeriği karta yazılmaz;
+kart Paraşüt'ten kimliğiyle yeniden okunur ve taramayla aynı kayıt yolundan (iki yönlü karar dahil) geçer.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as Paraşüt
+    participant W as wms. alıcı (POST /api/integrations/parasut/webhook)
+    participant DB as PostgreSQL
+    participant Q as Kuyruk (integration.webhook)
+    participant K as Worker
+    P->>W: Bildirim (şirket no, kayıt, imza)
+    W->>W: Yalnız wms. kipinde · IP hız sınırı · gövde ≤ 64 KiB
+    W->>DB: wms_probe.integration_webhook_lookup (yalnız bağlı + anlık bildirimi açık bağlantılar, en çok 5)
+    W->>W: İmza tenant'ın mühürlü anahtarıyla, sabit zamanlı
+    alt Bilinmeyen şirket / bozuk gövde / yanlış imza
+        W-->>P: 401 (tek biçim, ayırt edilemez)
+    else Geçerli
+        W->>DB: webhook_last_event_at + iş (tekil anahtar: bağlantı + kaynak + kimlik · processed_events)
+        W-->>P: 200
+        Q->>K: EVENT işi
+        K->>DB: Bağlantı CONNECTED mı, bağlayan Yönetici mi, akış Paraşüt → Etkin açık mı? (yazım anında yeniden)
+        K->>P: Kartı kimliğiyle yeniden oku
+        alt Kart var
+            K->>DB: syncRemoteCard (iki yönlü kural · Etkin daha yeniyse LOCAL_NEWER, uygulanmaz)
+        else 404
+            K->>DB: İlk yokluk yazılır · 31 sn sonra yeniden sorulur, ikinci 404'te arşiv / PENDING
+        end
+    end
+    Note over K,P: Kademe: anlık bildirim ACTIVE iken ürün/cari taraması 15 dk, depo 3 dk · değilse 30 sn.<br/>Kayıt işi bağlanınca hemen, ACTIVE iken günde bir, OFF/FAILED iken saatte bir.
+```
 
 ---
 
@@ -710,7 +798,8 @@ Doğal Türkçe ses (`/tts`, T-1106) worker değil, ayrı ses servisidir.
 | `support.notify` | Yeni destek talebinde | Operatöre WhatsApp kısa mesajı (CallMeBot; ayar yoksa atlanır) | (bir kez gönderildi kaydı) | `jobs/support-notify.ts` | [TAMAMLANDI] |
 | `stock.document.post` | Büyük (eşik üstü) stok belgesi kesinleştirilince | Belgeyi istek sahibi adına tek işlemde işler | `stock_documents`, `stock_ledger`, `stock_balances` | `jobs/post-stock-document.ts` | [TAMAMLANDI] |
 | `stock.consistency.check` + zamanlayıcı | Açılışta bir + saatte bir, her aktif firma için | Stok defteri ile bakiye tutarlı mı denetler; sorun varsa alarm logu | (okuma) | `jobs/stock-consistency.ts` | [TAMAMLANDI] |
-| `integration.sync` + zamanlayıcı | Açılışta bir + **30 saniyede bir** (T-1066; önce saatlikti); akış açılınca, ilk OAuth bağlantısında veya "Şimdi çalıştır" | ERP kart/stok/irsaliye eşitlemesi, ürün kaynak bilgisi ve yaşam döngüsü; bağlantı başına tek iş (`singletonKey`), koşu başına sayfa/gönderim üst sınırları | `integration_*`, `external_refs`, `items.source_*`, katalog tabloları | `jobs/integration-sync.ts` | [TAMAMLANDI] |
+| `integration.sync` + zamanlayıcı | Zamanlayıcı **30 saniyede bir** uyanır (T-1066). Gönderen akışlar (stok, irsaliye, yalnız gönderen kart) her tik; Paraşüt'ten alan ürün/cari akışı anlık bildirim ACTIVE iken 15 dk'da bir, depo 3 dk'da bir (T-1138), değilse 30 sn. Ayrıca akış açılınca, ilk OAuth bağlantısında, "Şimdi çalıştır"da | ERP kart eşitlemesi (iki yönlü karar + düzeltme turu, T-1140), stok toplamı ya da irsaliye (ikisi birlikte değil, T-1135), ürün kaynak bilgisi, ürün/cari/depo yaşam döngüsü; koşu başında bakım (40 dk'yı aşan RUNNING → TIMEOUT, 7 günden eski biten koşular budanır); bağlantı başına tek iş (`singletonKey`), koşu başına sayfa/gönderim üst sınırları | `integration_*` (0069 `integration_card_states` dahil), `external_refs`, `items.source_*`, katalog tabloları | `jobs/integration-sync.ts` | [TAMAMLANDI] |
+| `integration.webhook` (T-1138) | EVENT: Paraşüt bildirimi gelince · REGISTER: bağlanınca hemen, ACTIVE iken günde bir, OFF/FAILED iken saatte bir | EVENT: tek kartı Paraşüt'ten yeniden okuyup taramayla aynı yoldan yazar (yazım anında bağlantı + bağlayan + yön yeniden doğrulanır; tekrar teslim `processed_events` ile tek etki; geçici DB hatasında kuyruk yeniden dener). REGISTER: ürün/cari × create/update/delete kayıtlarını kurar/uzlaştırır, Paraşüt'te silineni yeniden kurar | `integration_webhooks`, `integrations.webhook_*`, `processed_events`, katalog tabloları | `jobs/integration-webhook.ts`, domain `webhook.ts`, `webhook-register.ts` | [TAMAMLANDI] (kod; gerçek hesapta anahtar/imza UNKNOWN, B-229) |
 | Terk edilmiş sayım alarmı | Açılışta bir + saatte bir | Süresi (varsayılan 8 saat) aşan açık sayımları alarm olarak loglar; sayımı kapatmaz | (okuma) | `jobs/count-abandon.ts` | [TAMAMLANDI] |
 | Kuyruk bakımı | Periyodik | Çöken işte asılı kalan işleri yeniden dener veya başarısız sayar; başarısız stok belgesini serbest bırakır | pg-boss tabloları | `jobs/queue-maintenance.ts` | [TAMAMLANDI] |
 | Worker nabzı | Periyodik | Sağlık satırını günceller; `/api/health` buna bakar | `wms_health.worker_heartbeats` | `jobs/worker-heartbeat.ts` | [TAMAMLANDI] |
@@ -734,6 +823,8 @@ flowchart TB
     J -. e-posta .-> M[Resend]
     J -. WhatsApp .-> C[CallMeBot]
     J -. ERP .-> P[Paraşüt API]
+    P -. "anlık bildirim (webhook)" .-> WH[wms. alıcı ucu]
+    WH --> Q
 ```
 
 ---
@@ -741,10 +832,13 @@ flowchart TB
 ## Bu bölümün eksik ve bekleyen işleri (Gap)
 
 **Onaylı tuvalle fark (29 Ekim güncellemesi, `Standart*.dc.html`)**
-- Entegrasyon ekranının alt bölümlü düzeni ve her zaman görünen yön seçimi **kodda** (T-1112, ortak `kalip/ayar.tsx`); Depolar için "iki
-  yönlü" kullanıcı kararıyla gösteriliyor. Excel toplu işlem hâlâ ayrı ekran (Bağlantı bölümünden bağlantı; B-196).
-- "Alan sahipliği" (yalnız "Yakında"), "Pasif ve arşiv" (sayı, politika, PASİF durumu) ve "Bekleyenler ve hatalar" (kayıt bazlı eşitleme
-  durumu, CHECK kararı) bölümlerinin verisi yok (B-200, B-170, B-113).
+- Entegrasyon ekranının alt bölümlü düzeni, her zaman görünen yön seçimi, yönün sonuç cümlesi ve dolu katalogda onay **kodda** (T-1112,
+  T-1134, T-1136, ortak `kalip/ayar.tsx`); Depolar için "iki yönlü" kullanıcı kararıyla gösteriliyor. Excel kaynak kartı Paraşüt'ün yanında
+  (T-1137) ama aktarım hâlâ ayrı ekranda çalışır (B-196).
+- "Alan sahipliği" (yalnız "YAKINDA"; B-200, B-238) ve "Pasif ve arşiv" (sayı, politika seçimi, PASİF durumu; B-200, B-170, B-172)
+  bölümlerinin verisi yok. "Bekleyenler ve hatalar" kayıt bazlı listesi ve çözüm düğmeleri T-1137 ile geldi (B-113 BİTTİ); kalan:
+  Paraşüt irsaliye numarasını bağlama (B-227), bekletilen kartın eşlemesini ekrandan düzeltme (B-228, B-224).
+- "Gelişmiş: kendi Paraşüt uygulaman" kartı ve 0068 "Yeniden bağlan" bandı tuvalde yok (B-220, B-233); bilinçli farklar DESIGN-PARITY'de.
 - Ayarlar'da "İş akışı" (teslimat yolu, iş adımları, teslim teyidi) ve "Etiket ve yazıcı" sekmeleri yok — ayar verisi yok (B-171, B-166).
   Mevcut iş akışı ayarları (kabul QC, sayım bırakma, vardiya, görev ayrılığı) İş akışı sekmesine taşınabilir (yalnız arayüz).
 - Satış faturasından iş akışı yok (Paraşüt'te sipariş kaynağı yok; B-116).
@@ -769,21 +863,24 @@ flowchart TB
 - Online tahsilat yok: tahakkuk elle açılıyor, ödeme elle işaretleniyor; otomatik aylık tahakkuk, kartla abonelik ve "Hatırlat" yok
   (B-40).
 - Deneme süresi bitince ne olacağı (otomatik askıya alma / uyarı e-postası) kodda yok; deneme bitişi panelde görünür ve elle uzatılır.
-- Paraşüt: canlıda doğrulanan yalnız OAuth bağlantısı + miktarsız ürün kartı alma ve yaşam döngüsü. Cari/depo/stok/irsaliye akışlarının
-  gerçek hesapla doğrulanması (irsaliye deposu/cari türü, 429 hız sınırı) bekliyor (B-110); okutmalı Devir ve kalan ürün aktarım adımları
-  B-182 planında.
-- Eşitleme ürün adını sessizce geri yazar; alan sahipliği ayarı yok. Ürün kartında Paraşüt sekmesi (bağlı ürün, son eşitleme, Tekrar dene,
-  elle eşleştir) yok (B-170).
-- İrsaliye kuyruğunda "CHECK" (sonucu belirsiz) duruma düşen kayıt için ekranda elle karar düğmesi yok; yalnız sayı bandı (B-113).
+- Paraşüt: gerçek hesapla doğrulanan yalnız 28 Ekim'deki bağlantı + miktarsız ürün kartı alma ve yaşam döngüsü. Bekleyen doğrulamalar:
+  ortak uygulama kaydı ve sunucu değerleri (sahipte; B-219), anlık bildirim anahtarı/imza biçimi (B-229), iki yönlü PUT alanları,
+  `updated_at` ve cari `archived` (B-235), irsaliye deposu/cari türü, kesirli miktar, 429 (B-110); okutmalı Devir ve kalan ürün aktarım
+  adımları B-182 planında.
+- İki yönlü kural kart başınadır ("son değişen kazanır"); alan bazlı sahiplik ayarı yok (B-238). Ürün kartında Paraşüt sekmesi bilgi
+  gösterir; son eşitleme, Tekrar dene, elle eşleştir yok (B-170). Etkin'de boşaltılan cari alanı Paraşüt'te silinmez (B-236); etkin raf
+  yeri olan depo Paraşüt'te silinse de PENDING kalır (B-237); cari formunda "Paraşüt'e de gider" uyarısı yok (B-240).
+- 0068 ile bağlantısı kesilen müşteriye ekran dışında haber yok (zil / e-posta; B-232). Webhook kaydı sürerken yeniden bağlanma durumu
+  doğrulanmadı (B-234). Ortak uygulama sırrının bağlantı kutusuna kopyalanması ve yaşam döngüsü bağının zaman penceresiyle kurulması
+  iyileştirilecek (B-221, B-222).
 - Paraşüt açılış stoku tek rafa toplam yazar; depo bazlı miktar ve 200 satırdan büyük açılış yok (B-139).
 - Panel hata kodları kullanıcı diline çevrilmemiş (ör. `FORBIDDEN/MFA_REQUIRED` gibi teknik kod görünebilir) (B-66).
 - Kullanıcı başına dil tercihi yok; saat dilimi arayüzde sabit İstanbul gösteriliyor (B-105).
 - İşlem rehberlerinin "görüldü" bilgisi sunucuda değil tarayıcıda; diğer ekranlar için otomatik ilk kullanım rehberi eksik (B-75).
 - Aynı e-postadan gelen yeni demo talebi panelde görünmüyor (sessiz tekilleştirme); "tekrar talep etti" kullanıcı kararı bekliyor (B-157).
-- `main`'de olup STATE'te canlı kaydı olmayanlar: odaklı Rehber (T-1100), işlem rehberleri (T-1105, T-1124, T-1130), Entegrasyon ekranı
-  (T-1104, T-1112), Etkin sesli yanıt ayarı (T-1109, 0063), cari ayrıntıları (T-1117, 0064), ürün sabit alanları (T-1129, 0065). Gerçek
-  iPhone Safari kontrolü kullanıcıdan bekleniyor (B-197, B-210).
+- Canlılık (STATE, 1 Kasım): canlı main `008070a`, şema 0070; bu bölümdeki işlerin hepsi o yayının içindedir. Gerçek iPhone Safari
+  kontrolü kullanıcıdan bekleniyor (B-197, B-210); Entegrasyonlar ekranının telefon düzeni (T-1134, T-1136) yalnız Chromium'da sınandı.
 
 **Yetki / güvenlik**
 - Panel ve entegrasyon için ayrıntılı güvenlik bulguları bu herkese açık belgede yazılmaz; genel başlıklar BACKLOG'daki 🔒 satırlarındadır
-  (ör. 🔒 B-10, 🔒 B-17, 🔒 B-67).
+  (ör. 🔒 B-10, 🔒 B-17, 🔒 B-67; entegrasyon için 🔒 B-231, 🔒 B-239).

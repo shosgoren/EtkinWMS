@@ -4,7 +4,7 @@ Bu bölüm depoda **her gün yapılan işleri** anlatır: ana ekran, görevler, 
 sipariş–toplama–sevkiyat, sayım, üretim, iade, işlem kaydı (Kim ne yaptı?), raporlar ve sesli komut (Etkin).
 
 Kaynak: `main` dalındaki kod — **main 2022915 · 29 Ekim 2026** (ilk sürüm 36f3a13 · 23 Ekim'den yazılmıştı; T-1029…T-1110 28 Ekim'de,
-T-1111…T-1131 29 Ekim'de işlendi). Tahmin yok; her satırda dosya yolu verildi. Web yolları `apps/web/app/t/[slug]/` altına göredir. Mal kabul, stok listesi,
+T-1111…T-1131 29 Ekim'de işlendi; **1 Kasım kontrolü, main `008070a`:** T-1133…T-1142 bu bölümün stok yazan işlemlerine dokunmadı; yalnız ana ekran "Excel'den aktar" alt yazısı (T-1134) ve Etkin'in "yetkiler" komutu (T-1142) değişti). Tahmin yok; her satırda dosya yolu verildi. Web yolları `apps/web/app/t/[slug]/` altına göredir. Mal kabul, stok listesi,
 ürün kartı ve stok belgeleri (giriş/çıkış formu) **2B** bölümündedir; burada yalnız bağlantı noktası anılır.
 
 ## Etiketlerin anlamı
@@ -170,7 +170,7 @@ Bütün kalıp ekranları (`kalip/ekran.tsx`) ve ana ekran panosu (`pano/pano-sh
 | Bekleyen işler: "Sevkiyat bekliyor" | Sayı kutusu (bağlantı) | Dokunulur → `/shipping` | `getBoard` → `bekleyenler` (`pano/ana-ekran.ts`) | Okur: `sales_orders.status='OPEN'`, `sales_order_lines` | Alt yazı en eski siparişin günü; siparişte sevk tarihi kolonu yok (B-205, G-41) | [TAMAMLANDI] (T-1115) |
 | Bekleyen işler: "Sayım onay bekliyor" | Sayı kutusu | Dokunulur → Sayımlar ya da `/tasks?kind=COUNT` | `getBoard` | Okur: `count_sessions.status='SUBMITTED'` | Hedef `document.approve` iznine göre; kutuda raf/koridor bilgisi yok (B-205) | [TAMAMLANDI] (T-1115) |
 | Bekleyen işler: "Ürün kritik stokta" | Sayı kutusu | Dokunulur → `/stock` | `getBoard` | Okur: `item_stock_policies.min_quantity`, `stock_balances.quantity` | Kritik = eldeki < min × 0,35; minimum giren ekran yok (G-20) | [TAMAMLANDI] (T-1115) |
-| İşler ızgarası (varsayılan 8 kutu) | Kutu ızgarası | Dokunulur → ilgili ekran | `anaIsler` (`pano/ana-ekran.ts`) + `kabukModules` (`kabuk/modules.ts`) | — | Modüller süzgeci; Depoya mal geldi `stock.post` + ekran `receive`, Excel'den aktar `data.import`; yetkisiz kutu gizli | [TAMAMLANDI] (T-1115) |
+| İşler ızgarası (varsayılan 8 kutu) | Kutu ızgarası | Dokunulur → ilgili ekran | `anaIsler` (`pano/ana-ekran.ts`) + `kabukModules` (`kabuk/modules.ts`) | — | Modüller süzgeci; Depoya mal geldi `stock.post` + ekran `receive`, Excel'den aktar `data.import` (alt yazı: kurulum yolculuğunda kart kaynağı Paraşüt seçildiyse "Veri kaynağı · Paraşüt", T-1134; gerçek bağlantı durumundan okunması B-223); yetkisiz kutu gizli | [TAMAMLANDI] (T-1115) |
 | Düzenle: sırala (sürükle / oklar), kaldır (✕) | Düzenleme kipi | Sürüklenir / dokunulur, "Bitti" | `pano/ana-isler.tsx` + saf işlevler `pano/ana-sira.ts` | — (yalnız bu cihaz, `localStorage`; depolama yoksa oturumda) | Yalnız görünürlük; hedef sayfa erişimi ayrıca denetlenir; tamam sesi | [TAMAMLANDI] (T-1115, T-1128) |
 | Düzenle: **İş ekle** | Ortak aramalı seçim sayfası (`KalipSecimSayfasi`) | İş seçilir → sona eklenir | `anaIsAdaylari` (sunucuda yetkiyle süzülmüş adaylar) | — | Izgarada olmayan izinli işler (ikon + ad + alt yazı); YAKINDA, Ana ekran ve görünüm geçişi hariç; ızgara boşsa Düzenle dışında da görünür | [TAMAMLANDI] (T-1128) |
 | Rehber halka simgesi | Simge | Dokunulur → kurulum yolculuğu | `getSetupJourney` (`packages/domain/src/onboarding/journey`) | Okur: kurulum durumu | Kurulum bitince görünmez; okunamazsa çizilmez, ana ekran düşmez | [TAMAMLANDI] (T-1100) |
@@ -651,7 +651,7 @@ sequenceDiagram
   Etkin yetki grubu izni (B-131), canlı yazı / arama mikrofonu (B-132). **Doğal komutlar (T-1110, PR 245)**: "bekleyen işim var mı / işlerim /
   görevim var mı" kişinin görevlerini söyler; ekli ekran adları ("ürünleri aç", "kullanıcı ayarlarına git", "Ayarlar") ekran sözlüğüyle
   (kök öneki + eş anlamlı + alt sekme, fiil başta/sonda) anlaşılır. **Yönlendirme (T-1118):** "entegrasyon / bağlantı / Paraşüt" yeni
-  Entegrasyonlar ekranını (`/integrations`), "excel" Ayarlar › Bağlantılar (Excel aktarımı) ekranını açar; yetki yine Ayarlar modülünden.
+  Entegrasyonlar ekranını (`/integrations`), "excel" Ayarlar › Bağlantılar (Excel aktarımı) ekranını açar; yetki yine Ayarlar modülünden. **T-1142:** "yetkiler / kullanıcı yetkileri / yetki ayarları" yeni Yetkiler ekranını (`/yetkiler`) açar (ekip modülü izniyle).
   **Ses servisi belleği** (T-1114, T-1125, T-1126): imajda iş parçacığı ve bellek arenası sabit, şeffaf büyük sayfalar süreçte kapalı
   (THP), CTranslate2 arka ucu her işlemcide aynı (`CT2_USE_MKL=0`); CI bellek sınırı 1100 MiB değişmedi, canlı kapsayıcı sınırı 1280 MiB.
   Canlıda bellek izlemesi ve gerçek Intel sunucuda ölçüm yok. Serbest doğal dil için sunucuda yerel küçük dil modeli kararı kullanıcıda (B-204). Ses servisi çalışmıyorsa Etkin "şu an kullanılamıyor"

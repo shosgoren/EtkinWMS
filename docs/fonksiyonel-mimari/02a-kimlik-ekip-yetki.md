@@ -1,6 +1,6 @@
 # 2A. Kimlik, ekip ve yetki modülleri
 
-> **Kaynak:** main 8e2710d · 28 Ekim 2026 (ilk sürüm main 36f3a13 · 23 Ekim 2026). Her satır bu koddan yeniden doğrulandı. **29 Ekim kontrolü (main 2022915):** T-1111…T-1131 bu dosyanın ekranlarına, yetki kurallarına ve tablolarına dokunmadı; yalnız Ayarlar › Entegrasyonlar sekmesinin hedefi değişti (aşağıda) ve ana ekran "İşler" ile yüzen kısayol aynı yetki süzgecini (rol + özel grup yetkisi + grubun görünür ekranları) kullanıyor (02c Modül 1).
+> **Kaynak:** main 8e2710d · 28 Ekim 2026 (ilk sürüm main 36f3a13 · 23 Ekim 2026). Her satır bu koddan yeniden doğrulandı. **29 Ekim kontrolü (main 2022915):** T-1111…T-1131 bu dosyanın ekranlarına, yetki kurallarına ve tablolarına dokunmadı; yalnız Ayarlar › Entegrasyonlar sekmesinin hedefi değişti (aşağıda) ve ana ekran "İşler" ile yüzen kısayol aynı yetki süzgecini (rol + özel grup yetkisi + grubun görünür ekranları) kullanıyor (02c Modül 1). **1 Kasım kontrolü (main 008070a):** T-1141 ürün / cari / depo / raf yeri yazmalarını genel `settings.manage` yerine **bölüm × işlem** anahtarına bağladı (yetkisiz kullanıcı düğmeyi kilitli + nedenli görür); T-1142 yeni **Yetkiler** ekranını getirdi (her yetki aç/kapa, anında kayıt), 12 kart anahtarı gruba verilebilir oldu (migration 0070) ve `items.*` / `parties.*` / `warehouses.*` iki adımlı doğrulama ister. Aşağıdaki matris, Yetki grupları ve yeni Yetkiler modülü buna göre güncellendi.
 >
 > **Bu dosya neyi anlatır?** Kullanıcının sisteme nasıl girdiğini, çalışma alanının nasıl kurulduğunu, ekibe kişinin nasıl eklendiğini ve kimin neyi yapabildiğini ekran ekran anlatır. Her ekranda "bu butona basılınca hangi sunucu işlemi çalışır, veritabanında hangi tabloya ne yazılır, hangi kural kontrol edilir" sorularının cevabı vardır.
 >
@@ -14,7 +14,7 @@
 > - Hassas yönetici işlemleri (rol değiştirme, çıkarma, cihaz onayı, kod yenileme, grup değiştirme, görev ayrılığı ayarı) için son 10 dakika içinde kimlik doğrulanmış olmalıdır (`REAUTH_WINDOW_SEC`). Değilse ekranda "kimliğini yeniden doğrula" yazar (`RECENT_AUTH_REQUIRED`) ve `/login?reauth=1&next=…` bağlantısı verilir. Bu girişte "30 gün hatırla" çerezi yok sayılır, 6 haneli kod yeniden sorulur.
 > - **Demo alanında** üye ekleme, çıkarma, QR paylaşma ve grup değiştirme kapalıdır (herkese açık demo hesabı yetki yükseltemesin diye). Demo alanında 2FA zorunluluğu da yoktur.
 >
-> **Canlı durumu:** Bu dosyadaki ekranların kodu main dalındadır. main'e birleşen kod otomatik yayına çıkar. Saha girişi (0044/0045), yetki grupları ve ekibe katılma (0051/0052, 19 Ekim) canlıdadır (`docs/STATE.md`). 23 Ekim sonrası gelenler (2FA kurulum sihirbazı T-1034, mağaza QR'ı T-1043, Ayarlar sekmeleri T-1046) STATE'te PR olarak kayıtlıdır; ayrı canlı doğrulama kaydı yoktur (UNKNOWN). Ekran bazında canlı tıklama testi bu belgede yapılmadı.
+> **Canlı durumu:** Bu dosyadaki ekranların kodu main dalındadır. main'e birleşen kod otomatik yayına çıkar. Saha girişi (0044/0045), yetki grupları ve ekibe katılma (0051/0052, 19 Ekim) canlıdadır (`docs/STATE.md`). 23 Ekim sonrası gelenler (2FA kurulum sihirbazı T-1034, mağaza QR'ı T-1043, Ayarlar sekmeleri T-1046) STATE'te PR olarak kayıtlıdır; ayrı canlı doğrulama kaydı yoktur (UNKNOWN). T-1141 (31 Ekim) ve T-1142 (1 Kasım, migration 0070) STATE'e göre canlıdadır (canlı main `008070a`, şema 0070). Ekran bazında canlı tıklama testi bu belgede yapılmadı.
 
 ## Modül dizini
 
@@ -32,8 +32,9 @@
 | 10 | Cihazlar (ortak/kişisel cihaz kaydı) | `/t/<alan>/members/devices` | [TAMAMLANDI] |
 | 11 | Ekibe katılma QR'ı ve onaylar | `/t/<alan>/members/join` | [TAMAMLANDI] |
 | 12 | Yetki grupları | `/t/<alan>/groups` | [TAMAMLANDI] |
-| 13 | Ayarlar › Kullanıcılar ve yetki sekmesi | `/t/<alan>/settings?sekme=kullanici` | [TAMAMLANDI] (T-1046) |
-| 14 | Rol / izin matrisi (kural tablosu, ekran değil) | `packages/domain/src/identity/permissions.ts` | [TAMAMLANDI] |
+| 13 | Yetkiler (her yetki aç/kapa: grup + kişi görünümü) | `/t/<alan>/yetkiler` | [TAMAMLANDI] (T-1142; tuvalde ayrı çizim yok, STANDART §5'ten türetildi — B-246) |
+| 14 | Ayarlar › Kullanıcılar ve yetki sekmesi | `/t/<alan>/settings?sekme=kullanici` | [TAMAMLANDI] (T-1046; T-1142 Yetkiler bağlantısı) |
+| 15 | Rol / izin matrisi + kart yetkileri (kural tablosu, ekran değil) | `packages/domain/src/identity/permissions.ts` | [TAMAMLANDI] (T-1141 kart anahtarları, T-1142 katalog + şablonlar) |
 
 ---
 
@@ -309,10 +310,56 @@ stateDiagram-v2
 | Grup listesi + hazır (rol) grupları | Liste | Görüntülenir | `listGroups` (`users.manage`) | Okur: `permission_groups`, `member_groups` | Hazır gruplar rolden gelir, değiştirilemez. Düzenleme yalnız hesap sahibine ve demo olmayan alanda açılır (`canEdit`). | [TAMAMLANDI] |
 | "YENİ GRUP" / gruba dokun → Ad, Renk | Input + renk seçimi | Doldurulur | — | — | Ad 1–60 karakter, alan içinde tekil. Renk yalnız 5 tasarım renginden biri. | [TAMAMLANDI] |
 | Ekranlar (Giriş görevi, Çıkış görevi, Transfer, Üretim, Sayım, Etiket, Raporlar, Sorun) | Çoklu seçim | Seçilir | — | `permission_groups.screens` | Kapalı liste: 8 ekran (DB CHECK) | [TAMAMLANDI] |
-| Ek yetkiler (stok işle, belge oluştur, onayla, sayım farkı onayla, ters kayıt, Excel aktarımı) | Çoklu seçim | Seçilir | — | `permission_groups.grants` | Kapalı liste: 6 yetki. **Ekip yönetimi ve ayarlar gruba verilemez.** | [TAMAMLANDI] |
-| "DEVAM: KİŞİLER" → "KAYDET (n)" | Buton | Tıklanır | `saveGroupAction` → `saveGroup`; ardından kişi başına `setMemberGroupAction` | `permission_groups` (yeni ya da güncelleme: `name`, `color`, `screens`, `grants`, `version` +1, `updated_at`); `member_groups`; etkilenen üyelerin `tenant_memberships.roles_version` +1 | **Yalnız hesap sahibi** ve son 10 dk içinde kimlik doğrulanmış olmalı. Sahip gruba konamaz; arşivli gruba kişi atanamaz. Saha hesabına MFA gerektiren yetki (onay/ters kayıt/aktarım) verilemez; atlanan kişiler ekranda listelenir. Grup başkası tarafından değiştirildiyse "Grup bu arada değişti" (sürüm çakışması). | [TAMAMLANDI] |
+| Ek yetkiler (sihirbazda güç kartları: stok işle, belge oluştur, onayla, sayım farkı onayla, ters kayıt, Excel aktarımı; tek tek anahtarlar Yetkiler ekranında) | Çoklu seçim | Seçilir | — | `permission_groups.grants` | Kapalı liste: 6 işlem yetkisi + 12 kart anahtarı (`items|parties|warehouses|locations` × `create|edit|archive`; 0070, en çok 18). **Ekip yönetimi ve ayarlar gruba verilemez.** T-1142: sihirbaz kaydı yalnız değişen güç kartlarının yetkilerini ekler/çıkarır; Yetkiler ekranında tek tek açılan anahtarlar silinmez | [TAMAMLANDI] |
+| "DEVAM: KİŞİLER" → "KAYDET (n)" | Buton | Tıklanır | `saveGroupAction` → `saveGroup`; ardından kişi başına `setMemberGroupAction` | `permission_groups` (yeni ya da güncelleme: `name`, `color`, `screens`, `grants`, `version` +1, `updated_at`); `member_groups`; etkilenen üyelerin `tenant_memberships.roles_version` +1 | **Yalnız hesap sahibi** ve son 10 dk içinde kimlik doğrulanmış olmalı. Sahip gruba konamaz; arşivli gruba kişi atanamaz. Saha hesabına MFA gerektiren yetki (onay/ters kayıt/aktarım ve T-1142'den beri ürün/cari/depo kart anahtarları) verilemez; grup kilidinden sonra gruptaki saha hesabı yeniden okunur (eşzamanlı atamaya karşı); atlanan kişiler ekranda listelenir. Grup başkası tarafından değiştirildiyse "Grup bu arada değişti" (sürüm çakışması). | [TAMAMLANDI] |
 | "Arşivle" / "Geri al" | Buton | Tıklanır | `archiveGroupAction` → `setGroupArchived` | `permission_groups.archived_at` | Silinmez, arşivlenir | [TAMAMLANDI] |
 | Ekran listesinin etkisi | Menü | — | `kabukModules` | — | Listede olmayan ekranın **menü kutusu çizilmez**. Not: bu bir görünüm süzgecidir. Asıl işlem yetkisini rol + ek yetki belirler (gap listesinde). | [TAMAMLANDI] |
+
+---
+
+## Modül: wms. / Yetkiler (`/t/<alan>/yetkiler`)
+- **Modül Durumu:** [TAMAMLANDI] (T-1142, PR #279, migration 0070; STATE'e göre canlı 1 Kasım). Tuvalde ayrı çizim yok: STANDART §5 ayar kalıbından türetildi (en yakın örnek Ayarlar › Entegrasyonlar); tuvale eklenmesi B-246.
+- **Ekranın amacı:** Kullanıcı kararı 31 Ekim: "yetkilendirme pratik ve akıcı olsun, bütün yetkiler aç/kapa ile ayarlansın". Hesap sahibi her özel grubun yetkilerini **bölüm × işlem** satırlarında tek dokunuşla açar/kapar; ayrıca bir kişinin her yetkisinin **nereden geldiğini** (rolünden / grubundan / kapalı) görür. Kaydet düğmesi yoktur: her dokunuş anında kaydedilir, balon + ses verir; istek reddedilirse (ör. ağ koptu) satır eski hâline döner.
+- **Dosyalar:** `apps/web/app/t/[slug]/yetkiler/{page,yetkiler-view}.tsx`, `yetkiler/katalog.ts` (istemci tipleri; domain ile derleme zamanı eşlik testi `katalog.test.ts`), `yetkiler/katalog-sunucu.ts`; sunucu eylemleri `groups/actions.ts` (`changeGroupGrantsAction`, `setMemberGroupAction`) ve `members/actions.ts` (`changeRoleAction`); domain `packages/domain/src/identity/permissions.ts` (`PERMISSION_CATALOGUE`, `PERMISSION_PRESETS`, `permissionSource`), `identity/groups.ts` (`changeGroupGrants`, `nextGrants`); ortak kalıp parçası `kalip/ayar.tsx` (`KalipAnahtarKumesi`). Ses: "yetkiler", "kullanıcı yetkileri", "yetki ayarları" bu ekranı açar (`packages/shared/src/voice/acilis.ts`).
+- **Düzen:** solda alt bölüm listesi = her özel grup + **Kişiler**; sağda seçili bölüm. Grup bölümünde arama, hazır şablon düğmeleri ve 10 bölüm (Ürünler, Cariler, Depolar, Raf yerleri, Stok işlemleri, Belgeler, Excel, Raporlar, Ayarlar, Entegrasyon); her bölümde işlem satırları ve "Hepsini aç/kapat". Alt çubuk ana işlemi **GRUP EKLE** → grup sihirbazı (`/groups?new=1`).
+
+| UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Sol liste (gruplar + Kişiler) | Alt bölüm listesi | Seçilir | `listGroups` (`users.manage`) | Okur: `permission_groups`, `member_groups`, `tenant_memberships`, `membership_roles` | `users.manage` yoksa kilitli tam ekran (`KalipKilitliEkran`); düzenleme yalnız hesap sahibinde ve demo olmayan alanda (`canEdit` yalnız gösterim; asıl karar domain'de) | [TAMAMLANDI] |
+| Yetki satırı aç/kapa (bölüm × işlem) | Anahtar (`KalipAnahtarKumesi`) | Dokunur | `changeGroupGrantsAction` → `changeGroupGrants` (küme işlemi: ekle/çıkar, sürüm istemez) | `permission_groups.grants`, `version` +1; gruptaki üyelerin `tenant_memberships.roles_version` +1; audit `group.updated` (`via: permission_screen`, önceki/yeni yetki listesi) | Yalnız hesap sahibi + son 10 dk kimlik doğrulaması (`ownerWrite`); girdi kapalı liste (zod `GRANTABLE` + domain `nextGrants` + DB CHECK 0070); **idempotent**: değişiklik yoksa yazım ve audit yok; arşivli grup reddedilir; eklenen yetki MFA istiyor ve grupta saha hesabı varsa `FIELD_MEMBER_MFA` | [TAMAMLANDI] |
+| Bölüm başlığında "Hepsini aç / kapat" | Düğme | Dokunur | Aynı eylem (bölümün bütün verilebilir anahtarları tek istekte) | Aynı | Kilitli satırlar atlanır | [TAMAMLANDI] |
+| Hazır şablonlar: Depo sorumlusu · Toplayıcı · Sayımcı · Kart sorumlusu · Salt okunur | Düğme grubu | Seçer | Aynı eylem (şablon ile mevcut küme arasındaki fark) | Aynı | Grup rolün **üstüne** eklenir. Depo sorumlusu = okut, belge oluştur/onayla, sayım farkı onayı, ters kayıt, ürün ekle/değiştir, depo değiştir, raf yeri ekle/değiştir/arşivle; Kart sorumlusu = 12 kart anahtarı; Salt okunur = ek yetki yok. Saha hesabı olan grupta MFA isteyen anahtarlar atlanır. Şablon tam eşleşirse seçili görünür | [TAMAMLANDI] |
+| Kilitli satırlar | Kilit + neden | — | — | — | `stock.view` herkeste açık; `settings.manage`, `users.manage`, `audit.view`, `takeout.request` yalnız Yönetici rolünde (gruba verilemez); saha hesabı olan grupta MFA isteyen yetki kilitli; diğer yöneticide bütün satırlar kilitli + "yalnız hesap sahibi" | [TAMAMLANDI] |
+| Kişiler › kişi kartı: rol seçimi | Seçim | Seçer | `changeRoleAction` → `changeRole` | `membership_roles`; `roles_version` +1; audit | Mevcut rol kuralları (son sahip/yönetici kuralı domain'de); hesap sahibinin rolü kilitli (kendi yönetici yetkisini kaldıramaz) | [TAMAMLANDI] |
+| Kişiler › kişi kartı: grup seçimi + "Rol varsayılanına dön" | Seçim + Düğme | Seçer / tıklar | `setMemberGroupAction` → `setMemberGroup` (Rol varsayılanı = gruptan çıkar) | `member_groups`; `roles_version` +1; audit | Kişi başına en çok bir grup; hesap sahibi gruba konamaz | [TAMAMLANDI] |
+| Kişiler › her yetkinin kaynağı | Liste | Görüntülenir | `permissionSource` (sunucuda hesaplanıp prop olarak gelir) | Okuma | "rolünden" / "<grup> grubundan" / "kapalı"; birden çok rol varsa birleşimi; **rolden fazlası** sarı çizgiyle işaretli. Kişiye özel istisna yok (model: rol + en çok bir grup; B-245) | [TAMAMLANDI] |
+| Alt çubuk GRUP EKLE | Ana işlem | Tıklar | `/groups?new=1` (grup sihirbazı) | — | Yalnız hesap sahibi | [TAMAMLANDI] |
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor S as Hesap sahibi
+    participant E as Yetkiler ekranı
+    participant A as changeGroupGrantsAction
+    participant D as Domain changeGroupGrants
+    participant DB as PostgreSQL
+    S->>E: "Ürün ekle" anahtarına dokunur
+    E->>E: Satırı hemen açık çizer (iyimser)
+    E->>A: ekle [items.create], çıkar []
+    A->>A: Köken + hız sınırı, users.manage ön denetimi
+    A->>D: ownerWrite (yalnız hesap sahibi, son 10 dk doğrulama)
+    D->>DB: Üyeleri ve grubu kilitle (sıra: üyelik → grup)
+    alt Değişiklik yok
+        D-->>E: changed:false (yazım ve audit yok)
+    else Eklenen MFA yetkisi + grupta saha hesabı
+        D-->>E: FIELD_MEMBER_MFA → satır geri döner, sarı balon
+    else Geçerli
+        D->>DB: permission_groups.grants (CHECK 0070) + roles_version +1 + audit group.updated
+        D-->>E: changed:true
+        E-->>S: Yeşil balon + ses
+    end
+    Note over E: Ağ hatasında satır eski hâline döner (iyimser istek geri alınır)
+```
 
 ---
 
@@ -326,6 +373,7 @@ stateDiagram-v2
 | Sekme şeridi (Firma / Kullanıcılar ve yetki / Entegrasyonlar / Görünüm) | Sekme | Tıklanır | Adres `?sekme=kullanici` (`router.replace`) | — | Firma, Kullanıcılar ve Görünüm aynı taslağın sekmeleridir: geçişte kaydedilmemiş değişiklik korunur ve "kaydetmeden çık" sorulmaz. Entegrasyonlar'a geçişte ortak çıkış koruması sorar. | [TAMAMLANDI] |
 | Kişiler ve yetki › "Kişiler · Ekle, yetki ver" | Bağlantı satırı | Tıklanır | `/t/<alan>/members` | — | Yetki kararı hedef ekranda verilir | [TAMAMLANDI] |
 | Kişiler ve yetki › "Yetki grupları · Kim ne yapabilir" | Bağlantı satırı | Tıklanır | `/t/<alan>/groups` | — | Hedef ekran `users.manage` ister | [TAMAMLANDI] |
+| Kişiler ve yetki › "Yetkiler" | Bağlantı satırı | Tıklanır | `/t/<alan>/yetkiler` | — | Hedef ekran `users.manage` ile okunur, yalnız hesap sahibi yazar (T-1142) | [TAMAMLANDI] |
 | Güvenlik › "İki adımlı doğrulama" AÇIK / KAPALI | Bilgi rozeti | — | Sayfa yüklenirken `principal.mfaVerified` | Okur: `sessions.mfa_verified_at` | Yalnız gösterir; buradan kurulum, kapatma ya da yedek kod yenileme yapılmaz | [TAMAMLANDI] |
 | Güvenlik › Parola "DEĞİŞTİR" → "Bağlantı gönder" | Satır + bağlantı | Tıklanır | `/reset-password` sayfasına gider → `POST /api/auth/request-password-reset` | Bkz. Modül 1 ("Parolamı unuttum") | Yeni parola e-postadaki bağlantıyla belirlenir; ekranda doğrudan parola değiştirme yok | [TAMAMLANDI] |
 | Firma › "Görev ayrılığı · Hazırlayan onaylamasın" + alt çubuk KAYDET | Anahtar + Buton | Kaydedilir | `saveSettingsFormAction` → `setSeparationOfDuties` | `tenant_settings.separation_of_duties` | `settings.manage` + son 10 dk kimlik doğrulama; doğrulanmamışsa diğer alanlar kaydedilir, ekranda yeniden giriş bağlantısı çıkar (`sod=reauth`). | [TAMAMLANDI] |
@@ -349,17 +397,23 @@ Ayarlar ekranının verisi `settings.manage` ile okunur; izni olmayan kişide ay
 | `reversal.create`: ters kayıt (yanlış işlemi geri alma) | ✅ | ✅ | — | — | — | ✅ (2FA ister) |
 | `count_diff.approve`: sayım farkını onaylama | ✅ | ✅ | — | — | — | ✅ (2FA ister) |
 | `takeout.request`: çıkış talebi | ✅ | — | — | — | — | — |
-| `settings.manage`: ayarlar, entegrasyonlar, görev ayrılığı | ✅ | — | — | — | — | ❌ (yalnız Yönetici) |
+| `settings.manage`: ayarlar, entegrasyonlar, görev ayrılığı, paylaşılan birim adı (`renameUnit`, T-1142) | ✅ | — | — | — | — | ❌ (yalnız Yönetici) |
 | `users.manage`: ekip, davet, cihaz, rol | ✅ | — | — | — | — | ❌ (yalnız Yönetici) |
 | `audit.view`: işlem kaydını görme / dışa aktarma | ✅ | ✅ | — | — | — | — |
 | `data.import`: Excel'den aktarım | ✅ | — | — | — | — | ✅ (2FA ister) |
+| `items.create` / `items.edit` / `items.archive`: ürün ekle (+ yeni birim, kod önerisi) / değiştir (+ kod, barkod, birim dönüşümü) / arşivle (T-1141) | ✅ | — | — | — | — | ✅ (2FA ister, T-1142) |
+| `parties.create` / `parties.edit` / `parties.archive`: cari ekle / değiştir (+ kod) / arşivle ve arşivden çıkar | ✅ | — | — | — | — | ✅ (2FA ister) |
+| `warehouses.create` / `warehouses.edit` / `warehouses.archive`: depo ekle / kod değiştir / arşivle | ✅ | — | — | — | — | ✅ (2FA ister) |
+| `locations.create` / `locations.edit` / `locations.archive`: raf yeri ekle (tek, alt, toplu) / kod ve tür değiştir / arşivle | ✅ | — | — | — | — | ✅ (2FA istemez) |
 | **2FA zorunlu mu?** | Evet | Evet | Hayır* | Hayır* | Hayır | |
 
-\* Gruptan onay, ters kayıt ya da aktarım yetkisi aldıysa evet.
+\* Gruptan onay, ters kayıt, aktarım ya da ürün/cari/depo kart yetkisi aldıysa evet.
 
-**Yalnız hesap sahibinin yapabildikleri:** başka bir yöneticiyi yönetmek ya da birine yöneticilik vermek, yönetici rolüyle davet göndermek, yetki gruplarını oluşturmak/değiştirmek/arşivlemek/atamak, sahipliği devretmek.
+**Kart yetkileri (T-1141, kullanıcı kararı 31 Ekim: "yetkisi yoksa ekleme, değiştirme, arşivleme yapamamalı"):** ürün, cari, depo ve raf yeri kartlarındaki her yazma komutu genel `settings.manage` yerine kendi **bölüm × işlem** anahtarını ister (21 domain komutu + 17 web eylemi ön denetimi). Rollerde bu anahtarlar yalnız Yönetici'dedir; yani rol erişimi değişmedi (yalnız hesap sahibi/yönetici), değişen şey anahtarların artık gruba tek tek verilebilmesidir (T-1142, 0070). Yetkisiz domain çağrısı `FORBIDDEN` döner, satır ve audit yazılmaz. Ekranda yetkisiz işlem **gizlenmez**: kilit ikonlu düğme + sarı balon "Ürün ekleme yetkin yok · Yetki iste: yöneticine sor" (ortak `KalipKilitliDugme`; alt çubuk ana işleminde `locked`). Excel aktarımı ayrıca `data.import`; depo/raf **içe** aktarımı hâlâ `settings.manage` ön koşulu taşır (B-243). Etiket basımı yazma değildir (`stock.view`). Entegrasyon eşitlemesi bağlayan hesap sahibinin yetkisiyle yazar (değişmedi). İstemci tipleri `kalip/kart-yetki.ts` domain `CardRights` ile derleme zamanında eşlenir; mekanik bekçi `kart-yetki.test.ts` (sayfalar `cardRights`, ekranlar ortak kilit, eylemlerde `settings.manage` yok).
 
-**2FA kuralı kaynağı:** `MFA_REQUIRED_ROLES` = Yönetici, Depo yöneticisi; `MFA_GRANTS` = `document.approve`, `count_diff.approve`, `reversal.create`, `data.import` (`packages/domain/src/identity/access.ts`, `permissions.ts`). Demo alanında 2FA istenmez. Matris 23 Ekim'den bu yana değişmedi.
+**Yalnız hesap sahibinin yapabildikleri:** başka bir yöneticiyi yönetmek ya da birine yöneticilik vermek, yönetici rolüyle davet göndermek, yetki gruplarını oluşturmak/değiştirmek/arşivlemek/atamak (Yetkiler ekranındaki aç/kapa dahil), sahipliği devretmek.
+
+**2FA kuralı kaynağı:** `MFA_REQUIRED_ROLES` = Yönetici, Depo yöneticisi; `MFA_GRANTS` = `document.approve`, `count_diff.approve`, `reversal.create`, `data.import` ve T-1142'den beri `items.*`, `parties.*` (cari kişisel veri), `warehouses.*` (bağlı dış sisteme giden kartlar); `locations.*` istemez (raf yerleri yalnız Etkin'de, saha personeli kullanır) (`packages/domain/src/identity/access.ts`, `permissions.ts`). Demo alanında 2FA istenmez. Matris 31 Ekim (T-1141) ve 1 Kasım (T-1142) güncellemesiyle bu hâlini aldı; yetki ekranının satırları aynı tek kaynaktan (`PERMISSION_CATALOGUE`) çizilir.
 
 **Görev ayrılığı (firma ayarı, varsayılan KAPALI):** Açıksa aynı kişi bir işin hem hazırlayanı hem onaylayanı olamaz: belgeyi oluşturan onaylayamaz, sayan kişi sayım farkını onaylayamaz, belgeyi oluşturan ya da işleyen kişi ters kayıt yapamaz. Ayar `tenant_settings.separation_of_duties` sütunundadır ve Ayarlar › Firma sekmesinden değiştirilir.
 
@@ -371,8 +425,8 @@ flowchart TD
   B -- Hayır --> X1["Giriş ekranı"]
   B -- Evet --> C{"Bu alanda ACTIVE üyelik var mı?"}
   C -- Hayır --> X2["404: alan bulunamadı"]
-  C -- Evet --> D{"Rol ya da grup bu izni veriyor mu?"}
-  D -- Hayır --> X3["Bu iş için yetkin yok"]
+  C -- Evet --> D{"Rol ya da grup bu izni veriyor mu?<br/>(kart işinde bölüm × işlem anahtarı)"}
+  D -- Hayır --> X3["Bu iş için yetkin yok<br/>(ekranda kilitli düğme + sarı balon)"]
   D -- Evet --> E{"Rol/yetki 2FA istiyor mu, oturumda 2FA var mı?"}
   E -- "İstiyor, yok" --> X4["/mfa ekranı"]
   E -- Tamam --> F{"Hassas işlem mi, son 10 dk içinde doğrulandı mı?"}
@@ -386,6 +440,9 @@ flowchart TD
 
 ## Bu dosyadan çıkan açıklar (özet; birleşik liste [04 — Gap analizi](04-gap-analizi.md))
 - `leaveTenantAction` (alandan ayrılma) sunucuda var, **hiçbir ekranda butonu yok**.
+- Kişiye özel yetki istisnası yok: model rol + en çok bir grup (T-1142 kararı; B-245).
+- Yetkiler ekranı tuvalde yok; tuvale ve ilk kullanım rehberine eklenmeli (B-246).
+- Depo / raf yeri Excel içe aktarımı kart anahtarı yerine hâlâ `settings.manage` ister (B-243; B-244 aynı iş).
 - Grup "ekranlar" listesi yalnız menüyü gizler. Doğrudan adresle girilen ekranda işlem yetkisini rol ve ek yetkiler belirler. Ekran kısıtının sunucuda da uygulanıp uygulanmayacağı ürün kararıdır.
 - `takeout.request` izni matriste var, ama kullanan bir ekran yok. Tam veri teslimi (B-67) için ayrılmış.
 - Üyeler (`members`) ile Ekip (`team`), Katılma (`members/join`) ile Ekip'in ONAY BEKLİYOR/QR bölümü kısmen aynı işi yapıyor. Üç ekran da yeni kalıpta; birleştirme kararı verilmedi.
