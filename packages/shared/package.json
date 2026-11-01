@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./labels": "./src/labels/index.ts",
     "./errors": "./src/errors.ts",
     "./queue": "./src/queue.ts",
     "./mailer": "./src/mailer.ts",
