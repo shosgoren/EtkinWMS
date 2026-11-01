@@ -138,3 +138,7 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Yazıcılar yalnızSYSTEM_DIALOG; şirket ve aktör/cihaz tercihi, şablonönceliği, açıkseçili kapalıprofilde blok; gerçekköprü yok. Kaynak profillerdeURL/port/kimlikbilgisi yok.
 - Şablon/sürüm/logo veri teslimi keysetkısa sayfalı, faturalamabayrağıyok ve auditli. Kota200şablon/100logo/30profil; çıktı stokkimliği üretmez.
 - Ön kontrol: eski64model/yazıcı +17PNGbirim, root/domaintsc/hedefESLint, gerçekuygulamarolüyle11entegrasyon geçti. Son arama/exportaudit değişikliğiyle11entegrasyon yenidengeçti; bağımsızinceleme/prepush/CI/API/UI/baskıbağlantısı henüz yok.
+
+### T-1157 ortak baskı motoru (yerel)
+- Aynı sürümlü modelden gerçek mm SVG; QR 4modül sessiz alan, Code128 10modül ve EAN13 doğrulanmış mevcut GTIN. DPI ve kalibrasyon sınırlı; okunamayacak kod/metin taşması engellenir, değer kesilmez veya uydurulmaz. Kanonik PNG yalnız yetkili sunucu varlık sınırından alınır.
+- Hedef35birim, sharedtsc/hedefESLint; gerçek Chromium PNG çıktılarından ZXing ile36/36 çözüm (3semboloji ×3DPI ×4dönüş), üç çıktı gözle kontrol edildi. Fiziksel yazıcı ve PDF sayfa kabulü henüz yapılmadı. Bu motor tek başına gerçek baskı kaynağı veya editör ekranı değildir; prepush/CI/yayın bekler.
