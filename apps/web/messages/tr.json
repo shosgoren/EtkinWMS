@@ -1080,7 +1080,8 @@
       "printer_saved": "Yazıcı tercihi kaydedildi",
       "preference_changed": "Etiket yazıcısı seçildi",
       "asset_added": "Etiket logosu eklendi",
-      "print_prepared": "Etiket baskısı hazırlandı"
+      "print_prepared": "Etiket baskısı hazırlandı",
+      "guide_seen": "Etiket rehberi gösterildi"
     }
   },
   "auditLog": {
@@ -1116,7 +1117,8 @@
         "printer_saved": "Yazıcı tercihi kaydedildi",
         "preference_changed": "Etiket yazıcısı seçildi",
         "asset_added": "Etiket logosu eklendi",
-        "print_prepared": "Etiket baskısı hazırlandı"
+        "print_prepared": "Etiket baskısı hazırlandı",
+        "guide_seen": "Etiket rehberi gösterildi"
       },
       "member": {
         "invited": "Üye davet edildi",
@@ -6554,7 +6556,8 @@
       "putaway": "Yerleştirme",
       "issue": "Stok çıkışı",
       "transfer": "Transfer",
-      "count": "Sayım"
+      "count": "Sayım",
+      "label": "Etiket tasarımı"
     },
     "instructions": {
       "receive0": "Kabul belgesini seç: listede belgeye dokun.",
@@ -6578,7 +6581,12 @@
       "count1": "Rafı okut, sonra sayacağın ürünü okut ya da listeden seç.",
       "count2": "Saydığın gerçek adedi tuşlarla gir.",
       "count3": "Alttaki KAYDET'e bas.",
-      "count4": "Kalan ürünleri say; hepsi bitince sayımı gönder."
+      "count4": "Kalan ürünleri say; hepsi bitince sayımı gönder.",
+      "label0": "YENİ ile hazır etiket aç.",
+      "label1": "Logo veya yazı eklemek için renkli simgeye dokun.",
+      "label2": "Alanı sürükle; küçükse alan listesinden seç.",
+      "label3": "KAYDET ile tasarımını sakla.",
+      "label4": "Yazıcılar ile bu etiketin yazıcısını seç."
     },
     "skipStep": "Atla",
     "restart": "Rehberi baştan göster",
