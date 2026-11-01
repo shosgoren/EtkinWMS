@@ -58,6 +58,6 @@ T-1026: Kullanıcı 23 Ekim onayıyla kurulum ipucu engellemeyen çalışma kart
 Not (Standart*, 26 Ekim, T-1041): kaynaklar Claude Design tuvalinin artboard dosyalarıdır (tek sayfa, `<x-dc>` + `data-dc-script`); örnek ürünler, sayılar, kişiler (Evren, Demo Firma), saat ve belge numaraları benzetimdir. Kural metni `docs/design/STANDART.md`; üreteç (`port.mjs`) bu kaynakları kabuk/kalıp işlerinde (T-1042…) okuyacak.
 
 ## Etiket editörü ortak kalıp uzantısı — T-1146
-Yerel türetim: STANDART/ALTIN-KURAL, kullanıcı 1 Kasım B-166 geliştirme onayı; Claude tuvalinden indirilmedi. `EtiketEditor.dc.html` sha256 `cbea2f1520e06ccadbca78bb3789335d3ee21b4d140050d4aded635dceb19b54`. Bu etkileşimli dosya yalnız örnek verili tasarım kaynağıdır; gerçek kayıt, yetki ve baskı değildir. 390×844/390×670/1180×820/1440×900 render ve gözle kontrol tamam; örnek etkileşimler geçti.
+Yerel türetim: STANDART/ALTIN-KURAL, kullanıcı 1 Kasım B-166 geliştirme onayı; Claude tuvalinden indirilmedi. `EtiketEditor.dc.html` sha256 `698baeca6e9088043297ad624736db4f673b402230f885f2d95b023e553b9f98`. Bu etkileşimli dosya yalnız örnek verili tasarım kaynağıdır; gerçek kayıt, yetki ve baskı değildir. 390×844/390×670/1180×820/1440×900 render ve gözle kontrol tamam; örnek etkileşimler geçti.
 
 T-1159: ortak editör uzantısı güncellendi; `.lx` bölümü ortak KalipEkran/KabukBar içinde kullanılır. Kaynakta QR kutusu yer tutucu, uygulamada aynı modelden gerçek matris. 390/1180/1440 ve kısa telefon denetimi kayıt kartında.

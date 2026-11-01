@@ -1,5 +1,6 @@
 // One geometry/encoder for browser preview, browser print and print-to-PDF. No DOM, DB, fetch or identity generation.
-// Existing GTIN only; quiet zones/nominal EAN13 geometry: https://ref.gs1.org/standards/genspecs/24.0.0/
+// Existing GTIN only; POS EAN13 nominal/max module0.330/0.660mm (100–200%): https://www.gs1ie.org/standards/data-carriers/barcodes/ean-13/
+// Quiet zones/nominal EAN13 geometry: https://ref.gs1.org/standards/genspecs/24.0.0/
 import { create } from "qrcode";
 import { AppError } from "../errors.ts";
 import { CONTEXT_FIELDS, parseLabelDesign, type LabelDesign, type LabelElement, type LabelField } from "./model.ts";
@@ -76,14 +77,14 @@ function barcodeSvg(e:Extract<LabelElement,{kind:"barcode"}>,value:string,w:numb
  try{if(ean)bits=encodeLabelEan13(value);else{const encoded=encodeCode128(value);bits=encoded.widths.map((width,i)=>(i%2===0?"1":"0").repeat(width)).join("");}}catch{return bad("BAD_VALUE",e.id);}
  const cells=bits.length+quiet*2,reserve=preview&&h<5000?0:4000;
  const targetHeight=ean?(22850/330+5):0;
- let step=preview?w/cells:Math.min(Math.floor(w/cells/dot),ean?Math.floor((h-reserve)/targetHeight/dot):Math.floor(1000/dot))*dot;
- if(preview&&ean)step=Math.min(step,Math.max(1,(h-reserve)/targetHeight));
+ let step=preview?w/cells:Math.min(Math.floor(w/cells/dot),ean?Math.min(Math.floor((h-reserve)/targetHeight/dot),Math.floor(660/dot)):Math.floor(1000/dot))*dot;
+ if(preview&&ean)step=Math.min(step,660,Math.max(1,(h-reserve)/targetHeight));
  if(step<=0||(!preview&&(step<(ean?330:250)||(!ean&&h-reserve<8000))))return bad("NEEDS_SPACE",e.id);
- const bodyHeight=ean?(preview?Math.max(1,h-reserve-5*step):22850*step/330):h-reserve;
+ const bodyHeight=ean?Math.max(1,22850*step/330):h-reserve;
  if(!preview&&bodyHeight+(ean?5*step:0)+reserve>h+.001)return bad("NEEDS_SPACE",e.id);
- const x=(w-cells*step)/2,rects:string[]=[];
- for(let i=0;i<bits.length;i++)if(bits[i]==="1"){const guard=ean&&(i<3||(i>=45&&i<50)||i>=92);rects.push(`<rect x="${n(x+(i+quiet)*step)}" width="${n(step)}" height="${n(bodyHeight+(guard?5*step:0))}"/>`);}
- const caption=reserve===0?"":`<text x="${n(w/2)}" y="${n(h-500)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${Math.min(2800,w/(Math.max(1,value.length)*.7))}" fill="#000">${xml(value)}</text>`;
+ const x=(w-cells*step)/2,top=ean?Math.max(0,(h-bodyHeight-5*step-reserve)/2):0,rects:string[]=[];
+ for(let i=0;i<bits.length;i++)if(bits[i]==="1"){const guard=ean&&(i<3||(i>=45&&i<50)||i>=92);rects.push(`<rect x="${n(x+(i+quiet)*step)}" y="${n(top)}" width="${n(step)}" height="${n(bodyHeight+(guard?5*step:0))}"/>`);}
+ const caption=reserve===0?"":`<text x="${n(w/2)}" y="${n(ean?top+bodyHeight+5*step+reserve-500:h-500)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${Math.min(2800,w/(Math.max(1,value.length)*.7))}" fill="#000">${xml(value)}</text>`;
  return `<rect width="${n(w)}" height="${n(h)}" fill="#fff"/><g fill="#000" shape-rendering="crispEdges">${rects.join("")}</g>${caption}`;
 }
 function rotation(e:LabelElement):string {
