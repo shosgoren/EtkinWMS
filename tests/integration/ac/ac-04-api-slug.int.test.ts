@@ -409,7 +409,9 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
     expect(own.outcome).toBe("render");
     expect(JSON.stringify(own.value)).toContain("noTemplate");
     expect(await runLoader(CUSTOM_LABELS,A.slug)).toEqual({outcome:"notFound"});
-    expect(await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source:"{}"})).not.toEqual({outcome:"redirect"});
+    const invalid = await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source:"{}"});
+    expect(invalid.outcome).toBe("render");
+    expect(JSON.stringify(invalid.value)).toContain("errors.DESIGN_INVALID");
     expect(await snapshot(A)).toEqual(beforeA);
     expect(await snapshot(B)).toEqual(beforeB);
   });
