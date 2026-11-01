@@ -6889,7 +6889,8 @@
       "OUTSIDE_LABEL": "Move the highlighted field inside the label",
       "TOO_MANY_ELEMENTS": "Use fewer fields",
       "CODE_GEOMETRY": "Enlarge the code or clear its surroundings"
-    }
+    },
+    "printerName": "Printer name"
   },
   "labelPrint": {
     "title": "Print labels",
