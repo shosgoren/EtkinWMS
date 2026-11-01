@@ -15,12 +15,12 @@ import{useCikisKorumasi}from"../kalip/cikis.tsx";
 import{labelSaveAction,labelPublishAction,labelAssignAction,labelArchiveAction,labelRestoreAction,labelLogoUploadAction,labelWorkspaceAction}from"./actions.ts";
 import{LabelPrinters,LabelPrinterChoice}from"./printer-view.tsx";
 import{labelDeviceId,labelLogoPng}from"./label-client.ts";
-interface Props{readonly slug:string;readonly dark:boolean;readonly initial:LabelWorkspace;readonly detail:LabelTemplateDetail|null;readonly assets:Readonly<Record<string,string>>;readonly newContext:LabelContext|undefined;readonly context:LabelContext|undefined;readonly archived:boolean;readonly query:string;readonly printers:boolean;readonly printerId:string|undefined}
+interface Props{readonly slug:string;readonly dark:boolean;readonly initial:LabelWorkspace;readonly detail:LabelTemplateDetail|null;readonly assets:Readonly<Record<string,string>>;readonly newContext:LabelContext|undefined;readonly context:LabelContext|undefined;readonly archived:boolean;readonly query:string;readonly after?:string;readonly printers:boolean;readonly printerId:string|undefined}
 const contextIcons={PRODUCT:LICON.box,RECEIPT:LICON.moveIn,LOCATION:LICON.raf,SHIPMENT:LICON.moveOut};
 export function LabelWorkspaceView(props:Props){
- const{slug,dark,initial,detail,newContext,context,archived,query}=props,t=useTranslations('labelEditor'),router=useRouter(),{say}=useKalipToast('form'),base=`/t/${encodeURIComponent(slug)}/label-designs`,home=`/t/${encodeURIComponent(slug)}`;
+ const{slug,dark,initial,detail,newContext,context,archived,query,after}=props,t=useTranslations('labelEditor'),router=useRouter(),{say}=useKalipToast('form'),base=`/t/${encodeURIComponent(slug)}/label-designs`,home=`/t/${encodeURIComponent(slug)}`;
  const[data,setData]=useState(initial),[device,setDevice]=useState<string|null>(null),[q,setQ]=useState(query);
- useEffect(()=>{let active=true;const id=labelDeviceId();setDevice(id);void labelWorkspaceAction({slug,deviceId:id,...(context?{context}:{}),archived,q:query}).then(r=>{if(active&&r.ok)setData(r.data);});return()=>{active=false;};},[slug,context,archived,query]);
+ useEffect(()=>{let active=true;const id=labelDeviceId();setDevice(id);void labelWorkspaceAction({slug,deviceId:id,...(context?{context}:{}),archived,q:query,...(after?{after}:{})}).then(r=>{if(active&&r.ok)setData(r.data);});return()=>{active=false;};},[slug,context,archived,query,after]);
  if(props.printers||props.printerId!==undefined)return<LabelPrinters slug={slug} dark={dark} data={data} device={device} editId={props.printerId}/>;
  if(detail||newContext)return<LabelEdit {...props} data={data} device={device}/>;
  const url=(params:Record<string,string>)=>base+'?'+new URLSearchParams(params).toString();
@@ -28,7 +28,7 @@ export function LabelWorkspaceView(props:Props){
   <KalipAra label={t('search')} placeholder={t('search')} value={q} onChange={setQ} onSubmit={()=>router.push(url({...(context?{context}:{}),...(archived?{archived:'1'}:{}),q}))}/>
   <KalipCipler label={t('context')} chips={[{id:'printers',label:t('printers'),d:LICON.printer,color:'3B6A9E',on:false,href:base+'?tab=printers'},{id:'all',label:t('all'),d:LICON.grid,color:'172E42',on:!context,href:url(archived?{archived:'1'}:{})},...LABEL_CONTEXTS.map(id=>({id,label:t(`contexts.${id}`),d:contextIcons[id],color:'3B6A9E',on:context===id,href:url({context:id,...(archived?{archived:'1'}:{})})})),{id:'archived',label:t('archived'),d:LICON.lock,color:'536B7E',on:archived,href:url({...(!archived?{archived:'1'}:{}),...(context?{context}:{})})}]}/>
   {data.templates.length===0?<KalipBos title={t('empty')} hint={t('startReady')} iconD={LICON.printer} action={{label:t('new'),kind:'add',onClick:()=>data.rights.design?router.push(url({new:context??'PRODUCT'})):say('warn',t('locked'))}}/>:<KalipKartListe label={t('templates')}>{data.templates.map(item=><KalipKart key={item.id} name={item.name} code={t(`contexts.${item.context}`)} d={contextIcons[item.context]} color="3B6A9E" aria={item.name} href={url({id:item.id})} badge={{value:data.defaults.some(d=>d.templateId===item.id)?t('default'):item.publishedVersionId?t('published'):t('draft'),sub:t(`contexts.${item.context}`)}}/>)}</KalipKartListe>}
-  {data.next&&<KalipDaha href={url({after:data.next,...(context?{context}:{}),...(archived?{archived:'1'}:{})})}>{t('more')}</KalipDaha>}
+  {data.next&&<KalipDaha href={url({after:data.next,...(query?{q:query}:{}),...(context?{context}:{}),...(archived?{archived:'1'}:{})})}>{t('more')}</KalipDaha>}
  </KalipEkran>;
 }
 function LabelEdit({slug,dark,detail,newContext,assets:initialAssets,data,device}:Props&{data:LabelWorkspace;device:string|null}){
