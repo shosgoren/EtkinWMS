@@ -132,3 +132,6 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - GeçiciDockerDB: yenişema6test ve öncekimigration4testi geçti; birimkatalog22test/roottsc geçti. Bağımsızsecurity/QA0/0/0 (15birim+6int); öncekimigrationregresyonu179test, AC04 383test ve verify5421birim geçti. Kapsam/tabanmetadata kaydı düzeltildikten sonra genelprepush tekrar koşuyor; CI/yayın bekliyor; henüz API/UI/baskıbağlantısı yok.
 
 **PR284 kapsam düzeltmesi:** TamCI ORMtablo/sütuneşliği ve bakımsıfırlamaFKdöngüsü buldu. 0072geri-bağı başlangıçtaanında denetlenen ertelemeliFK oldu; Drizzle modelieklenecek, bakımbetiğideğişmez. Paket≤30dosya kalması için 0073yetkiler/T-1149 ayrı sonraki pakete alındı. Önceki0bulgu raporu sonSQLfarkını kapsamaz; yeniinceleme/testşart. Canlıda müşteri verisine sıfırlama uygulanmaz.
+
+## Ayrı yetki paketi: T-1149 / T-1155 / T-1156
+0072şema/bakım düzeltmesi corePR284te; ardından0073 +5etiket yetkisi, MFA ve Yetkiler ekranı kataloğu gelir. Mevcut18anahtarın anlamı değişmez; yeniüst sınır23, negatifuzunluktesti24. Kartdışıyetkifikstürü yeni5anahtarı da taşır; kart yetkisi olmadığı halde kart yazmanın hâlâ reddedildiği kanıtlanır. 0073dolu geri alma stagingde ret, açıkci modunda yalnızyeni etiketgrantları kaldırılır. Testler ve bağımsızinceleme tamamlanmadan PR açılmaz.
