@@ -189,6 +189,10 @@ test("T-1047 Ürünler: Kart/Liste, sıralama, Sütunlar", async ({ page }) => {
   // Temizlik: varsayılan görünüm (diğer testler kart bekler).
   await page.getByTestId("kalip-sutunlar").click();
   await page.getByTestId("kalip-sutunlar-pencere").getByRole("button", { name: "Varsayılana dön" }).click();
+  // T-1160: Sütunlar penceresi (bir satır daha: Görsel) açıkken Kart'a basmak önce pencereyi kapatıp yerleşimi kaydırıyordu; pencere
+  // açıkça kapatılır, sonra görünüm değişir.
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("kalip-sutunlar-pencere")).toHaveCount(0);
   await page.getByTestId("kalip-gorunum").locator('[data-gorunum="kart"]').click();
   await expect(page.getByTestId("item-card").first()).toBeVisible();
 });
