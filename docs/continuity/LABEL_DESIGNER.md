@@ -223,16 +223,3 @@ T1168 yerel kanıt: 4/4 birim + web typecheck/ESLint; gerçek Chromium PDF altı
 
 ### T-1172 — Baskı ekranı (yerel geliştirme)
 `/custom-labels` yalnız kapalı kaynak sorgusu veya yetkili geçmiş işUUID alır; GET yazmaz. Baskı eylemi gerçek sunucu kaynaklarını yeniden okur; client değer/endpoint/kalibrasyon veremez. Tarayıcı aynı jobUUID ile tekrar güvenli; SVG DOM'a işlendiğinde sistem diyaloğu açılır ve fiziksel başarı iddia edilmez. Varsayılan atanan sürüm ayrı, açık seçim en yeni yayını kullanır. Tarihsel işte yeniden basım nedeni ve aynı kimlik; yetki/depo ve güncel barkod tekrar kontrol edilir. Test/bağımsız inceleme ve eski düğmelerin bağlantısı bekler.
-
-### T-1169 — Eski baskı düğmeleri (yerel geliştirme)
-Ürün/toplu filtreli ürün/raf ve kayıtlı kabul/üretim etiket yolları: yetkili özel varsayılan varsa custom-labels; yoksa önceki stock.view baskı yolu. Seçili hatalı özel etikette sessiz fallback yok. Ürün grubu gerçek itemIds taşır, sonraki keyset/filtre legacy yetkili sorguya geri döner; kabul/üretim kaynakları doğrulanmış belgeyle seçilir. Hedef int ve tarayıcı testi henüz yapılmadı.
-
-T1169 yerel gerçekDB19/19 (eski etiket kaynağı8+yeni baskı11), webtypecheck ve hedefESLint geçti. Yeni alan itemIds ile keyset grubu gerçek kaynak kimliklerini taşır. Bağımsız inceleme/tarayıcı/CI/canlı ayrıca bekler.
-
-### T-1173 — Modül ve ayar bağlantısı (yerel)
-Etiket tasarımı artık Modüller'de gerçek labels.view bağlantısıdır (yalnız print yetkisi yeterli değil); açık grant varsa saha kişisinde de görünür. Ayarlar aynı bağımsız yetkiyi sunucuda kontrol eder. “Etiket tasarımını aç” ve “yazıcı ayarları” yetkiyle süzülmüş modülden açılır; “barkod” eski QR ekranıdır. Yeni CSS yok, mevcut ortak ayar satırı. İlk kullanım rehberi ve gerçek tarayıcı kabulü ayrıca bekler.
-
-### T-1174 — Üretim ve sevk kabulü (yerel geliştirme)
-İşlenmiş çıkış belgesi kartında atanmış özel sevk etiketi bağlantısı; düz çıkış fişQR kullanır, fiziksel paket kimliği üretilmez. Gerçek kabul/kalite/yerleştirme/reçete/üretim komutlarıyla iki çıktı paketi ve gerçek çıkış postası üzerinden etiket testi hazırlanıyor; taslak kaynak ret ve stok değişmezliği ayrıca sınanır. Test henüz yapılmadı.
-
-T1174 gerçekDB13/13: iki üretim çıktısının gerçek paket QR/lot/tarihleri ve düz sevkin gerçek DB fişnumarası doğrulandı; baskı stok değiştirmedi. Routing2+action5 birim, root/web tip ve hedef ESLint geçti. Paketli sevkte otomatik kod seçimi T1177; tarayıcı/CI/canlı ayrı bekler.
