@@ -63,14 +63,14 @@ it("empty schema down/up is repeatable; populated label downgrade refuses and pr
  await scratchAdmin.query(`CREATE DATABASE ${name}`);const c=new pg.Client({connectionString:url});
  try{
   await c.connect();await migrateUp({url});
-  expect((await migrateDown({url,to:"0071",wmsEnv:"staging"})).reverted).toEqual(["0073","0072"]);
-  expect((await migrateUp({url})).applied).toEqual(["0072","0073"]);
+  expect((await migrateDown({url,to:"0071",wmsEnv:"staging"})).reverted).toEqual(["0074","0073","0072"]);
+  expect((await migrateUp({url})).applied).toEqual(["0072","0073","0074"]);
   const w=await seedWorld(c,newRegistry(),"LDOWN");await seedLabels(c,w);
   await expect(migrateDown({url,to:"0071",wmsEnv:"staging"})).rejects.toThrow(/0072_label_editor down/);
   expect((await c.query("SELECT count(*)::int AS n FROM public.label_template_versions")).rows[0]?.n).toBe(1);
-  expect((await migrateUp({url})).applied).toEqual(["0073"]);
-  expect((await migrateDown({url,to:"0071",wmsEnv:"ci"})).reverted).toEqual(["0073","0072"]);
-  expect((await migrateUp({url})).applied).toEqual(["0072","0073"]);
+  expect((await migrateUp({url})).applied).toEqual(["0073","0074"]);
+  expect((await migrateDown({url,to:"0071",wmsEnv:"ci"})).reverted).toEqual(["0074","0073","0072"]);
+  expect((await migrateUp({url})).applied).toEqual(["0072","0073","0074"]);
  }finally{await c.end();await scratchAdmin.query(`DROP DATABASE ${name} WITH (FORCE)`);}
 },120000);
 

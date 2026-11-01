@@ -23,6 +23,7 @@
     "qrcode": "1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "sharp": "0.35.5",
     "tailwindcss": "4.3.3",
     "zod": "4.6.6",
     "zxing-wasm": "3.1.5"

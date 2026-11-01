@@ -537,7 +537,23 @@
     "validation_failed_source_managed_field": "Paraşüt'ten geliyor — Paraşüt'te değiştir.",
     "validation_failed_source_managed_fieldAction": "Bu bilgi Paraşüt'te değişir; birkaç dakika içinde buraya gelir.",
     "validation_failed_source_managed_archive": "Paraşüt'te arşivle; Etkin kendiliğinden uyar.",
-    "validation_failed_source_managed_archiveAction": "Arşiv Paraşüt'ten gelir."
+    "validation_failed_source_managed_archiveAction": "Arşiv Paraşüt'ten gelir.",
+    "validation_failed_image_invalid": "Bu dosya bir görsel değil ya da türü desteklenmiyor.",
+    "validation_failed_image_invalidAction": "JPEG, PNG ya da WebP fotoğraf seç (SVG ve HEIC olmaz).",
+    "validation_failed_image_too_large": "Görsel çok büyük.",
+    "validation_failed_image_too_largeAction": "En çok 5 MB'lık bir fotoğraf seç.",
+    "validation_failed_image_limit": "Bu kayıtta en çok 5 görsel olabilir.",
+    "validation_failed_image_limitAction": "Önce bir görseli sil ya da Değiştir'i kullan.",
+    "validation_failed_min_max_invalid": "Minimum, maksimumdan büyük olamaz.",
+    "validation_failed_min_max_invalidAction": "Maksimumu minimuma eşit ya da ondan büyük yaz.",
+    "rate_limited_image_busy": "Görsel işleniyor, birazdan tekrar dene.",
+    "rate_limited_image_busyAction": "Birkaç saniye bekleyip görseli yeniden ekle.",
+    "validation_failed_image_quota": "Bu çalışma alanının görsel alanı doldu.",
+    "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç.",
+    "validation_failed_image_timeout": "Görsel yüklemesi çok uzun sürdü.",
+    "validation_failed_image_timeoutAction": "Bağlantını kontrol edip görseli yeniden ekle.",
+    "validation_failed_image_length_required": "Görsel yüklemesinin boyutu bildirilmedi.",
+    "validation_failed_image_length_requiredAction": "Görseli uygulamadaki Görsel ekle düğmesiyle yeniden ekle."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",
@@ -914,7 +930,18 @@
       "removed": "Bir üründen barkod kaldırdın."
     },
     "unit_conversion": {
-      "set": "Bir ürünün birim dönüşümünü ayarladın."
+      "set": "Bir ürünün birim dönüşümünü ayarladın.",
+      "removed": "Bir ürünün birim dönüşümünü kaldırdın."
+    },
+    "item_image": {
+      "added": "Bir ürüne görsel ekledin.",
+      "replaced": "Bir ürünün görselini değiştirdin.",
+      "removed": "Bir ürünün görselini sildin.",
+      "restored": "Bir ürünün görselini geri aldın.",
+      "main_set": "Bir ürünün kapak görselini değiştirdin."
+    },
+    "item_stock_policy": {
+      "set": "Bir ürünün min / maks stoğunu ayarladın."
     },
     "lot": {
       "created": "Bir lot oluşturdun."
@@ -1165,7 +1192,18 @@
         "removed": "Barkod kaldırıldı"
       },
       "unit_conversion": {
-        "set": "Birim çevrimi ayarlandı"
+        "set": "Birim çevrimi ayarlandı",
+        "removed": "Birim çevrimi kaldırıldı"
+      },
+      "item_image": {
+        "added": "Görsel eklendi",
+        "replaced": "Görsel değiştirildi",
+        "removed": "Görsel silindi",
+        "restored": "Görsel geri alındı",
+        "main_set": "Kapak görseli değişti"
+      },
+      "item_stock_policy": {
+        "set": "Min / maks stok ayarlandı"
       },
       "lot": {
         "created": "Lot eklendi"
@@ -1718,7 +1756,36 @@
         "historyAll": "Tümü · işlem kaydı",
         "historyUnread": "Geçmiş okunamadı · sayfayı yenile",
         "more": "Daha fazla",
-        "moreFailed": "Devamı okunamadı · tekrar dene"
+        "moreFailed": "Devamı okunamadı · tekrar dene",
+        "imgAdded": "Görsel eklendi.",
+        "imgReplaced": "Görsel değiştirildi.",
+        "imgRemoved": "Görsel silindi.",
+        "imgMain": "Kapak görseli değişti.",
+        "imgUndone": "Geri alındı.",
+        "imgUndoFailed": "Geri alınamadı; sayfayı yenileyip bak.",
+        "imgSame": "Bu görsel zaten ekli.",
+        "undo": "Geri al",
+        "infoMin": "Minimum stok",
+        "infoMax": "Maksimum stok",
+        "mmNone": "Tanımlı değil",
+        "mmTitle": "Min / maks stok",
+        "mmEditFor": "{name} için min / maks stoğu değiştir",
+        "mmNoWarehouse": "Önce bir depo ekle; min / maks depo başınadır.",
+        "mmWarehouse": "Depo",
+        "mmMin": "Minimum",
+        "mmMax": "Maksimum",
+        "mmMinHint": "Bu depoda en az kaç {unit} olsun (0 = minimum yok).",
+        "mmMaxHint": "Satın alırken en çok kaça tamamlansın ({unit}).",
+        "mmHint": "Değerler {unit} cinsinden ve depo başınadır.",
+        "mmMaxLow": "Maksimum, minimumdan küçük olamaz.",
+        "mmScale": "{n, plural, =0 {Bu ürün yalnız tam sayı alır.} other {Bu ürün en çok # ondalık alır.}}",
+        "mmSave": "Min / maks stoğu kaydet",
+        "mmSaved": "Min / maks stok kaydedildi.",
+        "convRemove": "Kaldır",
+        "convRemoveFor": "{unit} dönüşümünü kaldır",
+        "convRemoved": "{unit} dönüşümü kaldırıldı.",
+        "convInUseDoc": "Bu birim belgelerde kullanıldı; geçmiş kayıtlar korunduğu için kaldırılamaz.",
+        "convInUseBarcode": "Bu birime bağlı barkod var; önce barkodu kaldır."
       }
     },
     "errors": {
@@ -1760,7 +1827,25 @@
       "validation_failed_source_managed_field": "Paraşüt'ten geliyor — Paraşüt'te değiştir.",
       "validation_failed_source_managed_fieldAction": "Ad ve kod Paraşüt'te değişir; birkaç dakika içinde buraya gelir.",
       "validation_failed_source_managed_archive": "Paraşüt'te arşivle; Etkin kendiliğinden uyar.",
-      "validation_failed_source_managed_archiveAction": "Arşiv Paraşüt'ten gelir."
+      "validation_failed_source_managed_archiveAction": "Arşiv Paraşüt'ten gelir.",
+      "validation_failed_image_invalid": "Bu dosya bir görsel değil ya da türü desteklenmiyor.",
+      "validation_failed_image_invalidAction": "JPEG, PNG ya da WebP fotoğraf seç (SVG ve HEIC olmaz).",
+      "validation_failed_image_too_large": "Görsel çok büyük.",
+      "validation_failed_image_too_largeAction": "En çok 5 MB'lık bir fotoğraf seç.",
+      "validation_failed_image_limit": "Bu üründe en çok 5 görsel olabilir.",
+      "validation_failed_image_limitAction": "Önce bir görseli sil ya da Değiştir'i kullan.",
+      "validation_failed_min_max_invalid": "Minimum, maksimumdan büyük olamaz.",
+      "validation_failed_min_max_invalidAction": "Maksimumu minimuma eşit ya da ondan büyük yaz.",
+      "validation_failed_quantity_scale": "Miktar bu ürünün ondalık hassasiyetini aşıyor.",
+      "validation_failed_quantity_scaleAction": "Daha az ondalık hane yaz.",
+      "rate_limited_image_busy": "Görsel işleniyor, birazdan tekrar dene.",
+      "rate_limited_image_busyAction": "Birkaç saniye bekleyip görseli yeniden ekle.",
+      "validation_failed_image_quota": "Bu çalışma alanının görsel alanı doldu.",
+      "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç.",
+      "validation_failed_image_timeout": "Görsel yüklemesi çok uzun sürdü.",
+      "validation_failed_image_timeoutAction": "Bağlantını kontrol edip görseli yeniden ekle.",
+      "validation_failed_image_length_required": "Görsel yüklemesinin boyutu bildirilmedi.",
+      "validation_failed_image_length_requiredAction": "Görseli uygulamadaki Görsel ekle düğmesiyle yeniden ekle."
     },
     "locked": "Ürünleri görme yetkin yok.",
     "lockedAction": "Çalışma alanı yöneticine sor.",
@@ -1825,7 +1910,10 @@
       "colState": "Durum",
       "removed": "Kaldırıldı",
       "removedTag": "KALDIRILDI",
-      "pendingTag": "ARŞİV BEKLİYOR"
+      "pendingTag": "ARŞİV BEKLİYOR",
+      "colImage": "Görsel",
+      "imageNone": "Görsel yok",
+      "imageCount": "{n} görsel"
     },
     "productLabels": {
       "filter": "Süz",
@@ -5269,6 +5357,30 @@
       "loading": "Yükleniyor…",
       "retry": "Yüklenemedi · tekrar dene",
       "top": "Başa dön"
+    },
+    "gorsel": {
+      "add": "Görsel ekle",
+      "addShort": "Ekle",
+      "photo": "Fotoğraf çek",
+      "open": "Ürün görselleri ({n}) — büyüt",
+      "alt": "{name} görseli {i}",
+      "count": "{i} / {n}",
+      "prev": "Önceki görsel",
+      "next": "Sonraki görsel",
+      "close": "Kapat",
+      "title": "{name} görselleri",
+      "sub": "{code} · görsel {i} / {n}",
+      "group": "Görseller",
+      "thumb": "Görsel {i}",
+      "thumbOpen": "Görsel {i} (açık)",
+      "main": "Kapak yap",
+      "mainTag": "Kapak",
+      "replace": "Değiştir",
+      "remove": "Sil",
+      "saved": "Kaydedildi",
+      "hint": "Ok tuşları ya da kaydırarak geç · Esc kapatır",
+      "limit": "Bu kayıtta en çok 5 görsel olabilir; önce birini sil ya da Değiştir'i kullan.",
+      "tooBig": "Dosya çok büyük: en çok 5 MB'lık bir fotoğraf seç."
     }
   },
   "saha": {

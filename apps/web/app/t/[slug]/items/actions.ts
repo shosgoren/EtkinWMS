@@ -6,7 +6,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getAppDb } from "@wms/db";
-import { addBarcode, archiveItem, createItem, createItemWithDefaultUnit, createUnit, createWithSuggestedCode, removeBarcode, searchItems, setUnitConversion, suggestCode, updateItem } from "@wms/domain/catalog";
+import { addBarcode, archiveItem, createItem, createItemWithDefaultUnit, createUnit, createWithSuggestedCode, removeBarcode, removeItemImage, removeUnitConversion, restoreItemImage, searchItems, setItemImageMain, setItemStockPolicy, setUnitConversion, suggestCode, updateItem } from "@wms/domain/catalog";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { listItemLots, listItemSerials } from "@wms/domain/stock";
 import { loadItemsPage } from "./list-page.ts";
@@ -69,6 +69,11 @@ const addBarcodeSchema = z
   .object({ slug: slugSchema, itemId: idSchema, unitId: idSchema.nullable(), barcode: textSchema, quantity: decimalSchema.nullable() })
   .strict();
 const removeBarcodeSchema = z.object({ slug: slugSchema, barcodeId: idSchema }).strict();
+// T-1200: dönüşüm kaldırma (Geri al = `setConversionAction` aynı katsayıyla), görsel sil / geri al / kapak yap, depo başına min-maks.
+const removeConversionSchema = z.object({ slug: slugSchema, itemId: idSchema, unitId: idSchema }).strict();
+const imageSchema = z.object({ slug: slugSchema, itemId: idSchema, imageId: idSchema }).strict();
+const restoreImageSchema = z.object({ slug: slugSchema, itemId: idSchema, imageId: idSchema, main: z.boolean().optional() }).strict();
+const stockPolicySchema = z.object({ slug: slugSchema, itemId: idSchema, warehouseId: idSchema, min: decimalSchema, max: decimalSchema }).strict();
 
 /** Komut izni T-1141 kart anahtarı (domain komutuyla aynı); sayaç doğrulanmış tenant kimliğiyle tüketilir (üye/yetkisiz çağıran sayaç tüketmez). */
 async function writeContext(slug: string, ctx: ActionContext, permission: "items.create" | "items.edit" | "items.archive") {
@@ -201,5 +206,50 @@ export async function removeBarcodeAction(raw: unknown) {
     const params = await writeContext(input.slug, ctx, "items.edit");
     const r = await removeBarcode({ ...params, requestId: ctx.requestId }, { barcodeId: input.barcodeId });
     return { barcodeId: r.barcodeId };
+  })(raw);
+}
+
+/** T-1200: kullanılmayan birim dönüşümünü kaldır; belge / mal kabul / barkod kullanıyorsa domain `IN_USE` ile reddeder. */
+export async function removeConversionAction(raw: unknown) {
+  return guardedAction({ schema: removeConversionSchema }, async (input, ctx) => {
+    const params = await writeContext(input.slug, ctx, "items.edit");
+    const r = await removeUnitConversion({ ...params, requestId: ctx.requestId }, { itemId: input.itemId, unitId: input.unitId });
+    return { changed: r.changed, factor: r.factor };
+  })(raw);
+}
+
+/** T-1200: görseli sil (yumuşak silme; Geri al `restoreItemImageAction`). */
+export async function removeItemImageAction(raw: unknown) {
+  return guardedAction({ schema: imageSchema }, async (input, ctx) => {
+    const params = await writeContext(input.slug, ctx, "items.edit");
+    const r = await removeItemImage({ ...params, requestId: ctx.requestId }, { itemId: input.itemId, imageId: input.imageId });
+    return { changed: r.changed, wasMain: r.wasMain };
+  })(raw);
+}
+
+/** T-1200: silinen görseli geri aç ("Geri al"); `main` kapak yapar. */
+export async function restoreItemImageAction(raw: unknown) {
+  return guardedAction({ schema: restoreImageSchema }, async (input, ctx) => {
+    const params = await writeContext(input.slug, ctx, "items.edit");
+    const r = await restoreItemImage({ ...params, requestId: ctx.requestId }, { itemId: input.itemId, imageId: input.imageId, ...(input.main === undefined ? {} : { main: input.main }) });
+    return { changed: r.changed, isMain: r.isMain };
+  })(raw);
+}
+
+/** T-1200: kapak yap. */
+export async function setItemImageMainAction(raw: unknown) {
+  return guardedAction({ schema: imageSchema }, async (input, ctx) => {
+    const params = await writeContext(input.slug, ctx, "items.edit");
+    const r = await setItemImageMain({ ...params, requestId: ctx.requestId }, { itemId: input.itemId, imageId: input.imageId });
+    return { changed: r.changed, previousMainId: r.previousMainId };
+  })(raw);
+}
+
+/** T-1200: bir depoda min / maks stok. Değerler DİZGİ olarak domain'e gider (I-09); ölçek ve min ≤ maks domain'de. */
+export async function setStockPolicyAction(raw: unknown) {
+  return guardedAction({ schema: stockPolicySchema }, async (input, ctx) => {
+    const params = await writeContext(input.slug, ctx, "items.edit");
+    const r = await setItemStockPolicy({ ...params, requestId: ctx.requestId }, { itemId: input.itemId, warehouseId: input.warehouseId, min: input.min, max: input.max });
+    return { changed: r.changed, min: r.min, max: r.max };
   })(raw);
 }

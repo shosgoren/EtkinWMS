@@ -271,6 +271,26 @@ Bir kullanıcının **yalnız belirli depoları** görmesi isteniyorsa hangi dep
 | created_at | timestamptz | — | Oluşma | — |
 
 - **Koruma:** RLS ENABLE + FORCE.
+- **Kaldırma (T-1200, 0074):** `wms_app` yalnız hiçbir belge satırı, mal kabul satırı ya da birimli barkodun kullanmadığı dönüşümü silebilir (silme bekçisi kullanılanı sessizce atlar; domain `removeUnitConversion` `IN_USE` verir). Örnek ürünün dönüşümü 0040'taki gibi silinir.
+
+### item_images
+Ürün görselleri (T-1200, 0074). Sunucuda yeniden kodlanmış WebP olarak veritabanında tutulur (canlıda nesne deposu kapalı).
+
+| Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
+|---|---|---|---|---|
+| tenant_id | uuid | NULL olamaz | Firma | tenants.id |
+| id | uuid | PK | Görsel kimliği | — |
+| item_id | uuid | FK | Hangi ürün | items.id |
+| content_type | text | yalnız `image/webp` | Saklanan biçim | — |
+| data | bytea | NULL olabilir (boşaltılmışsa); RIFF/WEBP imzası, ≤ 1 MiB | Görsel (uzun kenar ≤ 1280 px, EXIF yok) | — |
+| thumb | bytea | `data` ile birlikte; imza, ≤ 16 KiB | Liste / küçük resim | — |
+| width, height | integer | 1–4096 | Ölçü | — |
+| sha256 | text | 64 onaltılık | İçerik özeti; aynı üründe etkin kopya tekil (idempotent yükleme), önbellek sürümü | — |
+| is_main | boolean | ürün başına en çok bir etkin kapak | Kapak görseli | — |
+| removed_at | timestamptz | NULL = etkin | Silinme anı (Geri al bunu boşaltır) | — |
+| created_at | timestamptz | — | Eklenme | — |
+
+- **Koruma:** RLS ENABLE + FORCE; `wms_app` SELECT + sütun düzeyi INSERT/UPDATE (`is_main`, `removed_at`, `data`, `thumb`), DELETE yok. Bekçi tetikleyicisi (ENABLE ALWAYS): kimlik/içerik alanı değişmez; baytlar yalnız silinmiş ve 10 dakikası dolmuş satırda NULL'a boşaltılır; boşaltılmış satır geri açılamaz; ürün başına ≤ 5 etkin görsel. Silme = yumuşak silme; baytlar aynı firmanın sonraki görsel komutunda boşaltılır.
 
 ### item_barcodes
 Ürüne bağlı barkodlar. Bir barkod belli bir birimi ve paket içi miktarı da gösterebilir.
@@ -878,6 +898,7 @@ Depo × ürün bazında minimum–maksimum stok seviyesi.
 | created_at | timestamptz | — | Oluşma | — |
 
 - **Koruma:** RLS ENABLE + FORCE.
+- **Yazma (T-1200):** ürün kartı › Min / maks stok (`setItemStockPolicy`, `items.edit`, depo kapsamı). Satır silinmez; 0 / 0 "minimum yok" anlamındadır (okumalar `min_quantity > 0` süzer).
 
 ### stock_alerts
 Min–maks kuralından doğan stok uyarısı.
