@@ -218,8 +218,15 @@ describe("T-1129 veritabanı bekçisi (0065): yetki, tenant, replica", () => {
     const fks = await adm.query<{ t: string }>("SELECT DISTINCT conrelid::regclass::text AS t FROM pg_constraint WHERE contype = 'f' AND confrelid = 'public.items'::regclass ORDER BY 1");
     const def = (await adm.query<{ d: string }>("SELECT pg_get_functiondef('public.item_fixed_usage(uuid, uuid)'::regprocedure) AS d")).rows[0]?.d ?? "";
     expect(fks.rows.length).toBeGreaterThanOrEqual(16);
+    // Bilinçli olarak SAYILMAYAN tablolar (gerekçeli, kapalı liste): birim / ölçek / takip anlamı taşımayan ürün eki.
+    const NOT_USAGE: Readonly<Record<string, string>> = { item_images: "T-1145 ürün görseli: temel birim, hassasiyet ve takip moduyla ilgisiz" };
+    for (const name of Object.keys(NOT_USAGE)) expect(fks.rows.map((r) => r.t.replace(/^public\./, "")), `${name} listede ama FK yok`).toContain(name);
     for (const { t } of fks.rows) {
       const name = t.replace(/^public\./, "");
+      if (NOT_USAGE[name] !== undefined) {
+        expect(def, `${name} sayılmamalı`).not.toContain(`public.${name} `);
+        continue;
+      }
       expect(def, `${name} ürüne FK veriyor ama item_fixed_usage saymıyor`).toContain(`public.${name} `);
     }
   });
