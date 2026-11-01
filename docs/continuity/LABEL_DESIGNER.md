@@ -156,3 +156,24 @@ Servis AC04 filtresi, export testindeki önceki test verisine bağımlılığı 
 Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol için assertiontabanı53→55 yükseldi; tam prepush ve korunan taban sonrası yenilenmiş bağımsız rapor zorunlu.
 
 **Servis son kapı:** Güncel tam prepush YEŞİL: lint/typecheck,5438birim, tüm bekçiler, AC04 387. Son kaynak11int geçti; bağımsız rapor0/0/0 @53244b1 önceki199birim+11int ve aynı işkodunu, yeni test/metadata farkını ayırarak doğruladı. CI/deploy/baskı ekranı hâlâ ayrı bekler.
+### T-1157 ortak baskı motoru (yerel)
+- Aynı sürümlü modelden gerçek mm SVG; QR 4modül sessiz alan, Code128 10modül ve EAN13 doğrulanmış mevcut GTIN. DPI ve kalibrasyon sınırlı; okunamayacak kod/metin taşması engellenir, değer kesilmez veya uydurulmaz. Kanonik PNG yalnız yetkili sunucu varlık sınırından alınır.
+- Hedef35birim, sharedtsc/hedefESLint; gerçek Chromium PNG çıktılarından ZXing ile36/36 çözüm (3semboloji ×3DPI ×4dönüş), üç çıktı gözle kontrol edildi. Fiziksel yazıcı ve PDF sayfa kabulü henüz yapılmadı. Bu motor tek başına gerçek baskı kaynağı veya editör ekranı değildir; prepush/CI/yayın bekler.
+
+### T-1158 hazır başlangıç düzenleri (yerel)
+- readyLabelDesign dört bağlama düzen verir; girişte miktar/birim/lot/üretim/SKT, sevkte belge/cari/miktar/lot/SKT, ürün ve rafta kendi gerçek alanları hazırdır. Kanonik tasarım sözleşmesi ve eski şablonlar değişmez; zorunlu veri yoksa baskı uydurulmaz.
+- Hazır düzen/motor/model83hedefbirim, sharedtsc ve hedefESLint geçti. UI bağlantısı, tam prepush/CI/canlı henüz bekler.
+
+### T-1159 ortak editör uzantısı (yerel)
+- EtiketEditor kaynağı `.lx` ortak uzantısına dönüştü; port registry CSS/token üretir. KalipEtiketEditor ortak kabın içinde kullanılır; hazır model, gerçek SVG önizleme, taşı/tek dokunuşla yerleştir/boyutlandır/döndür/hizala/kopyala/sil/geri al, klavye ve iki parmak görünüm kontrolü. Logo yükleme yetkili üst katman callback'idir.
+- Özellik sayfası ortak perde ve odak kancasını kullanır; kayıt/çıkış koruması üst sayfanın sorumluluğu. Salt okunur değişikliği reddeder; QR veri bağı serbest metne dönüşmez. Kaynak390/1180/1440/kısa telefon açık-koyu render taşmasız; ilk gözlemdeki alan kutusu taşması ve simge eşliği düzeltildi. Son render/gerçek uygulama e2e, bağımsız inceleme, prepush ve canlı bekliyor.
+
+### T-1160 web sunucu sınırı (yerel)
+- Mevcut production action guard (Origin/oturum/IP/kişi/tenant hız sınırı) ve kapalı şemalar; kullanıcı/tenant UUID istemciden alınmaz. Gerçek yetki/MFA/CAS ve logo kanonikleştirme domain'de tekrar doğrulanır; ağ yazıcısı URL'si veya istemciden baskı snapshot'ı kabul edilmez.
+- 14action sınır testi, webtsc ve hedefESLint geçti. Domain bağımsız incelemesi199birim+11izolasyonint/0bulgu; webaction/renderer/kayıt ekranı için yeni paket incelemesi henüz bekler. Gerçek baskı kaynağı ayrı dilimdir.
+
+### T-1165 paket incelemesi düzeltmesi (yerel)
+- Bağımsız incelemede bulunan action/domain yetki eşliği ve yazma önkoşulu tutarlılığı düzeltildi; bekçi/test gevşetilmedi. Canlı etiket modülü henüz açık değildir. Sürükleme/async ekleme güncel saltokunur durumunu kullanır.
+- Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
+
+**Renderer son önkontrol:** Güncel main7037d6d üstünde gerçek5kart/30dosya birleşmesi; tam prepush YEŞİL (verify5487birim, tüm bekçiler, AC04 387). İlk scope hatası, merge konularındaki eksik dal adları ve STACK sharedQR kayıtları düzeltilerek kapandı; kontroller gevşetilmedi. Bağımsız0/0/0 @f985154. PR/CI/deploy ayrı bekler; workspace ve gerçek baskı ekranı sonraki paketlerdir.

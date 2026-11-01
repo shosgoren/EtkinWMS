@@ -18,7 +18,11 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
   },
+  "devDependencies": {
+    "@types/qrcode": "1.5.5"
+  },
   "dependencies": {
+    "qrcode": "1.5.4",
     "zod": "4.6.6"
   }
 }
