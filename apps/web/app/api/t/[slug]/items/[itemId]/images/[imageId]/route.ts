@@ -23,7 +23,7 @@ export async function GET(request: Request, nextCtx: { params: Promise<{ slug: s
     const variant = new URL(req.url).searchParams.get("t") === "1" ? "thumb" : "full";
     const r = await getItemImage({ db: getAppDb(), principal, tenantSlug: slug }, { itemId, imageId, variant });
     if (!isWebp(r.bytes)) throw new AppError("NOT_FOUND");
-    return new Response(r.bytes as BodyInit, {
+    return new Response(r.bytes as unknown as ConstructorParameters<typeof Response>[0], {
       status: 200,
       headers: {
         "content-type": "image/webp",

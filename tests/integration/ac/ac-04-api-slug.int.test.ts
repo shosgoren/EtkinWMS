@@ -1034,6 +1034,9 @@ describe("Server Action'lar", () => {
 
   for (const [name, call] of Object.entries({ ...ACTIONS, ...ITEM_ACTIONS, ...TASK_ACTIONS, ...RECEIPT_ACTIONS })) {
     it(`@AC-04 ${name}: A yöneticisi B'nin slug'ıyla -> NOT_FOUND (var olmayan slug ile aynı yanıt); B'de hiçbir değişiklik yok`, async () => {
+      // T-1145: eylem sayısı arttıkça bu döngü A yöneticisinin dakikalık kullanıcı kotasını (120) sonraki testler için tüketiyordu; bu
+      // testler kotayı değil kimlik reddini sınar → yalnız kullanıcı kapsamlı sayaçlar sıfırlanır (T-1116 deseni; kota ayrı testte).
+      await adm.query("DELETE FROM public.request_rate_limits WHERE scope = 'web.user'");
       const victim = { membership: B.managerMembership, invitation: bInvite.invitationId };
       const beforeB = await snapshot(B);
       const beforeA = await snapshot(A);

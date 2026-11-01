@@ -58,6 +58,7 @@ Kaynak sözdizimi: `<dosya>#<json.yolu>` (package.json alanı) veya `docker-comp
 | Shadcn/Radix | — | — ilk kullanan kart | | |
 | Lucide | lucide-react | 1.52.0 | packages/ui/package.json#dependencies.lucide-react | T-110 |
 | Uygulama içi barkod çözücü (zxing-cpp WASM; MIT, zxing-cpp Apache-2.0; yalnızca tarama ekranında tembel yüklenir; WASM `locateFile` ile kendi kaynağımızdan sunulur, varsayılan jsDelivr adresi KULLANILMAZ; CSP `'wasm-unsafe-eval'`) | zxing-wasm | 3.1.5 | apps/web/package.json#dependencies.zxing-wasm | T-286, A-29 |
+| Görsel çözme ve yeniden kodlama (ürün görseli yüklemesi; sunucuda, EXIF silme + WebP; Next'in zaten kurduğu sürüm doğrudan bağımlılık yapıldı; Apache-2.0, libvips LGPL-3.0) | sharp | 0.35.5 | apps/web/package.json#dependencies.sharp | T-1145 |
 | next-intl | next-intl | 4.14.9 | apps/web/package.json#dependencies.next-intl | T-109, ADR-002 |
 | QR kod üretici (MFA kurulum ekranı; yalnızca istemcide SVG, ağ isteği yok) | qrcode | 1.5.4 | apps/web/package.json#dependencies.qrcode | T-912 |
 | QR kod tipleri | @types/qrcode | 1.5.5 | apps/web/package.json#devDependencies.@types/qrcode | T-912 |

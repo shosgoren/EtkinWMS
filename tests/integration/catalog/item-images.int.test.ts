@@ -268,7 +268,7 @@ function req(url: string, init: { method: "GET" | "POST"; user: string | null; b
   if (init.user !== null) headers.set("x-test-user", init.user);
   if (init.mfa === false) headers.set("x-test-mfa", "0");
   if (init.method === "POST") headers.set("origin", ORIGIN);
-  return new Request(url, { method: init.method, headers, ...(init.body === undefined ? {} : { body: init.body as BodyInit }) });
+  return new Request(url, { method: init.method, headers, ...(init.body === undefined ? {} : { body: init.body as unknown as NonNullable<RequestInit["body"]> }) });
 }
 
 describe("ürün görseli — route", () => {

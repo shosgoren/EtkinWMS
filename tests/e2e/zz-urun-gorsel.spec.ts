@@ -39,7 +39,7 @@ test("T-1145: görsel ekle + listede küçük resim, min / maks gir, dönüşüm
   const kapak = page.getByTestId("kart-gorsel");
   await expect(kapak).toBeVisible();
   await expect(page.getByTestId("kalip-toast").filter({ hasText: "Görsel eklendi" })).toBeVisible();
-  await expect.poll(async () => kapak.locator("img").evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await expect.poll(async () => kapak.locator("img").evaluate((el) => (el as unknown as { naturalWidth: number }).naturalWidth)).toBeGreaterThan(0);
   // Büyük görünüm açılır, Esc kapatır.
   await kapak.click();
   await expect(page.getByTestId("gorsel-buyuk")).toBeVisible();
@@ -47,10 +47,14 @@ test("T-1145: görsel ekle + listede küçük resim, min / maks gir, dönüşüm
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("gorsel-buyuk")).toHaveCount(0);
 
-  // Listede (Liste görünümü) bu ürünün satırında küçük resim.
+  // Listede (Liste görünümü; Kart / Liste geçişi yalnız geniş ekranda) bu ürünün satırında küçük resim.
   await page.goto(`/t/demo/items?q=${encodeURIComponent(code)}`);
-  await page.locator('[data-gorunum="liste"]').click();
-  await expect(page.getByTestId("items-table").getByTestId("liste-gorsel").first()).toBeVisible();
+  await expect(page.getByTestId("items")).toBeVisible();
+  const listeGecis = page.locator('[data-gorunum="liste"]');
+  if (await listeGecis.isVisible()) {
+    await listeGecis.click();
+    await expect(page.getByTestId("items-table").getByTestId("liste-gorsel").first()).toBeVisible();
+  }
 
   // 2. Min / maks: kalem → form; min > maks alan hatası; düzeltince kaydedilir ve kartta görünür.
   await page.goto(`/t/demo/items/${itemId}`);
