@@ -152,3 +152,5 @@ Yetki paketi kanıtı:24hedefint/22birim/webtsc ve prepushYEŞİL (verify5421bir
 Servis prepush ilk koşusu yeni root audit çevirilerini eksik buldu; auditLog ve root audit ikisi de tr/en tamamlandı. Baştan prepush tekrar gerekir. Şema deploy5193f22, main artıkb7e2753 olduğu için güvenli NOT_CURRENT_MAIN kapısında reddedildi; canlıya eski SHA zorlanmayacak, güncel main yayın hattı izlenecek.
 
 Servis AC04 filtresi, export testindeki önceki test verisine bağımlılığı buldu. Kendi26sürümlük geçmişi ve kesinBtenant kimlik kümesi ile tekbaşına ve tamdosya kabulü zorunlu; kontrol kaldırılmaz. Güncel hedefint/prepush tekrar gerekir.
+
+Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol için assertiontabanı53→55 yükseldi; tam prepush ve korunan taban sonrası yenilenmiş bağımsız rapor zorunlu.
