@@ -71,14 +71,15 @@ async function render(tx:AccessTx,m:Membership,t:Template,rows:readonly LabelSou
  if(printer.kind!=='dialog')throw new LabelPrintError('PRINTER_UNAVAILABLE');
  const ids=[...new Set(t.design.elements.flatMap(e=>e.kind==='logo'?[e.assetId]:[]))],assets:Record<string,string>={};let size=0;
  if(ids.length){const logos=await tx.execute<{id:string;png:Buffer}>(sql`SELECT id,png FROM public.label_assets WHERE tenant_id=${m.tenantId}::uuid AND id IN (${sql.join(ids.map(id=>sql`${id}::uuid`),sql`, `)})`);if(logos.length!==ids.length)throw new AppError('NOT_FOUND');for(const l of logos){const png=normalizeLabelPng(l.png).png;size+=png.length;if(size>1024*1024)throw new AppError('VALIDATION_FAILED');assets[l.id]=`data:image/png;base64,${png.toString('base64')}`;}}
- const pages=rows.map(r=>{
+ const pages:string[]=[];let bytes=0;for(const r of rows){
   prepareLabelForPrint(t.design,r.required);
   for(const field of r.required)if(!r.values[field])throw new LabelPrintError('REQUIRED_VALUE');
   const field=r.packageCodeRequired?'packageQr':t.design.context==='PRODUCT'?'barcode':t.design.context==='LOCATION'?'locationCode':'documentNo';
   if(!t.design.elements.some(e=>(e.kind==='qr'||e.kind==='barcode')&&e.field===field))throw new LabelPrintError('REQUIRED_CODE');
   // preview is deliberately never passed. DPI/offset only come from the current authorized server profile or saved job.
-  return renderLabelSvg(t.design,r.values,{...calibration,assets});
- });if(pages.reduce((n,p)=>n+p.length,0)>8*1024*1024)throw new AppError('VALIDATION_FAILED');
+  const page=renderLabelSvg(t.design,r.values,{...calibration,assets});bytes+=Buffer.byteLength(page,'utf8');
+  if(bytes>8*1024*1024)throw new AppError('VALIDATION_FAILED');pages.push(page);
+ }
  return{templateId:t.id,versionId:t.versionId,name:t.name,context:t.design.context,width:t.design.width/1000,height:t.design.height/1000,pages,next,printer};
 }
 async function printer(tx:AccessTx,m:Membership,templateId:string,deviceId:string|null,savedId?:string|null):Promise<{resolution:PrinterResolution;calibration:Calibration}>{
