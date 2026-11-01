@@ -33,6 +33,8 @@ BEGIN;
 SET LOCAL lock_timeout = '15s';
 SET LOCAL statement_timeout = '10min';
 SET LOCAL search_path = pg_catalog, pg_temp;
+-- Sıralayıcı ertelenebilir döngü kenarlarını atlar; FKler kapatılmaz, silmeler sonunda ALL IMMEDIATE ile doğrulanır.
+SET CONSTRAINTS ALL DEFERRED;
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 0. Ön denetimler + plan
