@@ -1,7 +1,7 @@
 // T-1026: istemci için yalnız rehber planı; izin hesabı sunucu modülündedir.
 /** İşlem rehberini açma olayı (detay: rehber anahtarı ya da "pick"); T-1120: yüzen kısayol da yayınlar, döngüsel içe aktarma olmasın diye burada. */
 export const OP_GUIDE_EVENT = "etkinwms:operation-guide";
-export const OP_GUIDES = ['receive', 'putaway', 'issue', 'transfer', 'count'] as const;
+export const OP_GUIDES = ['receive', 'putaway', 'issue', 'transfer', 'count', 'label'] as const;
 export type OpGuide = typeof OP_GUIDES[number];
 /**
  * T-1124 (kullanıcı 28 Ekim: "işi yaptırmıyor, sırasıyla doldurulacak yere odaklanmıyor"): her adım gerçek ekrandaki öğeyi gösterir
@@ -20,6 +20,13 @@ const ANA = '[data-tour="main"]';
 const TARA = '[data-testid="scan-panel"]';
 const MIKTAR = '[data-testid="qty-display"], [data-testid="saha-keypad"]';
 export const GUIDE_INSTRUCTIONS: Readonly<Record<OpGuide, readonly GuideInstruction[]>> = {
+    label: [
+        { key:'label0', target:ANA, done:'[data-testid="label-editor"]' },
+        { key:'label1', target:'[data-testid="label-editor"] [data-add="logo"], [data-testid="label-editor"] [data-add="text"]' },
+        { key:'label2', target:'[data-testid="label-editor"] [data-label-element]' },
+        { key:'label3', target:ANA, done:'[data-guide-done~="label-saved"]' },
+        { key:'label4', target:'[data-testid="label-printer-link"]', done:'[data-testid="label-printers"]' },
+    ],
     receive: [
         { key: 'receive0', target: '[data-testid="receive-pick"], [data-testid="receive-empty"]', done: TARA },
         { key: 'receive1', target: `${TARA}, ${ANA}`, done: '[data-testid="qty-display"]' },
@@ -57,9 +64,10 @@ export const GUIDE_INSTRUCTIONS: Readonly<Record<OpGuide, readonly GuideInstruct
     ],
 };
 export function guideHref(base: string, guide: OpGuide): string {
-    return `${base}${({ receive: '/field/receive', putaway: '/field/putaway', issue: '/stock/documents?new=STOCK_OUT', transfer: '/stock/documents?new=TRANSFER', count: '/field/tasks?kind=COUNT' } as const)[guide]}`;
+    return `${base}${({ receive: '/field/receive', putaway: '/field/putaway', issue: '/stock/documents?new=STOCK_OUT', transfer: '/stock/documents?new=TRANSFER', count: '/field/tasks?kind=COUNT', label:'/label-designs' } as const)[guide]}`;
 }
 export function currentGuide(path: string, query: string): OpGuide | null {
+    if(path.endsWith('/label-designs'))return 'label';
     if (path.endsWith('/field/receive'))
         return 'receive';
     if (path.endsWith('/field/putaway'))

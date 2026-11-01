@@ -212,3 +212,6 @@ Etiket tasarımı artık Modüller'de gerçek labels.view bağlantısıdır (yal
 İşlenmiş çıkış belgesi kartında atanmış özel sevk etiketi bağlantısı; düz çıkış fişQR kullanır, fiziksel paket kimliği üretilmez. Gerçek kabul/kalite/yerleştirme/reçete/üretim komutlarıyla iki çıktı paketi ve gerçek çıkış postası üzerinden etiket testi hazırlanıyor; taslak kaynak ret ve stok değişmezliği ayrıca sınanır. Test henüz yapılmadı.
 
 T1174 gerçekDB13/13: iki üretim çıktısının gerçek paket QR/lot/tarihleri ve düz sevkin gerçek DB fişnumarası doğrulandı; baskı stok değiştirmedi. Routing2+action5 birim, root/web tip ve hedef ESLint geçti. Paketli sevkte otomatik kod seçimi T1177; tarayıcı/CI/canlı ayrı bekler.
+
+### T-1176 — Görsel işlem rehberi (yerel geliştirme)
+Beş kısa adım mevcut ortak hedef deliği/odak/ses/Esc/katlama ile yeni etiket, logo/metin, nesne taşıma, gerçek kayıt ve yazıcı bağlantısını gösterir. Tasarım+görüntüleme hakkı gerekir; rehber işlem yetkisi vermez. Başarı markerı yalnız kayıt ve seçiliyse yayın/varsayılan başarıyla oluşur. İlk otomatik açılışın kullanıcı/tenant bazlı sunucu kaydı T1178'de yapılacak; mevcut rehberin cihazdaki kaldığın yerden devam deposu bunun yerine geçmez. T1177 otomatik takip kodu yalnız gerçek packageQr veya gerçek fişnumarasıdır; kaynağı değiştirmez. Yerel151birim/webtip temiz, gerçek kaynak13test yeni bağla tekrar doğrulanır.
