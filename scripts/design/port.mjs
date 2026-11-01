@@ -27,7 +27,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
  * @type {ReadonlyArray<{ name: string, file: string, sha256: string, scope: string, palette: "bakis" | "c" | "none", device?: "fr", section?: string }>}
  */
 export const SOURCES = [
-  { name: "etiket-editor", file: "docs/design/source/EtiketEditor.dc.html", sha256: "806809ac959b34703b0cd60cb61d65a445ca17ccf05e0562827fda8062351386", scope: "dzed", palette: "none", device: "fr", section: "YENİ" },
+  { name: "etiket-editor", file: "docs/design/source/EtiketEditor.dc.html", sha256: "698baeca6e9088043297ad624736db4f673b402230f885f2d95b023e553b9f98", scope: "dzed", palette: "none", device: "fr", section: "YENİ" },
   { name: "bakis", file: "docs/design/source/Bakis.dc.html", sha256: "f38a508b237a99683972698d34fdc639467864b4763f66d48e1c77d357bff457", scope: "dz", palette: "bakis" },
   { name: "giris", file: "docs/design/source/Giris.dc.html", sha256: "a0007e9453c60f8e11bd547101e38a8afe6888289f5490497510924a4296c1e5", scope: "dzg", palette: "c" },
   { name: "yonet", file: "docs/design/source/Yonet.dc.html", sha256: "5135ec250d1dd609b2415d5d834fc73d21b2a79df273d5cc44f21d4c4bfff425", scope: "dzy", palette: "c" },
