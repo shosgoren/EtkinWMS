@@ -281,6 +281,7 @@ Kaynak: 20.10.2026 statik inceleme (kod okuması; test/DB/canlı koşturulmadı)
 | B-244 | B-243 ile aynı iş (T-1142 tekrar kaydı) — B-243'te izlenir |
 | B-245 | Yetki · Kişiye özel yetki istisnası (grup dışında tek kişiye aç/kapa) yok: model rol + en çok bir grup. Gerekirse ayrı tablo + `withMembership` değişikliği + güvenlik incelemesi (T-1142 kararı) |
 | B-246 | Yetki ekranı tuvale eklenmeli (STANDART §5'ten türetildi; `KalipAnahtarKumesi` satırları, şablon düğmeleri, kişi görünümü) ve ilk kullanım rehberi adımları (T-1142) |
+| B-247 | Test · e2e `z-easy-setup` (masaüstü) main `008070a` ilk koşusunda MFA kodu sonrası `/mfa`'da kaldı; yeniden koşuda geçti. "Flake" kök neden değildir: aynı 30 sn penceresinde TOTP kodunun yeniden kullanımı ya da saat sınırı olasılığı incelenip test sağlamlaştırılmalı (T-1143 bulgusu) |
 
 ## Belge düzeltmeleri
 | ID | İş |
