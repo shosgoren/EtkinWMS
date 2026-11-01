@@ -163,3 +163,7 @@ Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol iç
 ### T-1158 hazır başlangıç düzenleri (yerel)
 - readyLabelDesign dört bağlama düzen verir; girişte miktar/birim/lot/üretim/SKT, sevkte belge/cari/miktar/lot/SKT, ürün ve rafta kendi gerçek alanları hazırdır. Kanonik tasarım sözleşmesi ve eski şablonlar değişmez; zorunlu veri yoksa baskı uydurulmaz.
 - Hazır düzen/motor/model83hedefbirim, sharedtsc ve hedefESLint geçti. UI bağlantısı, tam prepush/CI/canlı henüz bekler.
+
+### T-1159 ortak editör uzantısı (yerel)
+- EtiketEditor kaynağı `.lx` ortak uzantısına dönüştü; port registry CSS/token üretir. KalipEtiketEditor ortak kabın içinde kullanılır; hazır model, gerçek SVG önizleme, taşı/tek dokunuşla yerleştir/boyutlandır/döndür/hizala/kopyala/sil/geri al, klavye ve iki parmak görünüm kontrolü. Logo yükleme yetkili üst katman callback'idir.
+- Özellik sayfası ortak perde ve odak kancasını kullanır; kayıt/çıkış koruması üst sayfanın sorumluluğu. Salt okunur değişikliği reddeder; QR veri bağı serbest metne dönüşmez. Kaynak390/1180/1440/kısa telefon açık-koyu render taşmasız; ilk gözlemdeki alan kutusu taşması ve simge eşliği düzeltildi. Son render/gerçek uygulama e2e, bağımsız inceleme, prepush ve canlı bekliyor.
