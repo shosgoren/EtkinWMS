@@ -1,0 +1,3 @@
+-- T-1149: label module grants; no existing role/member changes. Permission catalogue and UI mirror this closed list.
+ALTER TABLE public.permission_groups DROP CONSTRAINT permission_groups_grants_chk,
+ ADD CONSTRAINT permission_groups_grants_chk CHECK (grants <@ ARRAY['stock.post','document.create','document.approve','count_diff.approve','reversal.create','data.import','items.create','items.edit','items.archive','parties.create','parties.edit','parties.archive','warehouses.create','warehouses.edit','warehouses.archive','locations.create','locations.edit','locations.archive','labels.view','labels.design','labels.publish','labels.print','labels.printers']::text[] AND cardinality(grants) <= 23);
