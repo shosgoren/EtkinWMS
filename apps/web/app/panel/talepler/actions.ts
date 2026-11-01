@@ -65,14 +65,15 @@ export async function demoRequestAction(_prev: TaleplerActionState, form: FormDa
     }
     const mailConfig = loadMailConfig(process.env);
     assertMailModeAllowed(mailConfig, process.env.WMS_ENV?.trim());
+    // Uygulama kökü yalnız bağlantı üreten işlemde (onay, yeni bağlantı) gerekir; ret bağlantı üretmez (T-1144).
     const base = appBase(ctx.origin);
-    if (base === undefined) throw new Error("WMS_APP_URL is not configured for the panel");
+    if (base === undefined && input.intent !== "REJECTED") throw new Error("WMS_APP_URL is not configured for the panel");
     const deps: ActivationDeliveryDeps = { mailConfig, queue: (await getSenderQueue()) ?? unavailableQueue, log };
     const issued =
       input.intent === "REISSUE"
         ? await reissueActivation(common, deps)
         : (await decideDemoRequest({ ...common, decision: input.intent }, deps)).activation;
-    return { intent: input.intent, link: issued?.token === undefined ? undefined : `${base}/activate/${issued.token}`, delivery: issued?.delivery };
+    return { intent: input.intent, link: issued?.token === undefined || base === undefined ? undefined : `${base}/activate/${issued.token}`, delivery: issued?.delivery };
   })({ id: typeof id === "string" ? id : "", intent: typeof intent === "string" ? intent : "" });
   if (!result.ok) {
     if (result.error.code === "UNAUTHENTICATED") {
