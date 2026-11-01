@@ -8,7 +8,7 @@ import { filterJourney, STEP_KEYS, type JourneyData } from '../yolculuk/steps.ts
 const member = (roles: string[], screens: string[] | null = null, grants: string[] = []) => ({ roles, screens, grants });
 describe('işlem rehberleri: mevcut yetkiler, eylem izni değildir', () => {
     it('hesap sahibi beş işlemi ve kurulumun tümünü seçebilir', () => { expect(guideAccess(member(['TENANT_ADMIN']))).toEqual({ setup: STEP_KEYS, operations: OP_GUIDES }); });
-    it('depo yöneticisine ekip/ERP/raf yönetimi önerilmez', () => { const a = guideAccess(member(['WAREHOUSE_MANAGER'])); expect(a.setup).not.toContain('people'); expect(a.setup).not.toContain('cards'); expect(a.setup).not.toContain('shelves'); expect(a.operations).toEqual(OP_GUIDES); });
+    it('depo yöneticisine ekip/ERP/raf yönetimi önerilmez', () => { const a = guideAccess(member(['WAREHOUSE_MANAGER'])); expect(a.setup).not.toContain('people'); expect(a.setup).not.toContain('cards'); expect(a.setup).not.toContain('shelves'); expect(a.operations).toEqual(OP_GUIDES.filter(g=>g!=='label')); });
     it('saha ve sayım ayrılır; özel ekran kısıtı ek izinle açılmaz', () => {
         expect(guideAccess(member(['PICKER'], ['receive'])).operations).toEqual(['receive', 'putaway']);
         expect(guideAccess(member(['COUNTER'], ['count'])).operations).toEqual(['count']);
@@ -84,3 +84,5 @@ describe('T-1124 işlem rehberi adım ilerlemesi ve hedef çapaları', () => {
     });
 });
 
+
+it('etiket rehberi tasarım ve görüntüleme hakkını birlikte ister; yazdırma hakkı yetmez',()=>{expect(guideAccess(member(['READ_ONLY'],null,['labels.print'])).operations).not.toContain('label');expect(guideAccess(member(['READ_ONLY'],null,['labels.view','labels.design'])).operations).toContain('label');expect(currentGuide('/t/a/label-designs','new=PRODUCT')).toBe('label');expect(guideScreen('label','/t/a/label-designs','tab=printers')).toBe(true);expect(guideAdvance(GUIDE_INSTRUCTIONS.label,3,s=>s==='[data-guide-done~=\"label-saved\"]')).toBe(4);});

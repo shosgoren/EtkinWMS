@@ -39,5 +39,6 @@ export function guideAccess(m: GuideMember): {
         operations.push('transfer');
     if (can('document.create') && screen('count'))
         operations.push('count');
+    if(can('labels.view')&&can('labels.design'))operations.push('label');
     return { setup: m.roles.some(r => r === 'TENANT_ADMIN' || r === 'WAREHOUSE_MANAGER') ? setup : [], operations };
 }

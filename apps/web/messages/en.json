@@ -6442,7 +6442,8 @@
       "putaway": "Putaway",
       "issue": "Stock issue",
       "transfer": "Transfer",
-      "count": "Counting"
+      "count": "Counting",
+      "label": "Label design"
     },
     "instructions": {
       "receive0": "Select the receipt: tap it in the list.",
@@ -6466,7 +6467,12 @@
       "count1": "Scan the shelf, then scan the item to count or pick it from the list.",
       "count2": "Enter the actual count on the keypad.",
       "count3": "Press SAVE below.",
-      "count4": "Count the remaining items; when all are done, submit the count."
+      "count4": "Count the remaining items; when all are done, submit the count.",
+      "label0": "Open a ready label with NEW.",
+      "label1": "Tap an icon to add a logo or text.",
+      "label2": "Drag a field; use the field list for small objects.",
+      "label3": "Save your design with SAVE.",
+      "label4": "Open Printers to choose this label’s printer."
     },
     "skipStep": "Skip step",
     "restart": "Restart guide",
