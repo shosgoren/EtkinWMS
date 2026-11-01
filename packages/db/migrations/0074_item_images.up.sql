@@ -11,8 +11,9 @@
 -- * İÇERİK: yalnız `image/webp` saklanır (giriş JPEG/PNG/WebP, sunucuda yeniden kodlanır); bayt imzası DB'de de denetlenir (RIFF….WEBP).
 --   SVG ve diğer türler giremez.
 -- * SİLME YOK: `wms_app` DELETE alamaz. "Sil" yumuşak silmedir (`removed_at`; Geri al aynı satırı geri açar). Silinmiş satırın baytları
---   10 dakika sonra boşaltılır (`data`/`thumb` NULL; satır meta veriyle iz olarak kalır, geri açılamaz). Boşaltmayı domain, aynı tenant'ın
---   sonraki görsel komutunda yapar; bekçi tetikleyicisi süreyi ve tek yönlü geçişi zorlar.
+--   10 dakika sonra boşaltılır (`data`/`thumb` NULL; satır meta veriyle iz olarak kalır, geri açılamaz). Boşaltmayı worker zamanlayıcısı
+--   (15 dakikada bir, etkin her tenant, `withSystemTenant` + aynı RLS) ve aynı tenant'ın sonraki görsel komutu yapar; bekçi tetikleyicisi
+--   süreyi, tek yönlü geçişi ve silinme anının uydurulamamasını (işlem anı; sonradan değişmez) zorlar.
 -- * KAPAK: ürün başına en çok bir etkin kapak (kısmi UNIQUE); aynı baytlar (sha256) aynı üründe iki kez etkin olamaz (idempotent yükleme).
 -- * Sayı sınırı (5) domain'de ürün satırı kilidiyle; tetikleyici yedek denetimdir (ENABLE ALWAYS).
 -- * RLS ENABLE + FORCE, tek tenant politikası; `wms_app` SELECT + sütun düzeyi INSERT/UPDATE; `wms_auth` / `wms_worker` yetkisiz.
@@ -81,12 +82,21 @@ BEGIN
        OR NEW.sha256 IS DISTINCT FROM OLD.sha256 OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
       RAISE EXCEPTION 'ITEM_IMAGE_IMMUTABLE: görselin kimlik ve içerik alanları değiştirilemez' USING ERRCODE = '23514';
     END IF;
+    -- Silinme anı uydurulamaz: NULL → dolu geçişte işlem anı (now()); bir silinme anı başka bir ana çevrilemez (geri açma = NULL).
+    IF OLD.removed_at IS NULL AND NEW.removed_at IS NOT NULL AND NEW.removed_at <> pg_catalog.now() THEN
+      RAISE EXCEPTION 'ITEM_IMAGE_IMMUTABLE: silinme anı işlem anı olmalı' USING ERRCODE = '23514';
+    END IF;
+    IF OLD.removed_at IS NOT NULL AND NEW.removed_at IS NOT NULL AND NEW.removed_at <> OLD.removed_at THEN
+      RAISE EXCEPTION 'ITEM_IMAGE_IMMUTABLE: silinme anı değiştirilemez' USING ERRCODE = '23514';
+    END IF;
     IF NEW.data IS DISTINCT FROM OLD.data OR NEW.thumb IS DISTINCT FROM OLD.thumb THEN
       IF NEW.data IS NOT NULL OR NEW.thumb IS NOT NULL OR OLD.removed_at IS NULL OR NEW.removed_at IS NULL
          OR OLD.removed_at > pg_catalog.now() - interval '10 minutes' THEN
         RAISE EXCEPTION 'ITEM_IMAGE_IMMUTABLE: görsel baytları yalnız silindikten 10 dakika sonra boşaltılır' USING ERRCODE = '23514';
       END IF;
     END IF;
+  ELSIF NEW.removed_at IS NOT NULL THEN
+    RAISE EXCEPTION 'ITEM_IMAGE_IMMUTABLE: görsel silinmiş olarak eklenemez' USING ERRCODE = '23514';
   END IF;
   IF NEW.removed_at IS NULL AND (TG_OP = 'INSERT' OR OLD.removed_at IS NOT NULL) THEN
     SELECT count(*) INTO active FROM public.item_images x

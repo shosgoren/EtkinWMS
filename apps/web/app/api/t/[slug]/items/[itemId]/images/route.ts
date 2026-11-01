@@ -3,16 +3,19 @@
 // tenant sayacı (`limitVerifiedTenant`; yetkisiz çağıran gövdeyi okutamaz, dosya çözülmez) → kullanıcı başına dakikada 20 yükleme →
 // gövde en çok 5 MiB okunur (fazlası okunmadan kesilir) → `processItemImage` (bayt imzası, yeniden kodlama, EXIF silme) → domain
 // `addItemImage` (yetki + RLS + audit aynı transaction'da). Dosya diske/loga yazılmaz; yanıt `no-store`.
+// Güvenlik incelemesi MAJOR-1: kullanıcı sınırına ek olarak çalışma alanı başına dakikada 60 yükleme; gövde okunmadan ÖNCE süreç
+// genelindeki işleme yuvası alınır (en çok 2 görsel aynı anda), dolu ise 429 `IMAGE_BUSY` ("Görsel işleniyor, birazdan tekrar dene").
 import { getAppDb } from "@wms/db";
 import { addItemImage, IMAGE_UPLOAD_MAX_BYTES } from "@wms/domain/catalog/item-images";
 import { AppError } from "@wms/shared/errors";
 import { createProductionRouteGuard, limitVerifiedTenant } from "../../../../../../../lib/action-guard.ts";
-import { processItemImage } from "../../../../../../../lib/item-image.ts";
+import { imageBusy, processItemImage, tryAcquireImageSlot } from "../../../../../../../lib/item-image.ts";
 import { createDbRateLimitStore, createRateLimiter } from "../../../../../../../lib/rate-limit.ts";
 
 export const dynamic = "force-dynamic";
 
 const UPLOADS_PER_MINUTE = 20;
+const TENANT_UPLOADS_PER_MINUTE = 60;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -59,9 +62,19 @@ export async function POST(request: Request, nextCtx: { params: Promise<{ slug: 
     const db = getAppDb();
     const access = { db, principal, tenantSlug: slug };
     await limitVerifiedTenant({ ...access, permission: "items.edit" }, ctx);
-    await createRateLimiter({ store: createDbRateLimitStore(db), secret: process.env.BETTER_AUTH_SECRET ?? "", limits: { user: UPLOADS_PER_MINUTE } }).check("user", `item-image:${principal.userId}`);
-    const bytes = await readCapped(req, IMAGE_UPLOAD_MAX_BYTES);
-    const image = await processItemImage(bytes);
+    const limiter = createRateLimiter({ store: createDbRateLimitStore(db), secret: process.env.BETTER_AUTH_SECRET ?? "", limits: { user: UPLOADS_PER_MINUTE, tenant: TENANT_UPLOADS_PER_MINUTE } });
+    await limiter.check("user", `item-image:${principal.userId}`);
+    // Üyelik yukarıda doğrulandı (slug → tek tenant); sayaç çalışma alanı başınadır.
+    await limiter.check("tenant", `item-image:${slug}`);
+    const release = tryAcquireImageSlot();
+    if (release === null) throw imageBusy();
+    let image: Awaited<ReturnType<typeof processItemImage>>;
+    try {
+      const bytes = await readCapped(req, IMAGE_UPLOAD_MAX_BYTES);
+      image = await processItemImage(bytes);
+    } finally {
+      release();
+    }
     const r = await addItemImage({ ...access, requestId: ctx.requestId }, { itemId, image, replaces });
     return new Response(JSON.stringify(r), { status: 200, headers: { "content-type": "application/json", "cache-control": "no-store", "x-content-type-options": "nosniff", "x-request-id": ctx.requestId } });
   })(request);

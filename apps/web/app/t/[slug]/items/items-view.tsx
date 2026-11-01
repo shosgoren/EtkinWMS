@@ -53,6 +53,8 @@ const DETAILED = [
   "validation_failed_image_limit",
   "validation_failed_min_max_invalid",
   "validation_failed_quantity_scale",
+  "validation_failed_image_quota",
+  "rate_limited_image_busy",
 ];
 
 /** Sunucu hatası → `items.errors.<anahtar>` (+ `<anahtar>Action` sonraki eylem). Bilinmeyen kod genel `internal`'a düşer. */
@@ -116,7 +118,7 @@ export interface ItemListView {
   /** T-1117: listenin "Barkod" sütunu — ürünün ilk barkodu (temel birimdeki önce); yoksa alan yok. */
   readonly barcode?: string;
   /** T-1160: "Görsel" sütunu — kapak küçük resmi (`data:` adresi) ve görsel sayısı; görselsiz üründe yok. */
-  readonly image?: { readonly thumb: string; readonly count: number };
+  readonly image?: { readonly thumb: string | null; readonly count: number };
 }
 
 /** Kod önerisi yanıt süresi sınırı; aşılırsa kod alanı açılır (T-259). */

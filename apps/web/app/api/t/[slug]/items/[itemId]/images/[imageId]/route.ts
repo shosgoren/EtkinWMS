@@ -1,7 +1,7 @@
 // T-1160: ürün görselini sunma (yalnız kiracı yetkisiyle). Oturum + üyelik + `stock.view` + RLS domain'de (`getItemImage`); başka
 // tenant'ın / silinmiş / olmayan görseli `NOT_FOUND` (varlık sızmaz). Yanıt yalnız `image/webp` (saklanan biçim; imza yeniden denetlenir),
 // `nosniff`, betik çalıştırmayan CSP + sandbox, `inline` (kaydetme adı sabit), yalnız aynı köken. Adres `?v=<sürüm>` taşır (içerik
-// özeti): içerik değişince adres değişir, bu yüzden tarayıcıda özel (paylaşılmayan) uzun önbellek güvenlidir. `?t=1` küçük resim.
+// özeti): içerik değişince adres değişir; tarayıcıda özel (paylaşılmayan) önbellek en çok 1 gün (silinen görsel en geç ertesi gün düşer). `?t=1` küçük resim.
 import { getAppDb } from "@wms/db";
 import { getItemImage, isWebp } from "@wms/domain/catalog/item-images";
 import { AppError } from "@wms/shared/errors";
@@ -32,7 +32,7 @@ export async function GET(request: Request, nextCtx: { params: Promise<{ slug: s
         "x-content-type-options": "nosniff",
         "content-security-policy": "default-src 'none'; sandbox",
         "cross-origin-resource-policy": "same-origin",
-        "cache-control": "private, max-age=31536000, immutable",
+        "cache-control": "private, max-age=86400",
         etag: `"${r.sha256.slice(0, 32)}"`,
         "x-request-id": ctx.requestId,
       },

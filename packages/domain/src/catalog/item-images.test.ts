@@ -2,7 +2,7 @@
 // WebP'yi kabul etmesi (DB'ye gitmeden önce: imza, boyut, kenar, kimlik biçimi).
 import { describe, expect, it } from "vitest";
 import { AppError } from "@wms/shared/errors";
-import { addItemImage, IMAGE_STORED_MAX_BYTES, IMAGE_THUMB_MAX_BYTES, isWebp, sniffImageType } from "./item-images.ts";
+import { addItemImage, exceedsImageQuota, IMAGE_STORED_MAX_BYTES, IMAGE_THUMB_MAX_BYTES, isWebp, sniffImageType, TENANT_IMAGE_BYTES_MAX } from "./item-images.ts";
 
 const bytes = (...xs: number[]): Uint8Array => new Uint8Array(xs);
 const text = (s: string): Uint8Array => new TextEncoder().encode(s);
@@ -64,5 +64,14 @@ describe("addItemImage giriş denetimi (DB'den önce)", () => {
     for (const bad of [0, 4097, 1.5, Number.NaN]) expect(await code(addItemImage(params, { itemId: ITEM, image: img({ width: bad }) }))).toBe("VALIDATION_FAILED/IMAGE_INVALID");
     expect(await code(addItemImage(params, { itemId: "nope", image: img() }))).toBe("VALIDATION_FAILED/");
     expect(await code(addItemImage(params, { itemId: ITEM, image: img(), replaces: "nope" }))).toBe("VALIDATION_FAILED/");
+  });
+});
+
+describe("çalışma alanı görsel bütçesi", () => {
+  it("500 MiB: sınıra kadar kabul, bir bayt fazlası ret", () => {
+    expect(TENANT_IMAGE_BYTES_MAX).toBe(500 * 1024 * 1024);
+    expect(exceedsImageQuota(TENANT_IMAGE_BYTES_MAX - 100, 100)).toBe(false);
+    expect(exceedsImageQuota(TENANT_IMAGE_BYTES_MAX - 100, 101)).toBe(true);
+    expect(exceedsImageQuota(0, 1, 0)).toBe(true);
   });
 });

@@ -539,7 +539,11 @@
     "validation_failed_image_limit": "Bu kayıtta en çok 5 görsel olabilir.",
     "validation_failed_image_limitAction": "Önce bir görseli sil ya da Değiştir'i kullan.",
     "validation_failed_min_max_invalid": "Minimum, maksimumdan büyük olamaz.",
-    "validation_failed_min_max_invalidAction": "Maksimumu minimuma eşit ya da ondan büyük yaz."
+    "validation_failed_min_max_invalidAction": "Maksimumu minimuma eşit ya da ondan büyük yaz.",
+    "rate_limited_image_busy": "Görsel işleniyor, birazdan tekrar dene.",
+    "rate_limited_image_busyAction": "Birkaç saniye bekleyip görseli yeniden ekle.",
+    "validation_failed_image_quota": "Bu çalışma alanının görsel alanı doldu.",
+    "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",
@@ -1797,7 +1801,11 @@
       "validation_failed_min_max_invalid": "Minimum, maksimumdan büyük olamaz.",
       "validation_failed_min_max_invalidAction": "Maksimumu minimuma eşit ya da ondan büyük yaz.",
       "validation_failed_quantity_scale": "Miktar bu ürünün ondalık hassasiyetini aşıyor.",
-      "validation_failed_quantity_scaleAction": "Daha az ondalık hane yaz."
+      "validation_failed_quantity_scaleAction": "Daha az ondalık hane yaz.",
+      "rate_limited_image_busy": "Görsel işleniyor, birazdan tekrar dene.",
+      "rate_limited_image_busyAction": "Birkaç saniye bekleyip görseli yeniden ekle.",
+      "validation_failed_image_quota": "Bu çalışma alanının görsel alanı doldu.",
+      "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç."
     },
     "locked": "Ürünleri görme yetkin yok.",
     "lockedAction": "Çalışma alanı yöneticine sor.",

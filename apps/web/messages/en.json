@@ -539,7 +539,11 @@
     "validation_failed_image_limit": "A record can have at most 5 images.",
     "validation_failed_image_limitAction": "Delete an image first or use Replace.",
     "validation_failed_min_max_invalid": "The minimum cannot be greater than the maximum.",
-    "validation_failed_min_max_invalidAction": "Enter a maximum equal to or greater than the minimum."
+    "validation_failed_min_max_invalidAction": "Enter a maximum equal to or greater than the minimum.",
+    "rate_limited_image_busy": "Images are being processed, try again shortly.",
+    "rate_limited_image_busyAction": "Wait a few seconds and add the image again.",
+    "validation_failed_image_quota": "This workspace's image storage is full.",
+    "validation_failed_image_quotaAction": "Delete images you no longer need or contact Etkin support."
   },
   "serverErrors": {
     "code": "Error code: {code}",
@@ -1797,7 +1801,11 @@
       "validation_failed_min_max_invalid": "The minimum cannot be greater than the maximum.",
       "validation_failed_min_max_invalidAction": "Enter a maximum equal to or greater than the minimum.",
       "validation_failed_quantity_scale": "The quantity has more decimals than this item allows.",
-      "validation_failed_quantity_scaleAction": "Enter fewer decimal places."
+      "validation_failed_quantity_scaleAction": "Enter fewer decimal places.",
+      "rate_limited_image_busy": "Images are being processed, try again shortly.",
+      "rate_limited_image_busyAction": "Wait a few seconds and add the image again.",
+      "validation_failed_image_quota": "This workspace's image storage is full.",
+      "validation_failed_image_quotaAction": "Delete images you no longer need or contact Etkin support."
     },
     "locked": "You do not have permission to view products.",
     "lockedAction": "Ask your workspace manager.",

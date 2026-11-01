@@ -28,6 +28,17 @@ export const IMAGE_MAX_SIDE = 1280;
 export const IMAGE_THUMB_SIDE = 160;
 /** Ürün başına etkin görsel sınırı (0074 tetikleyicisiyle aynı). */
 export const ITEM_IMAGES_MAX = 5;
+/** Çalışma alanı başına görsel bayt bütçesi (boşaltılmamış satırların `data` + `thumb` toplamı; güvenlik incelemesi MINOR-1). */
+export const TENANT_IMAGE_BYTES_MAX = 500 * 1024 * 1024;
+/** Liste sayfasında küçük resim yükü üst sınırı (aşan satır yalnız sayı + simge alır). */
+export const LIST_THUMB_BUDGET_BYTES = 192 * 1024;
+/** Silinmiş görselin baytlarının tutulduğu süre (Geri al penceresi; 0074 tetikleyicisiyle aynı). */
+export const REMOVED_RETENTION_MINUTES = 10;
+
+/** Çalışma alanı görsel bütçesi kararı (saf): kullanılan + eklenecek > bütçe ise ret. */
+export function exceedsImageQuota(usedBytes: number, addingBytes: number, max: number = TENANT_IMAGE_BYTES_MAX): boolean {
+  return usedBytes + addingBytes > max;
+}
 
 const startsWith = (b: Uint8Array, sig: readonly number[], at = 0): boolean => b.length >= at + sig.length && sig.every((x, i) => b[at + i] === x);
 
@@ -69,15 +80,25 @@ async function lockActiveItem(tx: AccessTx, tenantId: string, itemId: string): P
   if (item.status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");
 }
 
-/** 10 dakikadan eski silinmiş görsellerin baytlarını boşaltır (tenant başına bir seferde en çok 50 satır). */
-async function purgeRemoved(tx: AccessTx, tenantId: string): Promise<void> {
-  await tx.execute(sql`
+/**
+ * 10 dakikadan eski silinmiş görsellerin baytlarını boşaltır (bir seferde en çok `limit` satır). Komutlar (50) ve worker zamanlayıcısı
+ * (`withSystemTenant` bağlamında, aynı RLS) çağırır. Eşzamanlı geri açma ile yarış: alt sorgu `FOR UPDATE SKIP LOCKED`, dış UPDATE
+ * koşulları yeniden sınar (güvenlik incelemesi MINOR-4). Dönen değer boşaltılan satır sayısı.
+ */
+export async function purgeRemovedItemImages(tx: Pick<AccessTx, "execute">, tenantId: string, limit = 500): Promise<number> {
+  const rows = await tx.execute<{ id: string }>(sql`
     UPDATE public.item_images SET data = NULL, thumb = NULL
-     WHERE tenant_id = ${tenantId}::uuid AND id IN (
-       SELECT id FROM public.item_images
-        WHERE tenant_id = ${tenantId}::uuid AND removed_at IS NOT NULL AND data IS NOT NULL AND removed_at < now() - interval '10 minutes'
-        ORDER BY removed_at LIMIT 50)`);
+     WHERE tenant_id = ${tenantId}::uuid AND removed_at IS NOT NULL AND data IS NOT NULL AND removed_at < now() - interval '10 minutes'
+       AND id IN (
+         SELECT id FROM public.item_images
+          WHERE tenant_id = ${tenantId}::uuid AND removed_at IS NOT NULL AND data IS NOT NULL AND removed_at < now() - interval '10 minutes'
+          ORDER BY removed_at LIMIT ${limit}
+          FOR UPDATE SKIP LOCKED)
+    RETURNING id`);
+  return rows.length;
 }
+
+const purgeRemoved = (tx: AccessTx, tenantId: string): Promise<number> => purgeRemovedItemImages(tx, tenantId, 50);
 
 async function loadImage(tx: AccessTx, tenantId: string, itemId: string, imageId: string): Promise<Row | undefined> {
   const rows = await tx.execute<Row>(sql`
@@ -135,6 +156,10 @@ export async function addItemImage(
       await tx.execute(sql`UPDATE public.item_images SET is_main = false, removed_at = now() WHERE tenant_id = ${t}::uuid AND id = ${replaces}::uuid`);
     }
     if ((await activeCount(tx, t, itemId)) >= ITEM_IMAGES_MAX) throw new AppError("VALIDATION_FAILED", { detail: "IMAGE_LIMIT" });
+    const used = await tx.execute<{ n: string }>(sql`
+      SELECT coalesce(sum(octet_length(data) + octet_length(thumb)), 0)::text AS n FROM public.item_images
+       WHERE tenant_id = ${t}::uuid AND data IS NOT NULL`);
+    if (exceedsImageQuota(Number(used[0]?.n ?? "0"), data.length + thumb.length)) throw new AppError("VALIDATION_FAILED", { detail: "IMAGE_QUOTA" });
     // Değiştirilen görsel kapaksa kapak boşaldı → yeni görsel kapak olur; ilk görsel de kapaktır.
     const isMain = (await currentMain(tx, t, itemId)) === null;
     const ins = await tx.execute<{ id: string }>(sql`
@@ -313,8 +338,8 @@ export interface ItemMainThumb {
   readonly itemId: string;
   /** Etkin görsel sayısı (listede nokta göstergesi). */
   readonly count: number;
-  /** Kapak küçük resmi (`data:` adresi). */
-  readonly thumb: string;
+  /** Kapak küçük resmi (`data:` adresi); sayfa yük sınırı (`LIST_THUMB_BUDGET_BYTES`) aşıldıysa `null` (satır simge gösterir). */
+  readonly thumb: string | null;
 }
 
 /** Liste için ürün başına kapak küçük resmi + görsel sayısı (en çok 100 ürün; görselsiz ürün dönmez). */
@@ -330,6 +355,10 @@ export async function listItemMainThumbs(params: ReadParams, itemIds: readonly s
         JOIN (SELECT item_id, count(*)::int AS n FROM public.item_images
                WHERE tenant_id = ${actor.tenantId}::uuid AND item_id = ANY(${list}::uuid[]) AND removed_at IS NULL GROUP BY item_id) c ON c.item_id = m.item_id
        WHERE m.tenant_id = ${actor.tenantId}::uuid AND m.item_id = ANY(${list}::uuid[]) AND m.is_main`);
-    return rows.map((r) => ({ itemId: r.item_id, count: r.n, thumb: dataUrl(r.thumb) }));
+    let budget = LIST_THUMB_BUDGET_BYTES;
+    return rows.map((r) => {
+      budget -= r.thumb.length;
+      return { itemId: r.item_id, count: r.n, thumb: budget >= 0 ? dataUrl(r.thumb) : null };
+    });
   });
 }

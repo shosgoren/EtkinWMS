@@ -4,7 +4,7 @@ import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { AppError } from "@wms/shared/errors";
 import { IMAGE_MAX_SIDE, IMAGE_THUMB_MAX_BYTES, IMAGE_UPLOAD_MAX_BYTES, isWebp } from "@wms/domain/catalog/item-images";
-import { processItemImage } from "./item-image.ts";
+import { IMAGE_SLOTS, imageBusy, MAX_INPUT_PIXELS, processItemImage, tryAcquireImageSlot } from "./item-image.ts";
 
 async function code(p: Promise<unknown>): Promise<string> {
   try {
@@ -78,5 +78,31 @@ describe("processItemImage", () => {
     const huge = await sharp({ create: { width: 8000, height: 6000, channels: 3, background: { r: 0, g: 0, b: 0 } } }).png({ compressionLevel: 9 }).toBuffer();
     expect(huge.length).toBeLessThan(IMAGE_UPLOAD_MAX_BYTES);
     expect(await code(processItemImage(new Uint8Array(huge)))).toBe("VALIDATION_FAILED/IMAGE_INVALID");
+  });
+});
+
+describe("kaynak sınırı (güvenlik incelemesi MAJOR-1)", () => {
+  it("en çok IMAGE_SLOTS görsel aynı anda; dolu ise null, bırakınca yeniden alınır; bırakma bir kez sayılır", () => {
+    expect(IMAGE_SLOTS).toBeGreaterThanOrEqual(1);
+    expect(IMAGE_SLOTS).toBeLessThanOrEqual(2);
+    const held = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
+    expect(held.every((r) => r !== null)).toBe(true);
+    expect(tryAcquireImageSlot()).toBeNull();
+    held[0]!();
+    held[0]!();
+    const again = tryAcquireImageSlot();
+    expect(again).not.toBeNull();
+    expect(tryAcquireImageSlot()).toBeNull();
+    again!();
+    for (const r of held.slice(1)) r!();
+    expect(imageBusy()).toMatchObject({ code: "RATE_LIMITED", detail: "IMAGE_BUSY" });
+  });
+
+  it("satır atlamalı (interlaced) PNG ve 24 MP üstü reddedilir", async () => {
+    expect(MAX_INPUT_PIXELS).toBe(24_000_000);
+    const interlaced = await solid(64, 64).png({ progressive: true }).toBuffer();
+    expect(await code(processItemImage(new Uint8Array(interlaced)))).toBe("VALIDATION_FAILED/IMAGE_INVALID");
+    const big = await sharp({ create: { width: 5000, height: 5000, channels: 3, background: { r: 0, g: 0, b: 0 } } }).png({ compressionLevel: 9 }).toBuffer();
+    expect(await code(processItemImage(new Uint8Array(big)))).toBe("VALIDATION_FAILED/IMAGE_INVALID");
   });
 });

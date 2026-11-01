@@ -11,7 +11,7 @@ import path from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { createDbClient } from "../../../packages/db/src/index.ts";
+import { createDbClient, withSystemTenant } from "../../../packages/db/src/index.ts";
 import { DB_CLIENT_SETTINGS, type DbClient } from "../../../packages/db/src/client.ts";
 import { AppError } from "../../../packages/shared/src/errors.ts";
 import {
@@ -22,6 +22,7 @@ import {
   listItemImages,
   listItemMainThumbs,
   listItemStockPolicies,
+  purgeRemovedItemImages,
   removeItemImage,
   removeUnitConversion,
   restoreItemImage,
@@ -88,6 +89,16 @@ const imagesOf = async (w: TenantWorld, itemId: string) =>
     "SELECT id, is_main, removed_at IS NOT NULL AS removed, data IS NOT NULL AS has_data FROM public.item_images WHERE tenant_id = $1 AND item_id = $2 ORDER BY created_at, id",
     [w.tenantId, itemId],
   )).rows;
+
+/** Silinmiş görseli 11 dakika önce silinmiş gibi yaşlandırır (yalnız test sahibi; bekçi o an kapalı). */
+async function ageRemoved(id: string): Promise<void> {
+  await adm.query("ALTER TABLE public.item_images DISABLE TRIGGER item_images_guard");
+  try {
+    await adm.query("UPDATE public.item_images SET removed_at = now() - interval '11 minutes' WHERE id = $1 AND removed_at IS NOT NULL", [id]);
+  } finally {
+    await adm.query("ALTER TABLE public.item_images ENABLE ALWAYS TRIGGER item_images_guard");
+  }
+}
 
 /** Uygulama rolüyle (wms_app) tek transaction'da ham SQL; her zaman geri alınır. */
 async function asApp<T>(tenantId: string, run: (c: pg.Client) => Promise<T>): Promise<T> {
@@ -163,7 +174,7 @@ describe("ürün görseli — domain", () => {
     const thumbs = await listItemMainThumbs(admin(A), [item, A.itemId]);
     expect(thumbs).toHaveLength(1);
     expect(thumbs[0]).toMatchObject({ itemId: item, count: 2 });
-    expect(thumbs[0]?.thumb.startsWith("data:image/webp;base64,")).toBe(true);
+    expect(thumbs[0]?.thumb?.startsWith("data:image/webp;base64,")).toBe(true);
     for (const [action, n] of [["item_image.added", 2], ["item_image.main_set", 1], ["item_image.removed", 1], ["item_image.restored", 1]] as const) {
       expect(await audits(A, action), action).toBe(n);
     }
@@ -194,7 +205,8 @@ describe("ürün görseli — domain", () => {
     await addItemImage(admin(A), { itemId: item, image: await webpImage(121) });
     expect(await failure(restoreItemImage(admin(A), { itemId: item, imageId: ids[0]! }))).toBe("VALIDATION_FAILED/IMAGE_LIMIT");
     // 10 dakikadan eski silinmiş görsel sonraki komutta boşaltılır; boşaltılmış görsel geri açılamaz.
-    await adm.query("UPDATE public.item_images SET removed_at = now() - interval '11 minutes' WHERE id = $1", [ids[0]]);
+    // Silinme anı bekçide uydurulamaz (MINOR-3); yaşlandırma yalnız test sahibince, bekçi kısa süre kapatılarak (int dosyaları sıralı koşar).
+    await ageRemoved(ids[0]!);
     await removeItemImage(admin(A), { itemId: item, imageId: ids[1]! });
     expect((await imagesOf(A, item)).find((r) => r.id === ids[0])?.has_data).toBe(false);
     expect(await failure(restoreItemImage(admin(A), { itemId: item, imageId: ids[0]! }))).toBe("NOT_FOUND/");
@@ -244,6 +256,14 @@ describe("ürün görseli — domain", () => {
     expect(await asApp(A.tenantId, (c) => sqlState(c.query("UPDATE public.item_images SET data = $2 WHERE id = $1", [img.imageId, Buffer.from("RIFF0000WEBPxxxx")])))).toBe("23514");
     expect(await asApp(A.tenantId, (c) => sqlState(c.query("UPDATE public.item_images SET removed_at = now(), is_main = false, data = NULL, thumb = NULL WHERE id = $1", [img.imageId])))).toBe("23514");
     expect(await asApp(A.tenantId, (c) => sqlState(c.query("UPDATE public.item_images SET sha256 = repeat('a', 64) WHERE id = $1", [img.imageId])))).toBe("42501");
+    // MINOR-3: silinme anı işlem anı olmalı; sonradan başka ana çevrilemez.
+    expect(await asApp(A.tenantId, (c) => sqlState(c.query("UPDATE public.item_images SET removed_at = now() - interval '1 hour', is_main = false WHERE id = $1", [img.imageId])))).toBe("23514");
+    expect(
+      await asApp(A.tenantId, async (c) => {
+        await c.query("UPDATE public.item_images SET removed_at = now(), is_main = false WHERE id = $1", [img.imageId]);
+        return sqlState(c.query("UPDATE public.item_images SET removed_at = removed_at - interval '1 hour' WHERE id = $1", [img.imageId]));
+      }),
+    ).toBe("23514");
     const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
     expect(
       await asApp(A.tenantId, (c) =>
@@ -270,6 +290,30 @@ function req(url: string, init: { method: "GET" | "POST"; user: string | null; b
   if (init.method === "POST") headers.set("origin", ORIGIN);
   return new Request(url, { method: init.method, headers, ...(init.body === undefined ? {} : { body: init.body as unknown as NonNullable<RequestInit["body"]> }) });
 }
+
+describe("ürün görseli — süreli boşaltma (worker yolu, MINOR-2)", () => {
+  it("withSystemTenant + aynı RLS: yalnız 10 dk'dan eski silinmiş satırın baytları boşalır; taze silinmiş ve etkin görsel kalır; başka tenant'a dokunmaz", async () => {
+    const item = (await adm.query<{ id: string }>("INSERT INTO public.items (tenant_id, code, name, base_unit_id) VALUES ($1, $2, 'Boşaltma ürünü', $3) RETURNING id", [A.tenantId, `PRG-${rnd()}`, A.unitId])).rows[0]!.id;
+    const old = await addItemImage(admin(A), { itemId: item, image: await webpImage(140) });
+    const fresh = await addItemImage(admin(A), { itemId: item, image: await webpImage(141) });
+    const keep = await addItemImage(admin(A), { itemId: item, image: await webpImage(142) });
+    await removeItemImage(admin(A), { itemId: item, imageId: old.imageId });
+    await removeItemImage(admin(A), { itemId: item, imageId: fresh.imageId });
+    await ageRemoved(old.imageId);
+    const bImg = await addItemImage(admin(B), { itemId: B.itemTwoId, image: await webpImage(143) });
+    await removeItemImage(admin(B), { itemId: B.itemTwoId, imageId: bImg.imageId });
+    await ageRemoved(bImg.imageId);
+    const n = await withSystemTenant(app, A.tenantId, "item_images.purge", (tx) => purgeRemovedItemImages(tx, A.tenantId));
+    expect(n).toBeGreaterThanOrEqual(1);
+    const rows = await imagesOf(A, item);
+    expect(rows.find((r) => r.id === old.imageId)?.has_data).toBe(false);
+    expect(rows.find((r) => r.id === fresh.imageId)?.has_data).toBe(true);
+    expect(rows.find((r) => r.id === keep.imageId)?.has_data).toBe(true);
+    expect((await imagesOf(B, B.itemTwoId)).find((r) => r.id === bImg.imageId)?.has_data).toBe(true);
+    // İkinci koşu idempotent.
+    expect(await withSystemTenant(app, A.tenantId, "item_images.purge", (tx) => purgeRemovedItemImages(tx, A.tenantId))).toBe(0);
+  });
+});
 
 describe("ürün görseli — route", () => {
   let upload: Handler;
@@ -318,6 +362,24 @@ describe("ürün görseli — route", () => {
     expect((await get(A.slug, item, body.imageId, null)).status).toBe(401);
     const missing = await get(A.slug, item, randomUUID(), A.ownerUserId);
     expect(missing.status).toBe(404);
+  });
+
+  it("işleme yuvaları doluyken 429 IMAGE_BUSY (gövde işlenmez, satır yazılmaz); yuva boşalınca yükleme geçer", async () => {
+    const { tryAcquireImageSlot, IMAGE_SLOTS } = await import("../../../apps/web/lib/item-image.ts");
+    const item = A.itemTwoId;
+    const before = await imagesOf(A, item);
+    const png = new Uint8Array(await sharp({ create: { width: 9, height: 9, channels: 3, background: { r: 77, g: 1, b: 9 } } }).png().toBuffer());
+    const held = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
+    try {
+      const res = await post(A, item, A.ownerUserId, png);
+      expect(res.status).toBe(429);
+      const j = (await res.json()) as { error?: { code: string; detail?: string } };
+      expect(j.error).toMatchObject({ code: "RATE_LIMITED", detail: "IMAGE_BUSY" });
+      expect(await imagesOf(A, item)).toEqual(before);
+    } finally {
+      for (const r of held) r?.();
+    }
+    expect((await post(A, item, A.ownerUserId, png)).status).toBe(200);
   });
 
   it("SVG, sahte imza, GIF ve 5 MiB üstü 400; PICKER 403; MFA'sız editör 403; A üyesi B slug'ında 404; çapraz site POST 403; satır yazılmaz", async () => {

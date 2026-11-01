@@ -472,12 +472,17 @@ function GorselBuyuk({
 
 /** Liste "Görsel" sütunu (kaynak `StandartUrunlerListe.dc.html`): kapak küçük resmi + görsel sayısı kadar nokta (ilki koyu); görselsiz
  * satırda aynı hizada "+" kutusu. Salt gösterim (satır bağlantısı kaydı açar). */
-export function KalipListeGorsel({ gorsel, etiket }: { gorsel: { readonly thumb: string; readonly count: number } | undefined; etiket: string }) {
+export function KalipListeGorsel({ gorsel, etiket }: { gorsel: { readonly thumb: string | null; readonly count: number } | undefined; etiket: string }) {
   return (
     <span className="ktgor-k" role="img" aria-label={etiket} data-testid={gorsel === undefined ? "liste-gorsel-bos" : "liste-gorsel"}>
       {gorsel === undefined ? (
         <span className="ktgor-b bos">
           <Ico d={SICON.gArti} size={18} />
+        </span>
+      ) : gorsel.thumb === null ? (
+        // Sayfanın küçük resim yük sınırı aşıldı: görsel var (simge + nokta), resim kartta.
+        <span className="ktgor-b">
+          <Ico d={SICON.gorselListe} size={20} />
         </span>
       ) : (
         <span className="ktgor-b">
