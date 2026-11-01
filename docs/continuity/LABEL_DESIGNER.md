@@ -177,6 +177,7 @@ Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol iç
 - Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
 
 **Renderer son önkontrol:** Güncel main7037d6d üstünde gerçek5kart/30dosya birleşmesi; tam prepush YEŞİL (verify5487birim, tüm bekçiler, AC04 387). İlk scope hatası, merge konularındaki eksik dal adları ve STACK sharedQR kayıtları düzeltilerek kapandı; kontroller gevşetilmedi. Bağımsız0/0/0 @f985154. PR/CI/deploy ayrı bekler; workspace ve gerçek baskı ekranı sonraki paketlerdir.
+
 ### T-1161 gerçek çalışma alanı (yerel)
 - /label-designs sunucu oturum/yetki kontrolü ve yalnız seçili taslağın kanonik logoları. Ortak liste/context/arşiv/arama/keyset; hazır tasarım → gerçek action kayıt → yetkili yayın/varsayılan. Yarım iş çıkış koruması; sürüm çakışmasında sessiz üzerine yazma yok. Taslak kaydı açık Kaydet eylemidir; otomatik kayıt iddiası yok.
 - Ad/ölçü/yayın/sürüm ayarları ortak özellik panelinde; logo yerel JPG/WebP/PNG'den sınırlı PNG'ye dönüşür, sunucu yeniden doğrular. Kullanımda olan sürüm taslak değişiminden etkilenmez; tarihsel sürüm yalnız taslağa alınır. Kaynak/gerçek barkod üretimi bu ekranın işi değildir.
@@ -186,3 +187,14 @@ Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol iç
 - Genel profil ve her etikette ayrı profil; firma/genelcihaz seçenekleri gerçek CAS action ile kaydedilir. Yeni şablon önce kaydedilmeden şablon tercihi yapılamaz; yanlışlıkla genel tercihe yazılmaz. Profiller adı/DPI/kalibrasyon/aktiflik ile ortak form kalıbındadır, URL veya ağ hedefi yoktur.
 - Tarayıcı tercihinin fiziksel yazıcı seçmediği kısa notla görünür. Kapalı profil başka yazıcıya sessiz düşmez; Genel tercihi kullan açık seçenektir. Değişiklik yalnız labels.printers/MFA.
 - Webtypegen/tsc/ESLint ve tercih/UI/action426birim geçti. UI uçtan uca ve baskı kaynağı/CI/yayın bekler; OS/fiziksel yazıcı kabulü yapılmadı.
+
+### T-1163 gerçek kaynak okuma (yerel)
+- Kaynak, mevcut baskı hazırlama tenant transaction'ında okunur; stock.view/depo kapsamı, POSTED/CLOSED, gerçek mevcut paket kimliği ve mevcut paket bayrağı korunur. Sabit/benzersiz kaynak listesi ve100lük keyset; etiket kaynakları deftere yazmaz.
+- Miktarlar Number'a çevrilmez (2^53üstü ve6ondalık korunur); yalnız sunumda dil biçimi. Lot/varsa tarih gerçek zorunlu bağdır. Standart ürün barkodu mevcut temel birimden ve belirsiz olmayan kayıttan alınır, üretilmez.
+- Genel sevk hazır tasarımında QR belge numarasına bağlıdır; fiziksel paketli kaynakta ayrıca gerçek packageQr makine alanı zorunludur. Editörde yalnız bu iki izinli bağ seçilebilir; belge numarası packageQr değerine kopyalanmaz. Eski saklı tasarım değişmez.
+- Kaynak/model/motor31birim ve domain/webtsc/ESLint geçti; henüz gerçek DB kaynak/izolasyon int testi veya baskı işi/API/CI/canlı yok. Bunlar aynı dikey baskı paketi bitmeden teslim sayılmaz.
+
+### T-1165 paket incelemesi düzeltmesi (yerel)
+- Bağımsız incelemede bulunan action/domain yetki eşliği ve yazma önkoşulu tutarlılığı düzeltildi; bekçi/test gevşetilmedi. Canlı etiket modülü henüz açık değildir. Sürükleme/async ekleme güncel saltokunur durumunu kullanır.
+- Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
+
