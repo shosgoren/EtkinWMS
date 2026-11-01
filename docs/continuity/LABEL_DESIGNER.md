@@ -186,3 +186,5 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Varsayılanın atandığı eski sürüm, aynı şablonun daha yeni yayınıyla sessiz değişmez. Tarihsel yeniden basım aynı değer/QR/sürümü kullanır; kaynak ve güncel depo yetkisi yeniden doğrulanır. Kaldırılmış/yanlış eşlenen ürün barkodu veya değişmiş raf kodu fiziksel yeniden basılamaz. Genel/profile sessiz geçiş yok.
 - Tarihsel verinin salt okunur erişimi baskı profili/özellik bayrağıyla kapatılmaz; fiziksel yeni hazırlama ayrı yeniden doğrulanır. Hazırlandı fiziksel basıldı değildir. Wire DTO shared/type-only; istemci DB kodu almaz.
 - Safsnapshot/kaynak/hazırmodel13birim; domain/sharedtsc ve ESLint kontrol edilir. GerçekDB stokdeğişmezliği/izolasyon/int/yenidenbasım, UI/PDF/e2e, güvenlik, prepush/CI/canlı henüz bekler; paket bunlar bitmeden teslim sayılmaz.
+
+T1164 baskı geometri ekkontrolü: büyükEAN13kutusunda modül0.660mmüstüne çıkmaz, rakamlar kodun altında kalır (GS1primarysource renderercomment). 25motor/snapshotbirim ve gerçekChromiumPNG→ZXing36/36 (3semboloji×3DPI×4dönüş) yeniden geçti. Fiziksel cihaz/GS1 kalite sertifikası kanıtı değildir.

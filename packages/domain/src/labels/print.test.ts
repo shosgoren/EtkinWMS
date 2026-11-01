@@ -1,4 +1,5 @@
 import{describe,expect,it}from'vitest';
+import{renderLabelSvg,type LabelDesign}from'@wms/shared/labels';
 import{labelRequestFingerprint,parseLabelSnapshot,type LabelPrepareInput}from'./print.ts';
 const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222';
 const input:LabelPrepareInput={jobId:a,copies:1,locale:'tr',source:{kind:'PRODUCT',ids:[a,b]}};
@@ -17,4 +18,9 @@ describe('immutable label request and snapshot contract',()=>{
   expect(()=>parseLabelSnapshot([{...row(),source:{kind:'PRODUCT',id:'ETK-001'}}],'PRODUCT')).toThrow();
   expect(()=>parseLabelSnapshot([{...row(),source:{kind:'SCRIPT',id:a}}],'PRODUCT')).toThrow();
  });
+ it('an oversized EAN13 box keeps physical module width within 200% and its caption near the symbol',()=>{
+  const d:LabelDesign={schema:1,context:'PRODUCT',width:200000,height:120000,margin:2000,elements:[{id:'ean',kind:'barcode',field:'barcode',format:'EAN13',x:5000,y:5000,width:180000,height:100000,rotation:0,locked:false}]};
+  for(const dpi of[203,300,600] as const){const svg=renderLabelSvg(d,{barcode:'4006381333931'},{dpi}),bars=[...svg.matchAll(/<rect x="[^"]+" y="([^"]+)" width="([^"]+)" height="([^"]+)"/g)];expect(bars.length).toBeGreaterThan(20);expect(Math.max(...bars.map(b=>Number(b[2])))).toBeLessThanOrEqual(660);expect(Math.min(...bars.map(b=>Number(b[2])))).toBeGreaterThanOrEqual(330);const bottom=Math.max(...bars.map(b=>Number(b[1])+Number(b[3]))),caption=Number(/<text x="[^"]+" y="([^"]+)"/.exec(svg)?.[1]);expect(caption-bottom).toBeGreaterThan(0);expect(caption-bottom).toBeLessThanOrEqual(4000);}
+ });
+
 });
