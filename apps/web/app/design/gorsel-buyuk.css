@@ -1,0 +1,39 @@
+/* gorsel-buyuk.css — docs/design/source dosyasından scripts/design/port.mjs ile ÜRETİLDİ. Elle düzenlemeyin (I-18, DESIGN-PARITY §3). */
+body:has(.dzgb) {
+  margin:0;
+}
+.dzgb .ico {
+  display:block;
+  flex:none;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2.2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.dzgb .h {
+  font-family:var(--font-bricolage),sans-serif;
+  font-weight:800;
+  letter-spacing:-.01em;
+}
+.dzgb .arr {
+  position:relative;
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  background:var(--color-dz-a-pppppp-jf);
+  border:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--color-dz-x-bhcoec);
+  cursor:pointer;
+  box-shadow:0 10px 30px -12px var(--color-dz-a-aaaaaa-f);
+}
+.dzgb .th {
+  width:96px;
+  height:72px;
+  border-radius:14px;
+  border:0;
+  cursor:pointer;
+}

@@ -55,9 +55,9 @@ Not (Yolculuk, 22 Ekim): kaynaktaki `.pv-veil` / `.pv-btn` yalnız tuval önizle
 
 T-1026: Kullanıcı 23 Ekim onayıyla kurulum ipucu engellemeyen çalışma kartıdır; Uygula/ekrana dokunma kartı küçültür, form/menü üstünde perde yoktur. İşlem seçici aynı ysheet/yst, kısa rehber aynı ycoach/ynav kaynağını kullanır.
 
-Not (Standart*, 26 Ekim, T-1041): kaynaklar Claude Design tuvalinin artboard dosyalarıdır (tek sayfa, `<x-dc>` + `data-dc-script`); örnek ürünler, sayılar, kişiler (Evren, Demo Firma), saat ve belge numaraları benzetimdir. Kural metni `docs/design/STANDART.md`; üreteç (`port.mjs`) bu kaynakları kabuk/kalıp işlerinde (T-1042…) okuyacak.
+Not (Standart*, 26 Ekim, T-1041): kaynaklar Claude Design tuvalinin artboard dosyalarıdır (tek sayfa, `<x-dc>` + `data-dc-script`); örnek ürünler, sayılar, kişiler (Evren, Demo Firma), saat ve belge numaraları benzetimdir. Kural metni `docs/design/STANDART.md`; üreteç (`port.mjs`) bu kaynakları kabuk/kalıp işlerinde (T-1042…) okuyacak. T-1200: `StandartGorselBuyuk.dc.html` üretece kayıtlı (`gorsel-buyuk`, kap `.dzgb`); stili satır içi olan artboard'ların karşılığı elle yazılan `standart.css`.
 
 ## Etiket editörü ortak kalıp uzantısı — T-1146
-Yerel türetim: STANDART/ALTIN-KURAL, kullanıcı 1 Kasım B-166 geliştirme onayı; Claude tuvalinden indirilmedi. `EtiketEditor.dc.html` sha256 `806809ac959b34703b0cd60cb61d65a445ca17ccf05e0562827fda8062351386`. Bu etkileşimli dosya yalnız örnek verili tasarım kaynağıdır; gerçek kayıt, yetki ve baskı değildir. 390×844/390×670/1180×820/1440×900 render ve gözle kontrol tamam; örnek etkileşimler geçti.
+Yerel türetim: STANDART/ALTIN-KURAL, kullanıcı 1 Kasım B-166 geliştirme onayı; Claude tuvalinden indirilmedi. `EtiketEditor.dc.html` sha256 `698baeca6e9088043297ad624736db4f673b402230f885f2d95b023e553b9f98`. Bu etkileşimli dosya yalnız örnek verili tasarım kaynağıdır; gerçek kayıt, yetki ve baskı değildir. 390×844/390×670/1180×820/1440×900 render ve gözle kontrol tamam; örnek etkileşimler geçti.
 
 T-1159: ortak editör uzantısı güncellendi; `.lx` bölümü ortak KalipEkran/KabukBar içinde kullanılır. Kaynakta QR kutusu yer tutucu, uygulamada aynı modelden gerçek matris. 390/1180/1440 ve kısa telefon denetimi kayıt kartında.

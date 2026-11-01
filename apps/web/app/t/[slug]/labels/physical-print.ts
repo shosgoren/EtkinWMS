@@ -1,4 +1,4 @@
-// Physical output only: never scales a design to fit paper; the renderer already owns exact mm geometry.
+// Physical output only: exact mm geometry and opaque paper/ink live in the canonical SVG. Outer paper stays transparent and never inherits the application theme.
 import{DESIGN_LIMITS}from'@wms/shared/labels';
 export type LabelPaper='a4'|'roll';
 export function labelPaperLayout(width:number,height:number,mode:LabelPaper){
@@ -12,5 +12,5 @@ export function labelPaperPages(pages:readonly string[],copies:number,width:numb
 }
 export function labelPhysicalCss(width:number,height:number,mode:LabelPaper):string{
  const p=labelPaperLayout(width,height,mode);
- return `@media print{@page{size:${mode==='a4'?'A4':`${width}mm ${height}mm`};margin:${p.margin}mm}html,body{margin:0!important;padding:0!important;background:white!important}body>:not(.custom-label-sheet){display:none!important}.custom-label-sheet{display:block!important;margin:0!important;padding:0!important;color:black!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.custom-label-sheet,.custom-label-sheet *{visibility:visible!important}.custom-label-paper{display:grid;grid-template-columns:repeat(${p.columns},${width}mm);grid-auto-rows:${height}mm;gap:${p.gap}mm;align-content:start;width:${p.width}mm;height:${p.height}mm;break-after:page;page-break-after:always;overflow:hidden}.custom-label-paper:last-child{break-after:auto;page-break-after:auto}.custom-label-cell{width:${width}mm;height:${height}mm;overflow:hidden;break-inside:avoid}.custom-label-cell>svg{display:block;width:100%;height:100%}}`;
+ return `@media print{@page{size:${mode==='a4'?'A4':`${width}mm ${height}mm`};margin:${p.margin}mm}html,body{margin:0!important;padding:0!important;background:none!important}body>:not(.custom-label-sheet){display:none!important}.custom-label-sheet{display:block!important;margin:0!important;padding:0!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.custom-label-sheet,.custom-label-sheet *{visibility:visible!important}.custom-label-paper{display:grid;grid-template-columns:repeat(${p.columns},${width}mm);grid-auto-rows:${height}mm;gap:${p.gap}mm;align-content:start;width:${p.width}mm;height:${p.height}mm;break-after:page;page-break-after:always;overflow:hidden}.custom-label-paper:last-child{break-after:auto;page-break-after:auto}.custom-label-cell{width:${width}mm;height:${height}mm;overflow:hidden;break-inside:avoid}.custom-label-cell>svg{display:block;width:100%;height:100%}}`;
 }

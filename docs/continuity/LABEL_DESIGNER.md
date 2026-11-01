@@ -1,246 +1,70 @@
-# Etiket tasarım editörü — B-166 uygulama planı
+# Etiketler — B-166 hızlı devam
 
-Tarih: 1 Kasım 2026. Durum: GELİŞTİRME BAŞLADI; T-1146 tasarım kaynağı GitHub PR282 ile main'de; T-1147 saf sözleşme PR283 ile main’de (23a1aa5). T-1148…1150 kalıcıkatman paketi yerel doğrulamada. Henüz uygulama/yayın yok.
-Plan kartı: [T-1145](../tasks/T-1145.md). Başlangıç kaynak main: `9c046c6f015aa2448cbc82bff86fbbbd88ac6c20`.
-Otorite: kullanıcı kararı + ALTIN-KURAL, STANDART, DESIGN-PARITY, INVARIANTS ve ADR-022. Bu belge onların istisnası değildir.
+Bu dosya uygulanan sözleşmenin kısa özeti; canlı yayın kanıtı değildir. Yeni AI önce continuity/README + STATE ve işlenmemiş changes parçalarını okur. Kod, current main CI, VPS imajı ve DB defteri ayrı doğrulanır. Eski görev kartları o adımın tarihli kaydıdır; güncel mimari burada, gerçek yayın durumu GitHub/receiver'dadır.
 
-## Amaç ve mevcut durum
+## Kullanıcı yolu
 
-Hiç bilgisayar kullanmamış kişi hazır bir etiket seçer; logo, metin, barkod ve QR'ı kolayca yerleştirir; kendi ölçüsünde kaydeder ve işleme bağlar. Depo personeli her baskıda tasarım yapmaz: doğru tasarım işleme göre kendiliğinden gelir.
+**Modüller → Etiket tasarımı → kullanım yeri → hazır tasarım → Kaydet ve kullan.** Aynı modüle Ayarlar'dan ve yetkili ses komutundan ulaşılır. Depocu her işlemde tasarım yapmaz; bağlamın yayımlanmış varsayılanı baskıda seçilir.
 
-Kaynak incelemesi (kod kanıtı; canlı ve fiziksel yazıcı kabulü değildir):
-- `packages/domain/src/labels/templates.ts`: kodla tanımlı ürün/lokasyon SVG ve 203 dpi ZPL, ürün QR üretimi. Kayıtlı müşteri tasarım modeli yok.
-- `apps/web/app/t/[slug]/labels/`: önizleme, A4/rulo ve ölçü ayarı; özel ölçüde ZPL indirme gizlenir. Mevcut ölçü seçimi serbest alan yerleşimi değildir.
-- `apps/web/app/t/[slug]/receipts/packages/labels/`: paket etiketi/tekil QR yolu. Kimlikler ve stok motoru korunacak.
-- `packages/domain/src/identity/permissions.ts`: ürün/raf label işlem anahtarları var; tasarım yönetimi ve yayın yetkileri ayrıca modellenmeli.
-- ADR-022: birincil baskı tarayıcı; yerel köprü kapalı. Müşteri şablonları ve yeni baskı yetenekleri için uygulama aşamasında ADR eki gerekir.
-- B-166 aynı ihtiyacı kapsar; yeni mükerrer backlog açılmaz. Tasarım editörü, kapalı paket akışını kendiliğinden etkinleştirmez.
-
-## 1. Kullanıcının göreceği akış
-
-**Etiketler → Nerede kullanılacak? → Hazır tasarım → Düzenle → Kaydet ve kullan.**
-
-İlk açılışta en çok dört atlanabilir, tekrar açılabilir görsel adım. Tuval boş başlamaz; örnek verili hazır etiket gelir. Kullanıcıya değişken kodu veya teknik yazıcı dili yazdırılmaz.
-
-| Kullanım yeri | Örnek hazır tasarım | Gerçek veri kaynağı / kimlik |
+| Bağlam | Gerçek kaynak | Kimlik |
 |---|---|---|
-| Ürün | Küçük ürün, detaylı ürün | Ürün adı/kodu/birim ve mevcut standart barkodu |
-| Giriş / tekil paket | Varil, koli, çuval | Mal kabul/paket kaydı; lot, üretim/SKT, gerçek miktar, mevcut tekil paket QR |
-| Raf / göz | Büyük raf kodu | Yetkili depo/lokasyon kaydı; mevcut raf kimliği |
-| Çıkış / sevk | Sevk kolisi, sevk bilgisi | Mevcut çıkış/sevk belgesi ve ilişkili paketler; izinli cari/belge alanları |
+| PRODUCT | Ürün ve ana birimin mevcut, belirsiz olmayan barkodu | Mevcut standart barkod; yeni kod tahsis edilmez |
+| RECEIPT | İşlenmiş ve kapanmış kabul / işlenmiş üretim çıktısı | Mevcut tekil paket QR + gerçek miktar, lot, üretim/SKT, fiş |
+| LOCATION | Yetkili depo/lokasyon ve isteğe bağlı alt ağaç | Mevcut raf kodu |
+| SHIPMENT | İşlenmiş, ters kayıt olmayan çıkış | Fiziksel pakette mevcut QR; düz çıkışta gerçek fiş numarası |
 
-Her kullanım yerine birden fazla şablon, tam bir aktif varsayılan atanabilir. Aynı şablon uyumlu birden çok yerde kullanılabilir; uyumsuz alan bağlamında yayın reddedilir. Baskıda varsayılan önceden seçilir; yetkili kullanıcı değiştirebilir. İlk sürümde gizli ürün/depo öncelik zinciri yoktur; depo özel eşlemeleri sonraki aşamada açık öncelik göstergesiyle ele alınır.
+Sevk `trackingCode` kapalı sunucu alanıdır; gerçek packageQr varsa onunla birebir aynı, yoksa documentNo. Fiş alanı ayrıca korunur; RECEIPT zorunlu paket bağı gevşetilmez. Müşteri adı için güvenilir veri bağı yoksa boş kalır; isim uydurulmaz.
 
-## 2. Editör araçları
+## Ekran ve ilk kullanım
 
-- **Ekle:** Logo / Metin / Veri alanı / Barkod / QR / Çizgi / Çerçeve. İleri seçenekler ihtiyaç oldukça açılır.
-- Sürükle-bırak, köşeden boyutlandır, kopyala, sil ve geri al/ileri al. QR ve barkod en-boy oranı/okunabilirliği korunur.
-- Ortala, hizala, eşit aralık, gruplama, öne/arkaya al, arka plan öğesini kilitle; taşıma sırasında mıknatıslı kılavuzlar ve güvenli kenarlar.
-- Etiket ebatları mm: hazır ölçüler + özel en/boy, yatay/dikey, boşluk, kenar payı. A4'te sütun/satır ve boşluk önizlenir; gerçek ölçü ile ekran yakınlaştırması ayrıdır.
-- Yazı boyutu, satır sonu, kalınlık, hizalama ve dönüş; metin alanlarında Türkçe karakterler. Taşan metin sessizce kesilmez: sığdır/satırla/kısalt politikası belirgin olur; kimlik/barkod değeri asla kesilmez.
-- Veri alanları ikonlu katalogdan seçilir: ad/kod/birim, miktar, lot, üretim/SKT, raf, belge no, yetkili cari vb. Yalnız seçilen kullanım yerinde ve kullanıcı yetkisinde bulunan alanlar açılır.
-- Her öğe sabit metin ya da izinli dinamik alan olabilir. Örnek/gerçek önizleme ayrımı belirgin; örnek veri üretim etiketi gibi basılamaz.
-- Şablon çoğaltma, adlandırma, taslak kurtarma, önceki yayımlanmış sürüme geri dönme. Kalıcı kişisel tasarım/varsayılanlar tenant'ta tutulur.
-- Basit ses komutları mevcut Etkin altyapısına bağlanır: “metin ekle”, “ortala”, “geri al”, “önizle”; yayın/baskıda gereken onay ve yetki korunur.
+- Ortak `kalip/` + EtiketEditor kaynak uzantısı. 390×670/844,1180×820,1440×900; açık/koyu, büyük araçlar, sabit Geri/Ana ekran/işlem/Modüller. Dokunmatik tablette araç sütunu140px ile kelimeler bölünmez. Telefonda ortak `ksecp` özellik sayfası, odak/Esc/perde ve kaydırılabilir alanlar.
+- Logo / metin / bağlı alan / QR / Code128 / EAN13 / çizgi / çerçeve; sürükle, köşeden boyutlandır, döndür, kopyala, sil, geri al, ok tuşları, alan seçici, ortala, yakınlaştır/sığdır ve iki parmak pan/zoom. Serbest yer varsa yeni nesne/kopya oraya konur; yoksa uyarı ve mevcut tasarım korunur.
+- Ölçüler tam µm saklanır, mm gösterilir; ara sayı yazımı bitince doğrulanır. Hazır satırlar uzun ürün kodunu kesmeden iki satıra sığdırır; yazı/kod taşması sessiz kesilmez. QR/barkod çevresi ve fiziksel geometri yayında/baskıda yeniden denetlenir.
+- Taslak ayrı, yayın sürümleri değişmez. Kirli/yüklenen taslakta çıkış korunur; hata sahte başarıya dönüşmez. Varsayılan atanan sürümü kullanır; daha yeni yayın sessizce onu değiştirmez. Geçmiş sürüm taslağa kopyalanabilir, aktif varsayılan alternatif olmadan arşivlenemez.
+- Beş kısa görsel rehber adımı gerçek hedeflere bağlıdır. İlk otomatik açılış sunucuda tenant+üyelik+aktör+guideVersion audit kaydıyla tekilleşir; etkin başka rehberi kesmez. POST yalnız rehber motoru olayı kabul edince yapılır. Cihazdaki kaldığın adım kaydı ayrı; yardım menüsünden tekrar açılır.
+- İleri tasarım araçları (gruplama/eşit aralık/katman yöneticisi, redo, taslak otomatik kurtarma ve obje düzeyinde ses komutları) bu sürümde varmış gibi gösterilmez. Temel hazır etiket/kayıt/baskı yolu bunlara bağlı değildir.
 
-## 3. Cihaza göre ayrı kullanım
+## Yetki ve güvenlik
 
-| Cihaz | Düzen ve etkileşim |
+`labels.view/design/publish/print/printers` ayrı; TENANT_ADMIN tamamına sahiptir. Saha rolü kendiliğinden tasarım hakkı almaz. Print hakkı designer view hakkı vermez. Her sunucu okuma/yazma aktör/üyelik/tenant ve kaynak depo yetkisini yeniden doğrular; sensitive yayın/yazıcı işlemlerinde mevcut MFA/recent-auth kuralları korunur.
+
+Logo yalnız sınırlı yerel PNG/JPEG/WebP'den (5MiB) data URI ile okunur; CSP genişletilmez. İstemci küçültmesi güven sınırı değildir: sunucu128KiB/1024px statik RGB/RGBA8 PNG, CRC/chunk/scanline ve sınırlı inflate doğrular, metadata/animasyon/SVG/URL reddedilir. Depolama/çıktı yalnız kanonik PNG'dir. Metin XML escape edilir; örnek değerler gerçek baskı girdisi olmaz.
+
+0072/0073 additive migration'ları:7 tenant tablosu, FORCE RLS, bileşik FKs ve değişmez version/asset/job. App rolü bunları güncelleyip silemez. Normal işlemde FK hemen denetlenir; yalnız mevcut bakım reset işlemi kendi transaction'ında erteler. Prod reset yapılmaz.
+
+## Yazıcı tercihi ve fiziksel sınır
+
+Öncelik: **şablon+bu cihaz → şablon+firma → genel+bu cihaz → genel+firma → sistem penceresi**. Cihaz tercihi doğrulanmış aktörün kaydıdır. Açıkça seçili kapalı/eksik profil veya değişmiş kalibrasyon sessiz başka yazıcıya düşmez; yeniden seçim gerekir.
+
+Profil SYSTEM_DIALOG,203/300/600 DPI ve ±10mm kaydırma saklar. **Son gerçek yazıcı seçimi OS/tarayıcı penceresindedir.** Bu sürüm yazıcıları ağda keşfetmez, sessiz USB/Bluetooth/ağ seçmez; bridge/raw socket/arbitrary endpoint yok. Donanım testi olmadan fiziksel basıldı denmez.
+
+A4 gerçek mm ızgara (10mm kenar,3mm boşluk) veya tam ölçülü rulo/özel kağıt. Sığmayan A4 küçültülmez, özel kağıda yönlendirir; kullanıcı ölçek%100 seçer. Hazırlanan güncel job SVG'si DOM'a yerleşmeden pencere açılmaz. Busy durumda kağıt değişmez; sayfadan ayrılınca geç pencere açılmaz. “Hazırlandı / pencere açıldı” fiziksel çıktı kabulü değildir.
+
+## Baskı ve değişmezlik
+
+GET salt okunur. Guarded POST yalnız source kimlikleri, izinli şablon, kopya, cihaz ipucu ve jobUUID alır; client actor/değer/snapshot/DPI/endpoint gönderemez. İzin, stok kaynakları, varsayılan sürüm, profil ve geometri aynı yetkili transaction'da okunur.
+
+Job metadata UUID idempotent: aynı içerik aynı değişmez snapshot, farklı içerik çakışması. Tarihsel yeniden basım neden ister; aynı değer/QR/sürümle basılır, güncel kaynak/ACL tekrar denetlenir. Başka ürüne geçen/silinmiş barkod veya değişmiş raf kodu tekrar baskıyı kapatır. Salt geçmiş erişimi ayrı korunur. Baskı stock ledger/bakiye/paket kimliği üretmez.
+
+Sınırlar:60 nesne;100 kaynak/sayfa;1–100 kopya, toplam500; incremental8MiB SVG;512KiB snapshot;200 tasarım/100 logo/30 profil. Liste50 kayıt keyset + arama/bağlam/arşiv; cihaz tercihi yenilemesi cursor'u kaybetmez. Ayrıntı20 sürüm, export25/10 sınırlıdır.
+
+Mevcut ürün/raf/toplu ürün/kabul/üretim düğmeleri yetkili özel varsayılan varsa yeni yola geçer. Varsayılan veya print hakkı yoksa eski stock.view yolu korunur; hatalı seçili özel tasarım sessiz fallback yapmaz. İşlenmiş çıkış kartında sevk etiketi bağlantısı vardır.
+
+## Kod otoriteleri ve kabul kanıtı
+
+| Alan | Giriş |
 |---|---|
-| Masaüstü | Sol öğe kutusu, ortada çalışma yüzeyi, sağda yalnız seçili öğenin ayarı; fare, klavye okları ve çoklu seçim. Ortak kabuk/kalıp uzatılır. |
-| Tablet | Geniş çalışma yüzeyi, büyük dokunma tutamaçları; özellikler tek açılır panelde. Parmakla taşıma ve iki parmakla yakınlaştırma. |
-| Telefon | Ekrana sığan etiket, aşağıda Ekle/Düzenle/Hizala; aynı anda tek kısa araç paneli. Sürüklemenin yanında “öğeyi seç → hedefe dokun”, büyük yön düğmeleri ve otomatik hizalama. |
+| Saf model/ready/render/DTO | packages/shared/src/labels/ |
+| Store/logo/printer/guide | packages/domain/src/labels/store.ts, assets.ts, printer-store.ts |
+| Gerçek kaynak/baskı işi | packages/domain/src/labels/print-source.ts, print.ts |
+| Ekran/guarded actions | apps/web/app/t/[slug]/label-designs/, custom-labels/ |
+| Ortak editor/baskı | kalip/etiket-editor.tsx, kalip/etiket-baski.tsx, labels/physical-print.ts |
+| Kaynak/parite | docs/design/source/EtiketEditor.dc.html + SOURCE.md + port.mjs |
+| Gerçek DB | tests/integration/labels/ + ac/ac-04-api-slug.int.test.ts |
+| Gerçek tarayıcı | tests/e2e/label-designer.spec.ts |
 
-Telefon/tablet ana düzeninde yatay taşma veya sayfa kaydırması yoktur; yakınlaştırılmış tuvalin kontrollü kaydırılması editör yüzeyinin içindedir. Tek parmak öğeyi taşır, iki parmak görünümü değiştirir; görünümü değiştirmek etiketi değiştirmez. Telefon klavyesi ve Safari kısa görünür yüksekliği ayrıca kontrol edilir.
+1Kasım yerel kanıt:158 hedef birim;26 gerçek DB (store9/printer4/print13); ayrı A/B/oturum yükleyici AC04 392. QR/Code128/EAN13×203/300/600×4dönüş Chromium→ZXing36/36. Gerçek PDF6etiket A4→2sayfa,100×50mm rulo→6sayfa görüntülendi. Fiziksel yazıcı/GS1 kalite sertifikası kanıtı yok.
 
-Tüm cihazlarda alt Geri/Ana ekran erişilir; seçili öğe rengi ve tutamaçlarla anlaşılır. Renk tek başına bilgi değildir: ikon, kısa ad ve şekil eşlik eder. Dokunma en az48px, ana işlem56px; kısa anlamlı sonuç bildirimi, sessiz tercihi ve hareket azaltma korunur. Her harekette ses/uzun açıklama yoktur.
+Tarayıcı aday app commit6d62903: desktop/mobile tasarım/logo/sürükleme/klavye/tema,5 gerçek paketQR, tercihler, değişmez yeniden baskı ve>50 keyset; ölçü yarışı/unmount/busy/legacyyetki kabulü tek tam koşuda4/4 geçti.100×150mm ürün etiketi seçimi, gerçek standart barkodun QR/Code128/EAN13 olarak hazırlanması ve kayıtlı203DPI'da gerçek jobSVG'sinin Chromium→ZXing çözümü de bu koşuda.96DPI ekran küçük resmi fiziksel barkod kalite kanıtı sayılmaz. Mevcut derleme kimliği/uygulama değişmezliği yerel kanıtla doğrulandı. Exact-head final CI ve receiver/imaj/DB doğrulaması her yayında ayrıca gerekir; geçmiş yeşil log güncel yayın sayılmaz.
 
-Önce `docs/design/source` içinde ortak editör uzantısı ve üç görünüm hazırlanır; 390/1180/1440 genişlikte, tablet dikey/yatay ve kısa telefon yüksekliğinde gözle kontrol edilir. Ardından ortak `kalip/` bileşenlerine aktarılır. Bu planın kendisi tasarım kaynağı veya ekran kabulü değildir.
-
-## 4. Sistem kullanıcıyı korur
-
-- Barkodlar yetkili gerçek kayıttan gelir; şablon stok, fiş, lot veya paket kimliği üretmez/değiştirmez. Beş varil için beş mevcut kimlik, beş etiket; ürün barkodu paket QR yerine geçirilemez.
-- Yeniden basım aynı kimliği kullanır; bir öğeyi veya şablonu kopyalamak yeni fiziksel paket oluşturmaz. QR içeriği tasarım ekranında serbestçe değiştirilemez.
-- EAN13 yalnız geçerli mevcut kodla; eksik olana uydurma uluslararası numara verilmez. İç barkod QR/Code128 olabilir. GTİP barkod değildir. GS1/SSCC mevcut yetkili numara kaynağı doğrulanmadan açılmaz.
-- QR sessiz bölgesi, minimum modül boyu, karşıtlık; barkod genişliği ve etiket dışına taşma basmadan önce doğrulanır. Dekoratif öğe kodun üstünü örtemez. Renkli logo olabilir; kod yüzeyi açık ve okunaklı kalır.
-- Zorunlu izlenebilirlik alanı eksik/okunamazsa yayın veya ilgili baskı engellenir; kullanıcı sorunlu öğeye götürülür. Opsiyonel alan yoksa şablonda tanımlı “gizle/boş bırak” davranışı uygulanır, veri uydurulmaz.
-- Tarih ve miktarlar sunucudan, izinli biçimlendirmeyle gelir; miktar metin/decimal doğruluğu korunur. Serbest SQL/JavaScript/HTML/formül çalıştırılmaz.
-- Taslak değişiklikleri mevcut baskıyı etkilemez. Otomatik taslak kaydında durum görünür; ağ kesilince “kaydedildi” denmez ve yayın engellenir. Çakışan iki düzenleyici sürüm kontrolüyle korunur; sessiz son yazan kazanır yoktur.
-- Kaydetme ve işlem varsayılanına atama açık bir son eylemdir. Taslak otomatik kaydı ≠ yayındaki şablonu değiştirme. Yarım işte ortak çıkış koruması; nesne silmede geri al vardır.
-
-## 5. Veri, yetki ve güvenlik taslağı
-
-Uygulama kartında kesinleşecek aday model (bu plan migration oluşturmaz/numara ayırmaz):
-- `label_templates`: tenant, sabit UUID, ad, desteklenen kullanım yerleri, durum.
-- `label_template_versions`: değişmez yayımlanan sürüm + sürümlü doğrulanmış JSON; mm koordinatlar, öğe türleri/bağları, baskı profili. Taslak için optimistic version; sayısal/öğe/boyut sınırları sunucuda.
-- `label_template_assignments`: tenant + kullanım yeri başına tek varsayılan; yalnız uyumlu yayımlanmış sürüme atomik atama.
-- `label_assets`: tenant'a ait logo, içerik özeti ve doğrulanmış boyut/biçim. İlk sürüm PNG/JPEG/WebP; dosya boyutu ve piksel limiti, yeniden kodlama, yön doğrulama. Ham SVG/HTML, dış URL'den içerik getirme yok.
-- `label_print_jobs`: şablon sürümü, kaynak kayıt kimlikleri/sürümleri, kopya sayısı, isteyen kişi, yeniden baskı nedeni ve çıktı durumu. Gereken baskı snapshot'ı izinli alanlarla sınırlı; kişisel veri saklama/teslim politikası belirlenir.
-
-Tenant bileşik ilişkiler, FORCE RLS ve transaction-local bağlam; tasarım yönetimi/yayın/atama/baskı ayrı katalog yetkileri, denetim kaydı, depo kapsamı ve ihtiyaç varsa MFA. Mevcut Yetkiler ekranı üzerinden atanır; izin sayısı/DB CHECK sınırı uygulama aşamasında birlikte denetlenir. Bir şablonu kullanabilmek, veri alanlarına erişim yetkisi kazandırmaz. Önizleme, çıktı ve logo erişimi sunucuda yeniden doğrulanır. Tenant export/takeout kapsamı şablon ve varlıkları içerir; ödeme durumuyla erişim kapatılamaz.
-
-Yayımlanmış sürüm ve kullanılan varlık değişmez; sonraki logo/değişiklik yeni sürümdür. Kullanımdaki şablon arşivlenmeden alternatif varsayılan seçilir; geçmiş baskılar yetkili yeniden üretim için eski sürüme bağlı kalır. Tarihsel içeriğin yeniden basımı ile güncel veriden yeni baskı açıkça ayrılır. Etiket değiştirmek stok defterine yazmaz.
-
-## 6. Baskı kapsamı ve dürüst durumlar
-
-1. **İlk teslimin tam yolu:** ortak doğrulanmış tasarım → aynı geometri/veri ile önizleme, tarayıcı baskısı ve PDF; A4/rulo/özel mm, örnek test baskısı, yüzde100 ölçek/kenar kalibrasyonu. Logo ve QR dahil kaynak tek modeldir; PDF ayrı elle yazılmış tasarım değildir.
-2. Yazıcıya OS/tarayıcı üzerinden ulaşılır. Her USB/ağ/Bluetooth yazıcının her telefonda doğrudan çalıştığı iddia edilmez. Tarayıcı, yazıcı seçimini ve sessiz otomatik baskıyı genel olarak uygulamaya bırakamaz. Cihaz tercihi öneri olarak saklanabilir; kuyruk kontrolü ayrı köprü işidir.
-3. **Sonraki teslim:** mevcut ZPL yolu korunur; dinamik tasarımın desteklenen alanları DPI profiline göre üretilir. Logo/yazı/rotasyon destekleri doğrulanmadan “birebir” denmez. Desteklenmeyen öğede açık PDF/tarayıcı seçeneği vardır.
-4. Yerel köprü/ham ağ baskısı ayrı ADR eki, güvenlik ve cihaz kabulüyle açılır. VPS'den müşterinin yerel ağına port açılması planlanmaz.
-5. Baskı iletişim kutusunu açmak “etiket basıldı” kanıtı değildir. Hazırlandı/indirildi/baskı istendi/kullanıcı doğruladı/yazıcı doğruladı durumları ayrılır; fiziksel kabul gerektiği yerde mevcut stok durum geçişleri sahte başarıyla ilerletilmez.
-
-## 7. Seri geliştirme ve bitiş ölçütleri
-
-Her aşama başlamadan ayrı boş T numarasıyla kart, gerçek dosya kapsamı ve test planı oluşturulur. Aynı anda tek aşama; yalnız zorunlu bağımsız güvenlik incelemesi ayrı ajan olabilir.
-
-| Sıra | Teslim | Tamam sayılması için |
-|---|---|---|
-| 1 | Kullanım akışı, ortak editör tasarım kaynağı ve dört hazır şablon | Üç cihaz görünümü, tek elle yerleştirme, büyük logo/uzun ad/raf etiketi örnekleri; kaynak görsel kontrolü |
-| 2 | Sürümlü model, logo varlığı, yetki, kaydetme/yayın/atama | RLS/çapraz tenant, yetkisiz yayın, eşzamanlı edit, rollback/ret ve audit testleri; bağımsız güvenlik |
-| 3 | Sürükle-bırak editörü ve aynı modelden baskı/PDF | Logo/metin/veri/kod araçları, geri al, dokunarak yerleştir, güvenli sınırlar; aynı geometri ve çözülebilir kod |
-| 4 | Ürün, raf, giriş/paket ve çıkış/sevk akışlarına bağlama | Her bölüm doğru varsayılanı getirir, yetkili alternatif seçer; aynı QR ile yeniden basım; mevcut süreç regresyonları |
-| 5 | Kullanıcı/cihaz kabulü ve kontrollü yayın | İlk kez kullanan kişi rehberle tasarımını kaydeder, bölüme atar, test basar ve gerçek kod okutulur; CI/main/deploy/DB/sağlık ayrı kanıtlanır |
-
-İlk dört aşama ilk kullanılabilir editörün kapsamıdır; yalnız çizim ekranı “modül bitti” sayılmaz. ZPL/köprü genişlemesi bu yol tamamlandıktan sonra ayrı teslimdir.
-
-## 8. Kabul senaryoları ve devir
-
-- Hazır üründen başla; logo ekle, adı/QR'ı taşı, özel60×40mm kaydet; Ürün varsayılanı yap; yetkili başka cihazda aynı tasarım/veri/ebat açılır.
-- Girişte beş farklı miktarlı varil için beş farklı mevcut QR, doğru lot/tarihler; yeniden basımda kimlik ve stok miktarı değişmez. Paket akışı kapalıysa bu özellik açık gibi gösterilmez.
-- Raf etiketi, sevk etiketi ve ürün tasarımı birbirinin varsayılanını bozmaz. Yanlış kaynak alanı, yetkisiz cari ve eksik zorunlu tarih basılamaz.
-- 390/1180/1440, telefon kısa yükseklik/klavye, tablet yatay/dikey; sürükleme, dokunarak yerleştirme, klavye, odak, koyu tema, hareket azaltma, erişilebilir adlar ve alt çubuk kontrolü.
-- Uzun/Unicode metin, dar etiket, sınır dışı/geçersiz JSON, zararlı logo, katmanla örtülen QR, yetkisiz logo/şablon erişimi, ağ kesilmesi ve eşzamanlı taslak yayını.
-- Renderer çıktılarından QR/Code128/EAN13 çözme; PDF gerçek sayfa ölçüsü ve logo yerleşimi. Epson/A4 ve seçilmiş termal/telefon için ayrı fiziksel cihaz kabulü; çözümleme testi cihaz başarısı değildir.
-- Her iş kendi changes parçası + bu belgenin ilgili durumunu günceller. Push öncesi prepush, gitleaks, riskin istediği bağımsız inceleme; korunan dosya/ADR/migration için mevcut protokol. Gösterilmeyen test sonucu UNKNOWN.
-
-Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/akış/kabul/devir dokümanı. Yapılmayan: ekran, migration, uygulama kodu, logo yükleme, baskı motoru, cihaz testi ve canlı yayın.
-
-## 1 Kasım ek kullanıcı kararı — yetki ve şablon yazıcısı
-- Modül görüntüleme, taslak düzenleme, yayın/varsayılan atama, baskı ve yazıcı tercih yönetimi ayrı sunucu yetkileridir; Yetkiler ekranında gruba atanır. Özel tasarım yetkisi olmayan saha personeli izinli hazır şablonu kullanabilir.
-- Etkin tercih sırası: şablonun bu cihazdaki yazıcısı → şablonun firma yazıcısı → cihazın genel yazıcısı → firmanın genel yazıcısı → sistem yazdırma iletişim kutusu. “Genel tercihi kullan” açık seçenektir. Desteklenmeyen/çevrimdışı açık bir şablon tercihi sessizce başka yazıcıya gitmez.
-- Tarayıcıdan fiziksel yazıcıları listeleme ve sessiz yönlendirme garanti edilmez. Köprü yokken kayıtlı tercih baskı profili/önerisidir; sistem iletişim kutusunda seçim gerekir. Gerçek otomatik rota yalnız yetkili ve yeteneği doğrulanmış köprüde açılır; arayüz bu ayrımı söyler.
-- T-1146 ortak kaynak: docs/design/source/EtiketEditor.dc.html; örnek verili işlevsel tasarım, henüz backend yetki/kayıt/baskı değil.
-
-### T-1147 sözleşme dilimi
-- `@wms/domain/labels/editor`: DB/Next/yazıcı ağı içermeyen sürümlü geometri ve alan bağları, logoassetUUID, taslak/yayın ayrıdoğrulama. Integerµm baskıölçüsü; UIyakınlaştırması etiketi değiştirmez. QRkapalıalanı korunur; paketkimliği ürünbarkoduyla değiştirilemez, statiklotmetni zorunlu gerçeklotyerine geçmez.
-- Yazıcı çözümü gerçek yetkili profile listesiyle çağrılır; tarayıcımodu her zaman sistemseçimigerekir der. Açıkça seçilmiş erişilemeyen/kapalı/yetkisiz yazıcı veya hazır olmayan köprüde blocked; genel tercihe sessiz geçiş yok.
-- Yerel64birim/roottsc/hedefESLint geçti. Bağımsız inceleme/prepush/CI henüz bekliyor. Bu saf dilim kalıcı şablon, sunucu yetkisi veya gerçek baskı değildir; sonraki seri kart API/DB/izinleri kurar.
-
-
-## T-1148/T-1150/T-1154 kalıcı şema paketi — PR284
-- 0072 yedi tenant tablosu: taslak/sürüm, kanonik PNG varlık, sistem diyaloğu yazıcı profili, şablon/genel cihaz/firma tercihi, bağlam varsayılanı, değişmez baskı snapshot'ı. Yayımlanmış sürüm/varlık/baskı uygulama rolünde değiştirilemez; snapshot fiziksel baskı kanıtı değildir.
-- Tam CI, ORM eşliği ve dolu etiket verisiyle bakım geri-bağını buldu. Drizzle eşliği tamamlandı. Geri-bağ normalde anında denetlenir; yalnız bakım transaction'ında açık erteleme ve işlem sonunda mevcut tam FK denetimi kullanılır. Canlıda sıfırlama çalıştırılmadı.
-- Dolu yedi tabloyla gerçek bakım + şema: uygulayıcı ve bağımsız inceleme ayrı ayrı 11/11 geçti. Güncel bağımsız rapor 0/0/0 @40fdac4; önceki raporlar bu düzeltmenin kanıtı değildir.
-- Son prepush YEŞİL: lint/typecheck, 5420 birim, bütün bekçiler ve AC-04 383. İlk tam yerel int 2793 geçti/6 başarısız/33 mevcut koşullu atlama; başarısız dosyalar ve yeni bakım/şema ayrı koşuda 117/117 geçti. Tam int yeşil iddiası yok; güncel PR CI beklenir.
-- 0073 ve T-1149 modül yetkileri ayrı sonraki paket. Bu şema paketi API, logo yükleme, gerçek editör veya baskı bağlantısı içermez; B-166 devam eder. Kod/CI/deploy/gerçek DB defteri ayrı doğrulanır.
-## Ayrı yetki paketi: T-1149 / T-1155 / T-1156
-0072şema/bakım düzeltmesi corePR284te; ardından0073 +5etiket yetkisi, MFA ve Yetkiler ekranı kataloğu gelir. Mevcut18anahtarın anlamı değişmez; yeniüst sınır23, negatifuzunluktesti24. Kartdışıyetkifikstürü yeni5anahtarı da taşır; kart yetkisi olmadığı halde kart yazmanın hâlâ reddedildiği kanıtlanır. 0073dolu geri alma stagingde ret, açıkci modunda yalnızyeni etiketgrantları kaldırılır. Testler ve bağımsızinceleme tamamlanmadan PR açılmaz.
-
-
-Yetki paketi kanıtı:24hedefint/22birim/webtsc ve prepushYEŞİL (verify5421birim/AC04 383). Bağımsız0/0/0 @59148f7 (18int+22birim); PR284 şeması main5193f22 ile birleşti, yalnız kendi continuity kayıtları uzlaştırıldı. Yeni CI/deploy/DB henüz bekliyor.
-## T-1151…T-1153 uygulama katmanı (geliştirme)
-- İstemci sözleşmesi yalnız @wms/shared/labels içinde; domain/editor uyumlulukexportu kaldı. DB kodu istemciye girmez.
-- Kaydetme kararlıUUID ile tekrar güvenli, CAS ve tenantmetadata kilidi; taslak mevcutyayını etkilemez. Yayın+varsayılan ataması tektransaction; geçmiş sürüm geri dönüşü yalnız taslağı değiştirir. Atanmışşablon arşivi alternatif ister.
-- Logo istemcide PNGye dönüştürülür; sunucu statik8bit RGB/RGBA, ≤128KiB/1024², CRC/header/scanline/boundedzlib doğrular ve yalnızIHDR/IDAT/IEND yenidenyazar. SVG/URL/animasyon/metadata yok; tenantbazlıhashdedup, değişmezassetUUID.
-- Yazıcılar yalnızSYSTEM_DIALOG; şirket ve aktör/cihaz tercihi, şablonönceliği, açıkseçili kapalıprofilde blok; gerçekköprü yok. Kaynak profillerdeURL/port/kimlikbilgisi yok.
-- Şablon/sürüm/logo veri teslimi keysetkısa sayfalı, faturalamabayrağıyok ve auditli. Kota200şablon/100logo/30profil; çıktı stokkimliği üretmez.
-- Ön kontrol: eski64model/yazıcı +17PNGbirim, root/domaintsc/hedefESLint, gerçekuygulamarolüyle11entegrasyon geçti. Son arama/exportaudit değişikliğiyle11entegrasyon yenidengeçti; bağımsızinceleme/prepush/CI/API/UI/baskıbağlantısı henüz yok.
-
-
-**Güncel seri durum:** PR284 şema ve PR286 yetki ana dala birleşti; her iki PR gerçekCI/guards yeşil. Şema mainCI yeşil, deploy41339618915 henüz sürüyor; DB/canlı defter doğrulanmadı. Servis paketi bu üçkartla birleştiriliyor; bağımsız551c773 raporu199birim/11int0bulgu, güncel entegrasyon üstünde yeniden inceleme/prepush bekler. API/UI/render/baskı sonraki paketlerdir, B166 tamam değildir.
-
-Servis prepush ilk koşusu yeni root audit çevirilerini eksik buldu; auditLog ve root audit ikisi de tr/en tamamlandı. Baştan prepush tekrar gerekir. Şema deploy5193f22, main artıkb7e2753 olduğu için güvenli NOT_CURRENT_MAIN kapısında reddedildi; canlıya eski SHA zorlanmayacak, güncel main yayın hattı izlenecek.
-
-Servis AC04 filtresi, export testindeki önceki test verisine bağımlılığı buldu. Kendi26sürümlük geçmişi ve kesinBtenant kimlik kümesi ile tekbaşına ve tamdosya kabulü zorunlu; kontrol kaldırılmaz. Güncel hedefint/prepush tekrar gerekir.
-
-Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol için assertiontabanı53→55 yükseldi; tam prepush ve korunan taban sonrası yenilenmiş bağımsız rapor zorunlu.
-
-**Servis son kapı:** Güncel tam prepush YEŞİL: lint/typecheck,5438birim, tüm bekçiler, AC04 387. Son kaynak11int geçti; bağımsız rapor0/0/0 @53244b1 önceki199birim+11int ve aynı işkodunu, yeni test/metadata farkını ayırarak doğruladı. CI/deploy/baskı ekranı hâlâ ayrı bekler.
-### T-1157 ortak baskı motoru (yerel)
-- Aynı sürümlü modelden gerçek mm SVG; QR 4modül sessiz alan, Code128 10modül ve EAN13 doğrulanmış mevcut GTIN. DPI ve kalibrasyon sınırlı; okunamayacak kod/metin taşması engellenir, değer kesilmez veya uydurulmaz. Kanonik PNG yalnız yetkili sunucu varlık sınırından alınır.
-- Hedef35birim, sharedtsc/hedefESLint; gerçek Chromium PNG çıktılarından ZXing ile36/36 çözüm (3semboloji ×3DPI ×4dönüş), üç çıktı gözle kontrol edildi. Fiziksel yazıcı ve PDF sayfa kabulü henüz yapılmadı. Bu motor tek başına gerçek baskı kaynağı veya editör ekranı değildir; prepush/CI/yayın bekler.
-
-### T-1158 hazır başlangıç düzenleri (yerel)
-- readyLabelDesign dört bağlama düzen verir; girişte miktar/birim/lot/üretim/SKT, sevkte belge/cari/miktar/lot/SKT, ürün ve rafta kendi gerçek alanları hazırdır. Kanonik tasarım sözleşmesi ve eski şablonlar değişmez; zorunlu veri yoksa baskı uydurulmaz.
-- Hazır düzen/motor/model83hedefbirim, sharedtsc ve hedefESLint geçti. UI bağlantısı, tam prepush/CI/canlı henüz bekler.
-
-### T-1159 ortak editör uzantısı (yerel)
-- EtiketEditor kaynağı `.lx` ortak uzantısına dönüştü; port registry CSS/token üretir. KalipEtiketEditor ortak kabın içinde kullanılır; hazır model, gerçek SVG önizleme, taşı/tek dokunuşla yerleştir/boyutlandır/döndür/hizala/kopyala/sil/geri al, klavye ve iki parmak görünüm kontrolü. Logo yükleme yetkili üst katman callback'idir.
-- Özellik sayfası ortak perde ve odak kancasını kullanır; kayıt/çıkış koruması üst sayfanın sorumluluğu. Salt okunur değişikliği reddeder; QR veri bağı serbest metne dönüşmez. Kaynak390/1180/1440/kısa telefon açık-koyu render taşmasız; ilk gözlemdeki alan kutusu taşması ve simge eşliği düzeltildi. Son render/gerçek uygulama e2e, bağımsız inceleme, prepush ve canlı bekliyor.
-
-### T-1160 web sunucu sınırı (yerel)
-- Mevcut production action guard (Origin/oturum/IP/kişi/tenant hız sınırı) ve kapalı şemalar; kullanıcı/tenant UUID istemciden alınmaz. Gerçek yetki/MFA/CAS ve logo kanonikleştirme domain'de tekrar doğrulanır; ağ yazıcısı URL'si veya istemciden baskı snapshot'ı kabul edilmez.
-- 14action sınır testi, webtsc ve hedefESLint geçti. Domain bağımsız incelemesi199birim+11izolasyonint/0bulgu; webaction/renderer/kayıt ekranı için yeni paket incelemesi henüz bekler. Gerçek baskı kaynağı ayrı dilimdir.
-
-### T-1165 paket incelemesi düzeltmesi (yerel)
-- Bağımsız incelemede bulunan action/domain yetki eşliği ve yazma önkoşulu tutarlılığı düzeltildi; bekçi/test gevşetilmedi. Canlı etiket modülü henüz açık değildir. Sürükleme/async ekleme güncel saltokunur durumunu kullanır.
-- Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
-
-**Renderer son önkontrol:** Güncel main7037d6d üstünde gerçek5kart/30dosya birleşmesi; tam prepush YEŞİL (verify5487birim, tüm bekçiler, AC04 387). İlk scope hatası, merge konularındaki eksik dal adları ve STACK sharedQR kayıtları düzeltilerek kapandı; kontroller gevşetilmedi. Bağımsız0/0/0 @f985154. PR/CI/deploy ayrı bekler; workspace ve gerçek baskı ekranı sonraki paketlerdir.
-
-### T-1161 gerçek çalışma alanı (yerel)
-- /label-designs sunucu oturum/yetki kontrolü ve yalnız seçili taslağın kanonik logoları. Ortak liste/context/arşiv/arama/keyset; hazır tasarım → gerçek action kayıt → yetkili yayın/varsayılan. Yarım iş çıkış koruması; sürüm çakışmasında sessiz üzerine yazma yok. Taslak kaydı açık Kaydet eylemidir; otomatik kayıt iddiası yok.
-- Ad/ölçü/yayın/sürüm ayarları ortak özellik panelinde; logo yerel JPG/WebP/PNG'den sınırlı PNG'ye dönüşür, sunucu yeniden doğrular. Kullanımda olan sürüm taslak değişiminden etkilenmez; tarihsel sürüm yalnız taslağa alınır. Kaynak/gerçek barkod üretimi bu ekranın işi değildir.
-- Webtypegen/tsc/hedefESLint ve mevcut parite/UI/action417birim geçti. Henüz gerçek UI etkileşim e2e/bağımsız inceleme/prepush/CI/canlı yok. Yazıcı paneli ve gerçek işlem etiketleri sıradadır.
-
-### T-1162 yazıcı ekranı (yerel)
-- Genel profil ve her etikette ayrı profil; firma/genelcihaz seçenekleri gerçek CAS action ile kaydedilir. Yeni şablon önce kaydedilmeden şablon tercihi yapılamaz; yanlışlıkla genel tercihe yazılmaz. Profiller adı/DPI/kalibrasyon/aktiflik ile ortak form kalıbındadır, URL veya ağ hedefi yoktur.
-- Tarayıcı tercihinin fiziksel yazıcı seçmediği kısa notla görünür. Kapalı profil başka yazıcıya sessiz düşmez; Genel tercihi kullan açık seçenektir. Değişiklik yalnız labels.printers/MFA.
-- Webtypegen/tsc/ESLint ve tercih/UI/action426birim geçti. UI uçtan uca ve baskı kaynağı/CI/yayın bekler; OS/fiziksel yazıcı kabulü yapılmadı.
-
-### T-1163 gerçek kaynak okuma (yerel)
-- Kaynak, mevcut baskı hazırlama tenant transaction'ında okunur; stock.view/depo kapsamı, POSTED/CLOSED, gerçek mevcut paket kimliği ve mevcut paket bayrağı korunur. Sabit/benzersiz kaynak listesi ve100lük keyset; etiket kaynakları deftere yazmaz.
-- Miktarlar Number'a çevrilmez (2^53üstü ve6ondalık korunur); yalnız sunumda dil biçimi. Lot/varsa tarih gerçek zorunlu bağdır. Standart ürün barkodu mevcut temel birimden ve belirsiz olmayan kayıttan alınır, üretilmez.
-- Genel sevk hazır tasarımında QR belge numarasına bağlıdır; fiziksel paketli kaynakta ayrıca gerçek packageQr makine alanı zorunludur. Editörde yalnız bu iki izinli bağ seçilebilir; belge numarası packageQr değerine kopyalanmaz. Eski saklı tasarım değişmez.
-- Kaynak/model/motor31birim ve domain/webtsc/ESLint geçti; henüz gerçek DB kaynak/izolasyon int testi veya baskı işi/API/CI/canlı yok. Bunlar aynı dikey baskı paketi bitmeden teslim sayılmaz.
-
-### T-1165 paket incelemesi düzeltmesi (yerel)
-- Bağımsız incelemede bulunan action/domain yetki eşliği ve yazma önkoşulu tutarlılığı düzeltildi; bekçi/test gevşetilmedi. Canlı etiket modülü henüz açık değildir. Sürükleme/async ekleme güncel saltokunur durumunu kullanır.
-- Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
-
-
-### T-1166 çalışma alanı yetki eşliği (yerel)
-- Arşiv UI'si de yayın yetkisini kullanır; izni olmayan dokunuş sarı balon verir. Varsayılan tasarımı arşivlemeye çalışınca önce alternatif etiketi varsayılan yapma yönlendirmesi gelir. Sunucu yetkisi/aktif varsayılan denetimi korunur.
-- T1165 bağımsız düzeltmesi normal merge ile bu dala taşındı; eski rapor1/2 bulgulu olarak saklanır, güncel0/0/0 @6de09b0. UI e2e/yayın hâlâ bekler.
-
-### T-1164 sürümlü baskı hazırlama (yerel)
-- Önizleme salt okunur; hazırlamada değişmez şablon sürümü + gerçek kaynak snapshot'ı + kopya/yazıcı/aktör/audit kaydı. İşUUID metadata kimliğidir, fiziksel paket oluşturmaz. Aynı anahtar/içerik aynı sonucu döndürür; farklı içerik ret. PNG/kod/metin/kalibrasyon kontrolünden önce iş yazılmaz.
-- Varsayılanın atandığı eski sürüm, aynı şablonun daha yeni yayınıyla sessiz değişmez. Tarihsel yeniden basım aynı değer/QR/sürümü kullanır; kaynak ve güncel depo yetkisi yeniden doğrulanır. Kaldırılmış/yanlış eşlenen ürün barkodu veya değişmiş raf kodu fiziksel yeniden basılamaz. Genel/profile sessiz geçiş yok.
-- Tarihsel verinin salt okunur erişimi baskı profili/özellik bayrağıyla kapatılmaz; fiziksel yeni hazırlama ayrı yeniden doğrulanır. Hazırlandı fiziksel basıldı değildir. Wire DTO shared/type-only; istemci DB kodu almaz.
-- Safsnapshot/kaynak/hazırmodel13birim; domain/sharedtsc ve ESLint kontrol edilir. GerçekDB stokdeğişmezliği/izolasyon/int/yenidenbasım, UI/PDF/e2e, güvenlik, prepush/CI/canlı henüz bekler; paket bunlar bitmeden teslim sayılmaz.
-
-T1164 baskı geometri ekkontrolü: büyükEAN13kutusunda modül0.660mmüstüne çıkmaz, rakamlar kodun altında kalır (GS1primarysource renderercomment). 25motor/snapshotbirim ve gerçekChromiumPNG→ZXing36/36 (3semboloji×3DPI×4dönüş) yeniden geçti. Fiziksel cihaz/GS1 kalite sertifikası kanıtı değildir.
-
-### T-1167 — Gerçek DB kabulü (yerel)
-İki tenantlı izole DB, 73 migration ve gerçek wms_app: 11/11 test geçti. Beş mevcut ambalaj QR kimliği/lot/tarih/miktar, stok defteri-bakiye-seri-HU değişmezliği, tek auditli eşzamanlı replay, eski varsayılan sürümü, eski veriyle tekrar baskı, değişen ürün barkodunda yeni fiziksel baskının reddi, genel/şablon/kişisel cihaz yazıcı sırası ve kapalı profilde durma doğrulandı. Etiket yetkisi stok okuma hakkını vermez; depo kapsamı geçmişte de uygulanır. Fiziksel yazıcı, üretim/sevk gerçek kaynak kabulü ve tarayıcı akışı henüz yapılmadı.
-
-### T-1168 — Fiziksel çıktı yüzeyi (yerel)
-Onaylı etiket önizleme kalıbı ve aynı SVG; A4 10mm kenar/3mm aralık veya gerçek özel kağıt. A4'e sığmayan etiket küçültülmez, kullanıcı özel kağıda geçer. Çıktı gövdeye ayrı print-only portal; uygulama kabuğu baskıya girmez. Birim/PDF kabulü ve web bağlantısı henüz bekler.
-
-T1168 yerel kanıt: 4/4 birim + web typecheck/ESLint; gerçek Chromium PDF altı etiket A4te2sayfa, özel100×50mmde6sayfa; pdfinfo ölçüleri ve iki raster görüntü gözle kontrol edildi. Kabuk/yazı taşması yok. İlk hazırlık kalibrasyonu ve yazıcı fiziksel testi ayrıca gerekir.
-
-### T-1172 — Baskı ekranı (yerel geliştirme)
-`/custom-labels` yalnız kapalı kaynak sorgusu veya yetkili geçmiş işUUID alır; GET yazmaz. Baskı eylemi gerçek sunucu kaynaklarını yeniden okur; client değer/endpoint/kalibrasyon veremez. Tarayıcı aynı jobUUID ile tekrar güvenli; SVG DOM'a işlendiğinde sistem diyaloğu açılır ve fiziksel başarı iddia edilmez. Varsayılan atanan sürüm ayrı, açık seçim en yeni yayını kullanır. Tarihsel işte yeniden basım nedeni ve aynı kimlik; yetki/depo ve güncel barkod tekrar kontrol edilir. Test/bağımsız inceleme ve eski düğmelerin bağlantısı bekler.
-
-### T-1169 — Eski baskı düğmeleri (yerel geliştirme)
-Ürün/toplu filtreli ürün/raf ve kayıtlı kabul/üretim etiket yolları: yetkili özel varsayılan varsa custom-labels; yoksa önceki stock.view baskı yolu. Seçili hatalı özel etikette sessiz fallback yok. Ürün grubu gerçek itemIds taşır, sonraki keyset/filtre legacy yetkili sorguya geri döner; kabul/üretim kaynakları doğrulanmış belgeyle seçilir. Hedef int ve tarayıcı testi henüz yapılmadı.
-
-T1169 yerel gerçekDB19/19 (eski etiket kaynağı8+yeni baskı11), webtypecheck ve hedefESLint geçti. Yeni alan itemIds ile keyset grubu gerçek kaynak kimliklerini taşır. Bağımsız inceleme/tarayıcı/CI/canlı ayrıca bekler.
-
-### T-1173 — Modül ve ayar bağlantısı (yerel)
-Etiket tasarımı artık Modüller'de gerçek labels.view bağlantısıdır (yalnız print yetkisi yeterli değil); açık grant varsa saha kişisinde de görünür. Ayarlar aynı bağımsız yetkiyi sunucuda kontrol eder. “Etiket tasarımını aç” ve “yazıcı ayarları” yetkiyle süzülmüş modülden açılır; “barkod” eski QR ekranıdır. Yeni CSS yok, mevcut ortak ayar satırı. İlk kullanım rehberi ve gerçek tarayıcı kabulü ayrıca bekler.
-
-### T-1174 — Üretim ve sevk kabulü (yerel geliştirme)
-İşlenmiş çıkış belgesi kartında atanmış özel sevk etiketi bağlantısı; düz çıkış fişQR kullanır, fiziksel paket kimliği üretilmez. Gerçek kabul/kalite/yerleştirme/reçete/üretim komutlarıyla iki çıktı paketi ve gerçek çıkış postası üzerinden etiket testi hazırlanıyor; taslak kaynak ret ve stok değişmezliği ayrıca sınanır. Test henüz yapılmadı.
-
-T1174 gerçekDB13/13: iki üretim çıktısının gerçek paket QR/lot/tarihleri ve düz sevkin gerçek DB fişnumarası doğrulandı; baskı stok değiştirmedi. Routing2+action5 birim, root/web tip ve hedef ESLint geçti. Paketli sevkte otomatik kod seçimi T1177; tarayıcı/CI/canlı ayrı bekler.
-
-### T-1176 — Görsel işlem rehberi (yerel geliştirme)
-Beş kısa adım mevcut ortak hedef deliği/odak/ses/Esc/katlama ile yeni etiket, logo/metin, nesne taşıma, gerçek kayıt ve yazıcı bağlantısını gösterir. Tasarım+görüntüleme hakkı gerekir; rehber işlem yetkisi vermez. Başarı markerı yalnız kayıt ve seçiliyse yayın/varsayılan başarıyla oluşur. İlk otomatik açılışın kullanıcı/tenant bazlı sunucu kaydı T1178'de yapılacak; mevcut rehberin cihazdaki kaldığın yerden devam deposu bunun yerine geçmez. T1177 otomatik takip kodu yalnız gerçek packageQr veya gerçek fişnumarasıdır; kaynağı değiştirmez. Yerel151birim/webtip temiz, gerçek kaynak13test yeni bağla tekrar doğrulanır.
-### T-1171 — İlk kullanım koruması (yerel uygulama, henüz canlı değil)
-Büyük alan seçicisi küçük tuval nesnesini hedefleme zorunluluğunu kaldırır; Tab/Enter ve ok tuşları çalışır. mm girişleri yazım bitince doğrulanır, geçersiz ara değer tasarımı değiştirmez. Logo yüklemesi sürerken kayıt/çıkış korunur. Yayın önkontrolü sorunlu nesneyi seçer; sunucu aynı kuralları yeniden doğrular. Varsayılan etikette atanan sürüm dikkate alınır; değişmeyen yayını varsayılana seçmek yeni sürüm üretmez. Yerel tip/lint geçti; gerçek etkileşim kabulü henüz yapılmadı.
-
-### T-1178/T-1179 — İlk rehberin sunucu kaydı (yerel)
-İlk etiket ekranında beş adımlı rehber, başka aktif rehberi kesmeden gerçek motor olayı kabul edince başlar. Kullanıcı/üyelik/tenant ve guideVersion1 için sunucuda indeksli değişmez audit olayı tutulur; GET yalnız okur, guarded POST view+design/üyelik/MFA ister. Eşzamanlı metadata kilidi tek audit sağlar. Salt rehber görülmesi şablon/yazıcı/stok işlemi değildir, ek recentAuth istemez; aktör client'tan alınmaz. Cihazdaki kaldığın yerden devam kaydı ayrıdır, başka cihazda tekrar otomatik açılmama kararı sunucudan gelir. Yeni durum QA hazırlanıyor; gerçek tarayıcı ve bağımsız inceleme henüz yok.
-
-T1179 gerçekDB26/26 geçti (store9+printer4+print13),31hedefbirim ve root/webtip/ESLint temiz. Audit entity_id text tipidir; ilk gerçekDB denemesi tip uyuşmazlığını yakaladı, T1178 düzeltmesiyle tekrar26/26 geçti. Rehber görülmesi kullanıcı/üyelik/tenant bağımsız; eşzamanlı tek audit, hatada rollback ve stok/şablon değişmezliği doğrulandı. Kaynak audit sorgusu mevcut tenant indeksini kullanabilir; yeni özel indeks/migration eklenmedi, büyük ölçek performansı ayrıca izlenir. Tarayıcı UX/independentfinalreview/CI/canlı bekler.
+Yayın/geri alma/yedek ve sır referansları: OPERATIONS.md. Sır/DB adresi/anahtar burada veya görev kartlarında tutulmaz. Son görev kaydı: T1170; seri kartlar T1145–1182. Eski geliştirme günlüklerinin ayrıntısı Git geçmişindedir.

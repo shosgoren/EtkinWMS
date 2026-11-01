@@ -3,7 +3,7 @@ import {defaultLabelDesign,parseLabelDesign,type LabelContext,type LabelDesign,t
 export function readyLabelDesign(context:LabelContext):LabelDesign{
  const base=defaultLabelDesign(context),elements:LabelElement[]=[{...base.elements[0]!,y:4000,height:10000,fontSize:4500} as LabelElement,(context==='SHIPMENT'?{...base.elements[1]!,field:'trackingCode'}:base.elements[1]!) as LabelElement];
  const row=(id:string,caption:string,field:LabelField,y:number)=>{
-  const box={x:5000,y,width:14000,height:4500,rotation:0 as const,locked:false};
+  const box={x:5000,y,width:14000,height:5000,rotation:0 as const,locked:false};
   elements.push({...box,id:id+'-caption',kind:'text',field:null,text:caption,fontSize:2400,bold:false,align:'start'},
    {...box,id,width:40000,x:20000,kind:'text',field,text:null,fontSize:2800,bold:false,align:'start'});
  };
