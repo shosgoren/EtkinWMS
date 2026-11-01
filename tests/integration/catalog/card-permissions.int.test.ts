@@ -174,7 +174,7 @@ describe("T-1141 kart yazma yetkileri", () => {
 
   it("fikstür: yetkisiz yöneticinin grubunda kart anahtarı yok, kart dışı bütün ek yetkiler var (T-1142 sonrası da sınama gücü aynı)", () => {
     expect(NON_CARD_GRANTS.length).toBe(GRANTABLE.length - CARD_KEYS.length);
-    expect(NON_CARD_GRANTS).toEqual(["stock.post", "document.create", "document.approve", "count_diff.approve", "reversal.create", "data.import"]);
+    expect(NON_CARD_GRANTS).toEqual(["stock.post", "document.create", "document.approve", "count_diff.approve", "reversal.create", "data.import", "labels.view", "labels.design", "labels.publish", "labels.print", "labels.printers"]);
   });
 
   it("veritabanı gruba yönetici anahtarı verdirmez (0070 kapalı liste)", async () => {

@@ -38,6 +38,7 @@
     "./warehouse": "./src/warehouse/index.ts",
     "./operations": "./src/operations/index.ts",
     "./labels": "./src/labels/index.ts",
+    "./labels/editor": "./src/labels/editor/index.ts",
     "./stock": "./src/stock/index.ts",
     "./stock/jobs": "./src/stock/jobs.ts",
     "./integrations": "./src/integrations/index.ts",

@@ -237,14 +237,14 @@ describe("T-1142 aç/kapa (changeGroupGrants)", () => {
     expect(await auditCount(B.tenantId)).toBe(bAudit);
   });
 
-  it("veritabanı (0070 CHECK): kart anahtarları kabul; yönetici anahtarları, bilinmeyen ve 18'den uzun dizi ret", async () => {
+  it("veritabanı (0073 CHECK): kart anahtarları kabul; yönetici anahtarları, bilinmeyen ve 23'ten uzun dizi ret", async () => {
     const ok = await adm.query<{ id: string }>("INSERT INTO public.permission_groups (tenant_id, name, grants, created_by) VALUES ($1, $2, ARRAY['items.create','parties.archive','locations.edit'], $3) RETURNING id", [
       A.tenantId,
       `DB ${randomUUID().slice(0, 6)}`,
       A.ownerMembershipId,
     ]);
     expect(ok.rows).toHaveLength(1);
-    for (const bad of [["settings.manage"], ["users.manage"], ["stock.view"], ["items.delete"], Array.from({ length: 19 }, () => "items.edit")]) {
+    for (const bad of [["settings.manage"], ["users.manage"], ["stock.view"], ["items.delete"], Array.from({ length: 24 }, () => "items.edit")]) {
       await expect(
         adm.query("INSERT INTO public.permission_groups (tenant_id, name, grants, created_by) VALUES ($1, $2, $3::text[], $4)", [A.tenantId, `Kaçak ${randomUUID().slice(0, 6)}`, bad, A.ownerMembershipId]),
       ).rejects.toThrow(/permission_groups_grants_chk/);

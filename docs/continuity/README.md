@@ -13,6 +13,7 @@ Bu dizin yeni bir AI'ın bütün sohbeti okumadan devam etmesi içindir. Başlan
 | Tenant, stok, migration, RLS | [DATABASE](DATABASE.md) | `docs/INVARIANTS.md`, `packages/db/`, `packages/domain/` |
 | VPS/GitHub erişimi, yayın, yedek | [OPERATIONS](OPERATIONS.md) | `deploy/vps/`, gerçek operatör dosyaları |
 | Paraşüt ürün kartları ve okutmalı Devir | [PRODUCT_IMPORT](PRODUCT_IMPORT.md) | Onaylı kapsam, seri uygulama sırası ve gerçek durum |
+| Etiket tasarım editörü / baskı bağlamları | [LABEL_DESIGNER](LABEL_DESIGNER.md) | B-166; cihaz UX, sürüm/yetki, seri geliştirme ve kabul planı |
 | Açık işler / öncelik | [BACKLOG](../BACKLOG.md) | İlgili T- kartı, PR |
 | Güncel tutma / az token / teslim | [UPDATE_PROTOCOL](UPDATE_PROTOCOL.md) | Görev kartı + kısa kanıt kaydı |
 

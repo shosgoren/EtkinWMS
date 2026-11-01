@@ -16,6 +16,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 //
 // Ek (T-102 security-reviewer @77317fe MINOR, Supervisor): security_events sunucu alanı zorlaması,
 // session_replication_role=replica altında tetikleyici/TRUNCATE reddi, tetikleyicilerin tgenabled='A' denetimi.
+import { seedLabels } from "../labels/fixtures.ts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import pg from "pg";
 import { sql } from "../../../packages/db/node_modules/drizzle-orm/index.js";
@@ -360,6 +361,7 @@ beforeAll(async () => {
       "INSERT INTO public.item_images (tenant_id, item_id, data, thumb, width, height, sha256, is_main) VALUES ($1, $2, $3, $3, 1, 1, $4, true)",
       [w.tenantId, w.itemId, Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(4), Buffer.from("WEBP"), Buffer.alloc(4)]), randomBytes(32).toString("hex")],
     );
+    await seedLabels(admin, w); // T-1148: all new tenant label tables enter dynamic AC04 coverage.
     // T-1006 (0056): kurulum yolculuğu seçim satırı (tenant başına tek).
     await admin.query("INSERT INTO public.setup_journeys (tenant_id, skipped) VALUES ($1, '{labels}'::text[])", [w.tenantId]);
   }
