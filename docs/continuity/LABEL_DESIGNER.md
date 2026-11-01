@@ -1,6 +1,6 @@
 # Etiket tasarım editörü — B-166 uygulama planı
 
-Tarih: 1 Kasım 2026. Durum: GELİŞTİRME BAŞLADI; T-1146 tasarım kaynağı GitHub PR282 ile main'de; T-1147 saf sözleşme geliştiriliyor. Henüz uygulama/yayın yok.
+Tarih: 1 Kasım 2026. Durum: GELİŞTİRME BAŞLADI; T-1146 tasarım kaynağı GitHub PR282 ile main'de; T-1147 saf sözleşme PR283 ile main’de (23a1aa5). T-1148…1150 kalıcıkatman paketi yerel doğrulamada. Henüz uygulama/yayın yok.
 Plan kartı: [T-1145](../tasks/T-1145.md). Başlangıç kaynak main: `9c046c6f015aa2448cbc82bff86fbbbd88ac6c20`.
 Otorite: kullanıcı kararı + ALTIN-KURAL, STANDART, DESIGN-PARITY, INVARIANTS ve ADR-022. Bu belge onların istisnası değildir.
 
@@ -125,3 +125,10 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - `@wms/domain/labels/editor`: DB/Next/yazıcı ağı içermeyen sürümlü geometri ve alan bağları, logoassetUUID, taslak/yayın ayrıdoğrulama. Integerµm baskıölçüsü; UIyakınlaştırması etiketi değiştirmez. QRkapalıalanı korunur; paketkimliği ürünbarkoduyla değiştirilemez, statiklotmetni zorunlu gerçeklotyerine geçmez.
 - Yazıcı çözümü gerçek yetkili profile listesiyle çağrılır; tarayıcımodu her zaman sistemseçimigerekir der. Açıkça seçilmiş erişilemeyen/kapalı/yetkisiz yazıcı veya hazır olmayan köprüde blocked; genel tercihe sessiz geçiş yok.
 - Yerel64birim/roottsc/hedefESLint geçti. Bağımsız inceleme/prepush/CI henüz bekliyor. Bu saf dilim kalıcı şablon, sunucu yetkisi veya gerçek baskı değildir; sonraki seri kart API/DB/izinleri kurar.
+
+## T-1148/T-1150/T-1154 kalıcı şema paketi — PR284
+- 0072 yedi tenant tablosu: taslak/sürüm, kanonik PNG varlık, sistem diyaloğu yazıcı profili, şablon/genel cihaz/firma tercihi, bağlam varsayılanı, değişmez baskı snapshot'ı. Yayımlanmış sürüm/varlık/baskı uygulama rolünde değiştirilemez; snapshot fiziksel baskı kanıtı değildir.
+- Tam CI, ORM eşliği ve dolu etiket verisiyle bakım geri-bağını buldu. Drizzle eşliği tamamlandı. Geri-bağ normalde anında denetlenir; yalnız bakım transaction'ında açık erteleme ve işlem sonunda mevcut tam FK denetimi kullanılır. Canlıda sıfırlama çalıştırılmadı.
+- Dolu yedi tabloyla gerçek bakım + şema: uygulayıcı ve bağımsız inceleme ayrı ayrı 11/11 geçti. Güncel bağımsız rapor 0/0/0 @40fdac4; önceki raporlar bu düzeltmenin kanıtı değildir.
+- Son prepush YEŞİL: lint/typecheck, 5420 birim, bütün bekçiler ve AC-04 383. İlk tam yerel int 2793 geçti/6 başarısız/33 mevcut koşullu atlama; başarısız dosyalar ve yeni bakım/şema ayrı koşuda 117/117 geçti. Tam int yeşil iddiası yok; güncel PR CI beklenir.
+- 0073 ve T-1149 modül yetkileri ayrı sonraki paket. Bu şema paketi API, logo yükleme, gerçek editör veya baskı bağlantısı içermez; B-166 devam eder. Kod/CI/deploy/gerçek DB defteri ayrı doğrulanır.
