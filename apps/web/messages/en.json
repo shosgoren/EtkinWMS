@@ -6890,7 +6890,8 @@
       "TOO_MANY_ELEMENTS": "Use fewer fields",
       "CODE_GEOMETRY": "Enlarge the code or clear its surroundings"
     },
-    "printerName": "Printer name"
+    "printerName": "Printer name",
+    "noSpace": "No space · enlarge the label or reduce a field"
   },
   "labelPrint": {
     "title": "Print labels",

@@ -6890,7 +6890,8 @@
       "TOO_MANY_ELEMENTS": "Daha az alan kullan",
       "CODE_GEOMETRY": "Kodu büyüt veya çevresini boşalt"
     },
-    "printerName": "Yazıcı adı"
+    "printerName": "Yazıcı adı",
+    "noSpace": "Yer yok · etiketi büyüt veya alanı küçült"
   },
   "labelPrint": {
     "title": "Etiket bas",
