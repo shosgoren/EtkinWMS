@@ -155,6 +155,7 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Mevcut production action guard (Origin/oturum/IP/kişi/tenant hız sınırı) ve kapalı şemalar; kullanıcı/tenant UUID istemciden alınmaz. Gerçek yetki/MFA/CAS ve logo kanonikleştirme domain'de tekrar doğrulanır; ağ yazıcısı URL'si veya istemciden baskı snapshot'ı kabul edilmez.
 - 14action sınır testi, webtsc ve hedefESLint geçti. Domain bağımsız incelemesi199birim+11izolasyonint/0bulgu; webaction/renderer/kayıt ekranı için yeni paket incelemesi henüz bekler. Gerçek baskı kaynağı ayrı dilimdir.
 
+
 ### T-1161 gerçek çalışma alanı (yerel)
 - /label-designs sunucu oturum/yetki kontrolü ve yalnız seçili taslağın kanonik logoları. Ortak liste/context/arşiv/arama/keyset; hazır tasarım → gerçek action kayıt → yetkili yayın/varsayılan. Yarım iş çıkış koruması; sürüm çakışmasında sessiz üzerine yazma yok. Taslak kaydı açık Kaydet eylemidir; otomatik kayıt iddiası yok.
 - Ad/ölçü/yayın/sürüm ayarları ortak özellik panelinde; logo yerel JPG/WebP/PNG'den sınırlı PNG'ye dönüşür, sunucu yeniden doğrular. Kullanımda olan sürüm taslak değişiminden etkilenmez; tarihsel sürüm yalnız taslağa alınır. Kaynak/gerçek barkod üretimi bu ekranın işi değildir.
@@ -170,3 +171,8 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Miktarlar Number'a çevrilmez (2^53üstü ve6ondalık korunur); yalnız sunumda dil biçimi. Lot/varsa tarih gerçek zorunlu bağdır. Standart ürün barkodu mevcut temel birimden ve belirsiz olmayan kayıttan alınır, üretilmez.
 - Genel sevk hazır tasarımında QR belge numarasına bağlıdır; fiziksel paketli kaynakta ayrıca gerçek packageQr makine alanı zorunludur. Editörde yalnız bu iki izinli bağ seçilebilir; belge numarası packageQr değerine kopyalanmaz. Eski saklı tasarım değişmez.
 - Kaynak/model/motor31birim ve domain/webtsc/ESLint geçti; henüz gerçek DB kaynak/izolasyon int testi veya baskı işi/API/CI/canlı yok. Bunlar aynı dikey baskı paketi bitmeden teslim sayılmaz.
+
+### T-1165 paket incelemesi düzeltmesi (yerel)
+- Bağımsız incelemede bulunan action/domain yetki eşliği ve yazma önkoşulu tutarlılığı düzeltildi; bekçi/test gevşetilmedi. Canlı etiket modülü henüz açık değildir. Sürükleme/async ekleme güncel saltokunur durumunu kullanır.
+- Yeni sınır regresyonları ve yeniden bağımsız inceleme tamamlanmadan eski0rapor kullanılmaz. Gerçek tarayıcı gesture/rol değişimi kabulü UI paketiyle bekler.
+
