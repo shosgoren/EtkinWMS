@@ -18,10 +18,11 @@ const snapped=(v:number)=>Math.round(v/500)*500;
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 export function KalipEtiketEditor({dark,design,onChange,canEdit,assets,upload,copy:t}:KalipEtiketEditorProps){
  const {say}=useKalipToast("form"),[selected,setSelected]=useState<readonly string[]>([]),[panel,setPanel]=useState(false),[zoom,setZoom]=useState(1),[pan,setPan]=useState({x:0,y:0}),[space,setSpace]=useState({w:400,h:250}),[history,setHistory]=useState<readonly LabelDesign[]>([]),[uploading,setUploading]=useState(false);
+ const editable=useRef(canEdit);editable.current=canEdit;
  const view=useRef<HTMLDivElement>(null),paper=useRef<HTMLDivElement>(null),file=useRef<HTMLInputElement>(null),current=useRef(design);current.current=design;
  const drag=useRef<{pointer:number;x:number;y:number;design:LabelDesign;ids:readonly string[];resize:boolean}|null>(null),touches=useRef(new Map<number,{x:number;y:number}>()),pinch=useRef<{distance:number;zoom:number;center:{x:number;y:number};pan:{x:number;y:number}}|null>(null);
  useEffect(()=>{const el=view.current;if(!el)return;const r=new ResizeObserver(([entry])=>{if(entry)setSpace({w:entry.contentRect.width,h:entry.contentRect.height});});r.observe(el);return()=>r.disconnect();},[]);
- const valid=()=>{if(canEdit)return true;say("warn",t("locked"));return false;};
+ const valid=()=>{if(editable.current)return true;say("warn",t("locked"));return false;};
  const remember=()=>setHistory(h=>[...h.slice(-39),current.current]);
  const change=(d:LabelDesign,save=true)=>{if(!valid())return;try{const next=parseLabelDesign(d,"DRAFT");if(save)remember();onChange(next);}catch{say("warn",t("outside"));}};
  const picked=design.elements.find(e=>selected.includes(e.id)),isCode=picked?.kind==="qr"||picked?.kind==="barcode";
@@ -48,6 +49,7 @@ export function KalipEtiketEditor({dark,design,onChange,canEdit,assets,upload,co
  const pointerMove=(event:ReactPointer)=>{
   if(touches.current.has(event.pointerId))touches.current.set(event.pointerId,{x:event.clientX,y:event.clientY});
   if(touches.current.size===2&&pinch.current){const[a,b]=[...touches.current.values()];if(a&&b){setZoom(clamp(pinch.current.zoom*Math.hypot(a.x-b.x,a.y-b.y)/pinch.current.distance,.5,3));setPan({x:pinch.current.pan.x+(a.x+b.x)/2-pinch.current.center.x,y:pinch.current.pan.y+(a.y+b.y)/2-pinch.current.center.y});}return;}
+  if(!editable.current){drag.current=null;return;}
   const d=drag.current;if(!d||d.pointer!==event.pointerId)return;const r=paper.current?.getBoundingClientRect();if(!r)return;const dx=snapped((event.clientX-d.x)*design.width/r.width),dy=snapped((event.clientY-d.y)*design.height/r.height);
   const originals=d.design.elements.filter(e=>d.ids.includes(e.id));let next:LabelElement[];
   if(d.resize){const first=originals[0];if(!first)return;let w=clamp(first.width+dx,first.kind==="qr"?10000:1000,design.width-design.margin-first.x),h=clamp(first.height+dy,first.kind==="qr"?10000:1000,design.height-design.margin-first.y);if(first.kind==="qr")w=h=Math.min(w,h);next=d.design.elements.map(e=>e.id===first.id?{...e,width:w,height:h}:e);}
