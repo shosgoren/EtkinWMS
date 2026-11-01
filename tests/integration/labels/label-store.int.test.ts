@@ -78,12 +78,19 @@ it("audit failure rolls back the draft write instead of returning a false saved 
 it("@AC-04 template/history exports and lists are bounded/keyset and tenant scoped without billing gates",async()=>{
  const special="Find %_\\ exact";await saveLabelTemplate(w.call(),{expectedVersion:0,name:special,design:defaultLabelDesign("PRODUCT")});expect((await getLabelWorkspace(w.call(),{q:"%_\\"})).templates.map(x=>x.name)).toEqual([special]);
  const design=JSON.stringify(defaultLabelDesign("PRODUCT"));
- await w.adm.query("INSERT INTO public.label_templates(tenant_id,id,name,context,draft,created_by) SELECT $1,gen_random_uuid(),'Paged '||n,'PRODUCT',$2,$3 FROM generate_series(1,56)n",[w.B.tenantId,design,w.B.ownerMembershipId]);
+ const existingB=(await w.adm.query<{id:string}>("SELECT id FROM public.label_templates WHERE tenant_id=$1",[w.B.tenantId])).rows.map(r=>r.id);
+ const seededB=await w.adm.query<{id:string}>("INSERT INTO public.label_templates(tenant_id,id,name,context,draft,created_by) SELECT $1,gen_random_uuid(),'Paged '||n,'PRODUCT',$2,$3 FROM generate_series(1,56)n RETURNING id",[w.B.tenantId,design,w.B.ownerMembershipId]);
  expect((await getLabelWorkspace(w.call(w.B),{q:"Paged 56"})).templates.map(x=>x.name)).toEqual(["Paged 56"]);
  const page=await getLabelWorkspace(w.call(w.B));expect(page.templates).toHaveLength(50);expect(page.next).not.toBeNull();
  const next=await getLabelWorkspace(w.call(w.B),{after:page.next??undefined});expect(next.templates.length).toBeGreaterThan(0);expect(new Set([...page.templates,...next.templates].map(t=>t.id)).size).toBe(page.templates.length+next.templates.length);
  const ids:string[]=[];let cursor:string|undefined;
  do{const x=await exportLabelDesigns(w.call(w.B),{kind:"TEMPLATES",...(cursor?{after:cursor}:{})});expect(x.rows.length).toBeLessThanOrEqual(25);ids.push(...x.rows.map(r=>(r as {id:string}).id));cursor=x.next??undefined;}while(cursor);
- expect(ids.length).toBe(57);expect(new Set(ids).size).toBe(57);
- const history=await exportLabelDesigns(w.call(),{kind:"VERSIONS"});expect(history.rows.length).toBeGreaterThan(2);expect((await exportLabelDesigns(w.call(w.B),{kind:"VERSIONS"})).rows).toEqual([]);
+ const expectedB=[...existingB,...seededB.rows.map(r=>r.id)];expect(ids.slice().sort()).toEqual(expectedB.slice().sort());expect(new Set(ids).size).toBe(expectedB.length);
+ // This AC must work alone: create its own >25 history and prove export is not limited to the UI's latest20.
+ const historical=await create();let version=historical.version;const historicalIds:string[]=[];
+ for(let i=0;i<26;i++){const published=await publishLabelTemplate(w.call(),{id:historical.id,expectedVersion:version});version=published.version;historicalIds.push(published.publishedVersionId);}
+ expect((await getLabelTemplate(w.call(),historical.id)).revisions).toHaveLength(20);
+ const exported: {id:string;template_id:string}[]=[];let historyCursor:string|undefined;
+ do{const x=await exportLabelDesigns(w.call(),{kind:"VERSIONS",...(historyCursor?{after:historyCursor}:{})});expect(x.rows.length).toBeLessThanOrEqual(25);exported.push(...x.rows as {id:string;template_id:string}[]);historyCursor=x.next??undefined;}while(historyCursor);
+ expect(exported.filter(r=>r.template_id===historical.id).map(r=>r.id).sort()).toEqual(historicalIds.slice().sort());expect((await exportLabelDesigns(w.call(w.B),{kind:"VERSIONS"})).rows).toEqual([]);
 });

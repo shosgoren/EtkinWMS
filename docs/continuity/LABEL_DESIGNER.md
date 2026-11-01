@@ -150,3 +150,5 @@ Yetki paketi kanıtı:24hedefint/22birim/webtsc ve prepushYEŞİL (verify5421bir
 **Güncel seri durum:** PR284 şema ve PR286 yetki ana dala birleşti; her iki PR gerçekCI/guards yeşil. Şema mainCI yeşil, deploy41339618915 henüz sürüyor; DB/canlı defter doğrulanmadı. Servis paketi bu üçkartla birleştiriliyor; bağımsız551c773 raporu199birim/11int0bulgu, güncel entegrasyon üstünde yeniden inceleme/prepush bekler. API/UI/render/baskı sonraki paketlerdir, B166 tamam değildir.
 
 Servis prepush ilk koşusu yeni root audit çevirilerini eksik buldu; auditLog ve root audit ikisi de tr/en tamamlandı. Baştan prepush tekrar gerekir. Şema deploy5193f22, main artıkb7e2753 olduğu için güvenli NOT_CURRENT_MAIN kapısında reddedildi; canlıya eski SHA zorlanmayacak, güncel main yayın hattı izlenecek.
+
+Servis AC04 filtresi, export testindeki önceki test verisine bağımlılığı buldu. Kendi26sürümlük geçmişi ve kesinBtenant kimlik kümesi ile tekbaşına ve tamdosya kabulü zorunlu; kontrol kaldırılmaz. Güncel hedefint/prepush tekrar gerekir.
