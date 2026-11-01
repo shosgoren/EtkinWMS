@@ -126,9 +126,9 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Yazıcı çözümü gerçek yetkili profile listesiyle çağrılır; tarayıcımodu her zaman sistemseçimigerekir der. Açıkça seçilmiş erişilemeyen/kapalı/yetkisiz yazıcı veya hazır olmayan köprüde blocked; genel tercihe sessiz geçiş yok.
 - Yerel64birim/roottsc/hedefESLint geçti. Bağımsız inceleme/prepush/CI henüz bekliyor. Bu saf dilim kalıcı şablon, sunucu yetkisi veya gerçek baskı değildir; sonraki seri kart API/DB/izinleri kurar.
 
-## T-1148…T-1150 kalıcı katman (geliştirme)
-- 0072 yedi tenanttablosu: taslak/sürüm, PNGvarlık, yalnızsistemdiyaloğuyazıcıprofili, şablon/genelcihaz/firma tercihi, bağlamvarsayılanı, değişmezbaskısnapshotı. Uygulama rolü yayımlanansürüm/varlık/baskıyı güncelleyemez/silemez; snapshot hazırlama fizikselbaskıkanıtı değildir.
-- 0073 + yetkikataloğu: labels.view/design/publish/print/printers; Yönetici tümü, özelgrupta ayrıaçılır. Yayın/yazıcıyönetimi MFA. Mevcut stock.view etiket yolu korunur, yeniözelleştirilmişmodüle yetki kendiliğinden verilmez.
-- GeçiciDockerDB: yenişema6test ve öncekimigration4testi geçti; birimkatalog22test/roottsc geçti. Bağımsızsecurity/QA0/0/0 (15birim+6int); öncekimigrationregresyonu179test, AC04 383test ve verify5421birim geçti. Kapsam/tabanmetadata kaydı düzeltildikten sonra genelprepush tekrar koşuyor; CI/yayın bekliyor; henüz API/UI/baskıbağlantısı yok.
-
-**PR284 kapsam düzeltmesi:** TamCI ORMtablo/sütuneşliği ve bakımsıfırlamaFKdöngüsü buldu. 0072geri-bağı başlangıçtaanında denetlenen ertelemeliFK oldu; Drizzle modelieklenecek, bakımbetiğideğişmez. Paket≤30dosya kalması için 0073yetkiler/T-1149 ayrı sonraki pakete alındı. Önceki0bulgu raporu sonSQLfarkını kapsamaz; yeniinceleme/testşart. Canlıda müşteri verisine sıfırlama uygulanmaz.
+## T-1148/T-1150/T-1154 kalıcı şema paketi — PR284
+- 0072 yedi tenant tablosu: taslak/sürüm, kanonik PNG varlık, sistem diyaloğu yazıcı profili, şablon/genel cihaz/firma tercihi, bağlam varsayılanı, değişmez baskı snapshot'ı. Yayımlanmış sürüm/varlık/baskı uygulama rolünde değiştirilemez; snapshot fiziksel baskı kanıtı değildir.
+- Tam CI, ORM eşliği ve dolu etiket verisiyle bakım geri-bağını buldu. Drizzle eşliği tamamlandı. Geri-bağ normalde anında denetlenir; yalnız bakım transaction'ında açık erteleme ve işlem sonunda mevcut tam FK denetimi kullanılır. Canlıda sıfırlama çalıştırılmadı.
+- Dolu yedi tabloyla gerçek bakım + şema: uygulayıcı ve bağımsız inceleme ayrı ayrı 11/11 geçti. Güncel bağımsız rapor 0/0/0 @40fdac4; önceki raporlar bu düzeltmenin kanıtı değildir.
+- Son prepush YEŞİL: lint/typecheck, 5420 birim, bütün bekçiler ve AC-04 383. İlk tam yerel int 2793 geçti/6 başarısız/33 mevcut koşullu atlama; başarısız dosyalar ve yeni bakım/şema ayrı koşuda 117/117 geçti. Tam int yeşil iddiası yok; güncel PR CI beklenir.
+- 0073 ve T-1149 modül yetkileri ayrı sonraki paket. Bu şema paketi API, logo yükleme, gerçek editör veya baskı bağlantısı içermez; B-166 devam eder. Kod/CI/deploy/gerçek DB defteri ayrı doğrulanır.
