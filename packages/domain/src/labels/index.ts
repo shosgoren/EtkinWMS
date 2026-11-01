@@ -81,6 +81,7 @@ export async function loadLabelSource(params: Params, q: LabelSourceQuery): Prom
 
 export interface ProductLabelBatch extends LabelSource {
   readonly template: "product";
+  readonly itemIds: readonly string[];
   readonly total: number;
   readonly nextCursor: string | null;
 }
@@ -91,7 +92,7 @@ export interface ProductLabelBatch extends LabelSource {
 export async function loadProductLabelBatch(params: Params, input: SearchItemsInput = {}): Promise<ProductLabelBatch> {
   const page = await searchItems(params, { ...input, status: input.status ?? "ACTIVE", withTotal: true });
   return runTenantQuery({ ...params, permission: "stock.view" }, async (tx, actor) => {
-    if (page.items.length === 0) return { template: "product", name: "urunler", datas: [], total: page.total ?? 0, nextCursor: page.nextCursor };
+    if (page.items.length === 0) return { template: "product", name: "urunler", datas: [], itemIds: [], total: page.total ?? 0, nextCursor: page.nextCursor };
     const ids = page.items.map((item) => sql`${item.id}::uuid`);
     const rows = await tx.execute<{ id: string; code: string; name: string; unit: string; barcode: string | null }>(sql`
       SELECT i.id, i.code, i.name, u.code AS unit, b.barcode
@@ -114,6 +115,6 @@ export async function loadProductLabelBatch(params: Params, input: SearchItemsIn
         ) b ON true
        WHERE i.tenant_id = ${actor.tenantId}::uuid AND i.id IN (${sql.join(ids, sql`, `)})
        ORDER BY i.code, i.id`);
-    return { template: "product", name: "urunler", datas: rows.map(({ code, name, unit, barcode }) => ({ code, name, unit, barcode })), total: page.total ?? 0, nextCursor: page.nextCursor };
+    return { template: "product", name: "urunler", itemIds: rows.map(r => r.id), datas: rows.map(({ code, name, unit, barcode }) => ({ code, name, unit, barcode })), total: page.total ?? 0, nextCursor: page.nextCursor };
   });
 }

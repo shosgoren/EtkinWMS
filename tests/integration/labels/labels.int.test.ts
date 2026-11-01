@@ -126,11 +126,13 @@ describe("loadLabelSource olumlu yol", () => {
     const input = { q: prefix, limit: 1 } as const;
     const batch = await loadProductLabelBatch(admin(A), input);
     expect(batch.total).toBe(2);
+    expect(batch.itemIds).toEqual([first.itemId]);
     expect(batch.datas).toEqual([expect.objectContaining({ code: `${prefix}-01`, barcode: `${prefix}-1URUN` })]);
     expect(await loadProductLabelBatch(admin(A), input)).toEqual(batch);
     const next = await loadProductLabelBatch(admin(A), { ...input, after: batch.nextCursor! });
     expect(next.datas).toEqual([expect.objectContaining({ code: `${prefix}-02`, barcode: null })]);
     expect(next.nextCursor).toBeNull();
+    expect(next.itemIds).toEqual([second.itemId]);
     expect((await loadLabelSource(admin(A), { itemId: first.itemId }))?.datas).toEqual(batch.datas);
     expect((await loadLabelSource(admin(A), { itemId: second.itemId }))?.datas).toEqual(next.datas);
     expect((await loadProductLabelBatch(admin(B), input)).datas).toEqual([]);
