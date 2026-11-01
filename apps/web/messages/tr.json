@@ -6900,6 +6900,7 @@
       "PRINTER_CHANGED": "Yazıcı ayarı değişmiş. Yeni önizleme aç.",
       "SOURCE_CHANGED": "Barkod veya raf kodu değişmiş. Güncel etiketi bas.",
       "DESIGN_INVALID": "Etiket alanı veya kod ölçüsü uygun değil. Tasarımı kontrol et."
-    }
+    },
+    "preparing": "Etiket hazırlanıyor; biraz bekle."
   }
 }
