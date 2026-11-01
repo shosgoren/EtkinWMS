@@ -75,7 +75,7 @@ async function render(tx:AccessTx,m:Membership,t:Template,rows:readonly LabelSou
   prepareLabelForPrint(t.design,r.required);
   for(const field of r.required)if(!r.values[field])throw new LabelPrintError('REQUIRED_VALUE');
   const field=r.packageCodeRequired?'packageQr':t.design.context==='PRODUCT'?'barcode':t.design.context==='LOCATION'?'locationCode':'documentNo';
-  if(!t.design.elements.some(e=>(e.kind==='qr'||e.kind==='barcode')&&e.field===field))throw new LabelPrintError('REQUIRED_CODE');
+  if(!t.design.elements.some(e=>(e.kind==='qr'||e.kind==='barcode')&&(e.field===field||(t.design.context==='SHIPMENT'&&e.field==='trackingCode'&&r.values.trackingCode===r.values[field]))))throw new LabelPrintError('REQUIRED_CODE');
   // preview is deliberately never passed. DPI/offset only come from the current authorized server profile or saved job.
   const page=renderLabelSvg(t.design,r.values,{...calibration,assets});bytes+=Buffer.byteLength(page,'utf8');
   if(bytes>8*1024*1024)throw new AppError('VALIDATION_FAILED');pages.push(page);
