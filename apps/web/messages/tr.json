@@ -1044,6 +1044,16 @@
     "setup_journey": {
       "updated": "Kurulum yolculuğu seçimi değişti",
       "labels_printed": "İlk etiket yazdırıldı"
+    },
+    "label": {
+      "template_saved": "Etiket taslağı kaydedildi",
+      "template_published": "Etiket tasarımı yayımlandı",
+      "template_archived": "Etiket arşivi değişti",
+      "default_changed": "İşlem etiketi seçildi",
+      "printer_saved": "Yazıcı tercihi kaydedildi",
+      "preference_changed": "Etiket yazıcısı seçildi",
+      "asset_added": "Etiket logosu eklendi",
+      "print_prepared": "Etiket baskısı hazırlandı"
     }
   },
   "auditLog": {
@@ -1071,6 +1081,16 @@
     "recentAuthAction": "Yeniden giriş yapıp tekrar dene.",
     "loginLink": "Yeniden giriş yap",
     "actions": {
+      "label": {
+        "template_saved": "Etiket taslağı kaydedildi",
+        "template_published": "Etiket tasarımı yayımlandı",
+        "template_archived": "Etiket arşivi değişti",
+        "default_changed": "İşlem etiketi seçildi",
+        "printer_saved": "Yazıcı tercihi kaydedildi",
+        "preference_changed": "Etiket yazıcısı seçildi",
+        "asset_added": "Etiket logosu eklendi",
+        "print_prepared": "Etiket baskısı hazırlandı"
+      },
       "member": {
         "invited": "Üye davet edildi",
         "removed": "Üye çıkarıldı",
@@ -4652,7 +4672,13 @@
     "stripEdit": "Cari kartı",
     "stripEmpty": "Ünvan yazınca burada görünür",
     "autoCode": "otomatik kod",
-    "ph": { "shortName": "Listede görünen ad", "name": "Firma adı", "phone": "05xx xxx xx xx", "email": "ornek@firma.com", "address": "Mahalle, cadde, no" },
+    "ph": {
+      "shortName": "Listede görünen ad",
+      "name": "Firma adı",
+      "phone": "05xx xxx xx xx",
+      "email": "ornek@firma.com",
+      "address": "Mahalle, cadde, no"
+    },
     "gContactSub": "İsteğe bağlı",
     "searchLabel": "Cari ara",
     "filter": "Süzgeç",

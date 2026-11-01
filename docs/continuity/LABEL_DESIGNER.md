@@ -126,6 +126,7 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Yazıcı çözümü gerçek yetkili profile listesiyle çağrılır; tarayıcımodu her zaman sistemseçimigerekir der. Açıkça seçilmiş erişilemeyen/kapalı/yetkisiz yazıcı veya hazır olmayan köprüde blocked; genel tercihe sessiz geçiş yok.
 - Yerel64birim/roottsc/hedefESLint geçti. Bağımsız inceleme/prepush/CI henüz bekliyor. Bu saf dilim kalıcı şablon, sunucu yetkisi veya gerçek baskı değildir; sonraki seri kart API/DB/izinleri kurar.
 
+
 ## T-1148/T-1150/T-1154 kalıcı şema paketi — PR284
 - 0072 yedi tenant tablosu: taslak/sürüm, kanonik PNG varlık, sistem diyaloğu yazıcı profili, şablon/genel cihaz/firma tercihi, bağlam varsayılanı, değişmez baskı snapshot'ı. Yayımlanmış sürüm/varlık/baskı uygulama rolünde değiştirilemez; snapshot fiziksel baskı kanıtı değildir.
 - Tam CI, ORM eşliği ve dolu etiket verisiyle bakım geri-bağını buldu. Drizzle eşliği tamamlandı. Geri-bağ normalde anında denetlenir; yalnız bakım transaction'ında açık erteleme ve işlem sonunda mevcut tam FK denetimi kullanılır. Canlıda sıfırlama çalıştırılmadı.
@@ -137,3 +138,21 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 
 
 Yetki paketi kanıtı:24hedefint/22birim/webtsc ve prepushYEŞİL (verify5421birim/AC04 383). Bağımsız0/0/0 @59148f7 (18int+22birim); PR284 şeması main5193f22 ile birleşti, yalnız kendi continuity kayıtları uzlaştırıldı. Yeni CI/deploy/DB henüz bekliyor.
+## T-1151…T-1153 uygulama katmanı (geliştirme)
+- İstemci sözleşmesi yalnız @wms/shared/labels içinde; domain/editor uyumlulukexportu kaldı. DB kodu istemciye girmez.
+- Kaydetme kararlıUUID ile tekrar güvenli, CAS ve tenantmetadata kilidi; taslak mevcutyayını etkilemez. Yayın+varsayılan ataması tektransaction; geçmiş sürüm geri dönüşü yalnız taslağı değiştirir. Atanmışşablon arşivi alternatif ister.
+- Logo istemcide PNGye dönüştürülür; sunucu statik8bit RGB/RGBA, ≤128KiB/1024², CRC/header/scanline/boundedzlib doğrular ve yalnızIHDR/IDAT/IEND yenidenyazar. SVG/URL/animasyon/metadata yok; tenantbazlıhashdedup, değişmezassetUUID.
+- Yazıcılar yalnızSYSTEM_DIALOG; şirket ve aktör/cihaz tercihi, şablonönceliği, açıkseçili kapalıprofilde blok; gerçekköprü yok. Kaynak profillerdeURL/port/kimlikbilgisi yok.
+- Şablon/sürüm/logo veri teslimi keysetkısa sayfalı, faturalamabayrağıyok ve auditli. Kota200şablon/100logo/30profil; çıktı stokkimliği üretmez.
+- Ön kontrol: eski64model/yazıcı +17PNGbirim, root/domaintsc/hedefESLint, gerçekuygulamarolüyle11entegrasyon geçti. Son arama/exportaudit değişikliğiyle11entegrasyon yenidengeçti; bağımsızinceleme/prepush/CI/API/UI/baskıbağlantısı henüz yok.
+
+
+**Güncel seri durum:** PR284 şema ve PR286 yetki ana dala birleşti; her iki PR gerçekCI/guards yeşil. Şema mainCI yeşil, deploy41339618915 henüz sürüyor; DB/canlı defter doğrulanmadı. Servis paketi bu üçkartla birleştiriliyor; bağımsız551c773 raporu199birim/11int0bulgu, güncel entegrasyon üstünde yeniden inceleme/prepush bekler. API/UI/render/baskı sonraki paketlerdir, B166 tamam değildir.
+
+Servis prepush ilk koşusu yeni root audit çevirilerini eksik buldu; auditLog ve root audit ikisi de tr/en tamamlandı. Baştan prepush tekrar gerekir. Şema deploy5193f22, main artıkb7e2753 olduğu için güvenli NOT_CURRENT_MAIN kapısında reddedildi; canlıya eski SHA zorlanmayacak, güncel main yayın hattı izlenecek.
+
+Servis AC04 filtresi, export testindeki önceki test verisine bağımlılığı buldu. Kendi26sürümlük geçmişi ve kesinBtenant kimlik kümesi ile tekbaşına ve tamdosya kabulü zorunlu; kontrol kaldırılmaz. Güncel hedefint/prepush tekrar gerekir.
+
+Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol için assertiontabanı53→55 yükseldi; tam prepush ve korunan taban sonrası yenilenmiş bağımsız rapor zorunlu.
+
+**Servis son kapı:** Güncel tam prepush YEŞİL: lint/typecheck,5438birim, tüm bekçiler, AC04 387. Son kaynak11int geçti; bağımsız rapor0/0/0 @53244b1 önceki199birim+11int ve aynı işkodunu, yeni test/metadata farkını ayırarak doğruladı. CI/deploy/baskı ekranı hâlâ ayrı bekler.
