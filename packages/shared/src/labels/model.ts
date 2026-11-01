@@ -119,3 +119,13 @@ export function prepareLabelForPrint(value: unknown, requiredFields: readonly La
   }
   return design;
 }
+
+/** New objects start in free space. Layout geometry only: no label, barcode or package identity is allocated. */
+export function findLabelPlacement(value:LabelDesign,width:number,height:number):{x:number;y:number;width:number;height:number}|null{
+ const d=parseLabelDesign(value,'DRAFT');integer(width,100,DESIGN_LIMITS.maxWidth);integer(height,100,DESIGN_LIMITS.maxHeight);
+ const right=d.width-d.margin-width,bottom=d.height-d.margin-height;if(right<d.margin||bottom<d.margin)return null;
+ const boxes=d.elements.flatMap(e=>e.kind==='frame'?[{x:e.x,y:e.y,width:e.width,height:e.stroke},{x:e.x,y:e.y+e.height-e.stroke,width:e.width,height:e.stroke},{x:e.x,y:e.y,width:e.stroke,height:e.height},{x:e.x+e.width-e.stroke,y:e.y,width:e.stroke,height:e.height}]:[e]);
+ const gap=500,xs=[right,d.margin,...boxes.flatMap(b=>[b.x+b.width+gap,b.x-width-gap])],ys=[bottom,d.margin,...boxes.flatMap(b=>[b.y+b.height+gap,b.y-height-gap])];
+ for(const y of new Set(ys))for(const x of new Set(xs))if(x>=d.margin&&y>=d.margin&&x<=right&&y<=bottom&&!boxes.some(b=>x<b.x+b.width+gap&&x+width+gap>b.x&&y<b.y+b.height+gap&&y+height+gap>b.y))return{x,y,width,height};
+ return null;
+}
