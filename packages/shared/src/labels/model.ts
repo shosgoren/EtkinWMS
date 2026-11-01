@@ -6,11 +6,11 @@ export const CONTEXT_FIELDS = {
   PRODUCT: ["name", "code", "unit", "barcode"],
   RECEIPT: ["name", "code", "unit", "barcode", "packageQr", "quantity", "lot", "productionDate", "expiryDate", "documentNo"],
   LOCATION: ["locationCode", "locationName", "warehouseName"],
-  SHIPMENT: ["name", "code", "unit", "barcode", "packageQr", "quantity", "lot", "expiryDate", "documentNo", "customerName"],
+  SHIPMENT: ["name", "code", "unit", "barcode", "packageQr", "quantity", "lot", "expiryDate", "documentNo", "customerName", "trackingCode"],
 } as const satisfies Record<LabelContext, readonly string[]>;
 export type LabelField = (typeof CONTEXT_FIELDS)[LabelContext][number];
 const CODE_FIELDS: Readonly<Record<LabelContext, readonly string[]>> = {
-  PRODUCT: ["barcode"], RECEIPT: ["packageQr"], LOCATION: ["locationCode"], SHIPMENT: ["packageQr", "documentNo"],
+  PRODUCT: ["barcode"], RECEIPT: ["packageQr"], LOCATION: ["locationCode"], SHIPMENT: ["packageQr", "documentNo", "trackingCode"],
 };
 export const DESIGN_LIMITS = Object.freeze({ elements: 60, codes: 6, minWidth: 10_000, maxWidth: 500_000, minHeight: 10_000, maxHeight: 1_000_000 });
 interface Box { readonly id: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly rotation: 0 | 90 | 180 | 270; readonly locked: boolean }
@@ -114,6 +114,7 @@ export function prepareLabelForPrint(value: unknown, requiredFields: readonly La
   const bound = new Set(design.elements.flatMap(e => (e.kind === "text" || e.kind === "barcode" || e.kind === "qr") && e.field !== null ? [e.field] : []));
   for (const required of requiredFields) {
     field(required, design.context);
+    if(required==="packageQr"&&design.context==="SHIPMENT"&&bound.has("trackingCode"))continue;
     if (!bound.has(required)) return fail("UNSUPPORTED_FIELD");
   }
   return design;

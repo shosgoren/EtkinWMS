@@ -6842,7 +6842,8 @@
       "locationCode": "Raf yeri kodu",
       "locationName": "Raf yeri adı",
       "warehouseName": "Depo",
-      "customerName": "Müşteri"
+      "customerName": "Müşteri",
+      "trackingCode": "Takip QR · otomatik"
     },
     "printers": "Yazıcılar",
     "newPrinter": "Yazıcı ekle",

@@ -13,7 +13,7 @@ export interface KalipEtiketEditorProps{
  readonly assets:Readonly<Record<string,string>>;readonly upload:(file:File)=>Promise<string|null>;
  readonly copy:(key:string)=>string;readonly settings?:ReactNode;
 }
-const example:Record<LabelField,string>={name:"SBR granül",code:"HM-001",unit:"KG",barcode:"ETK-HM-001",packageQr:"EWMS:PKG:1:11111111-1111-4111-8111-111111111111",quantity:"200",lot:"LOT-2026-01",productionDate:"01.11.2026",expiryDate:"01.11.2027",documentNo:"DVR-2026-001",locationCode:"A-1-2-3",locationName:"A-1-2-3",warehouseName:"Merkez",customerName:"Örnek müşteri"};
+const example:Record<LabelField,string>={name:"SBR granül",code:"HM-001",unit:"KG",barcode:"ETK-HM-001",packageQr:"EWMS:PKG:1:11111111-1111-4111-8111-111111111111",quantity:"200",lot:"LOT-2026-01",productionDate:"01.11.2026",expiryDate:"01.11.2027",documentNo:"DVR-2026-001",locationCode:"A-1-2-3",locationName:"A-1-2-3",warehouseName:"Merkez",customerName:"Örnek müşteri",trackingCode:"EWMS:PKG:1:11111111-1111-4111-8111-111111111111"};
 const snapped=(v:number)=>Math.round(v/500)*500;
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 export function KalipEtiketEditor({dark,design,onChange,canEdit,assets,upload,copy:t,settings}:KalipEtiketEditorProps){
@@ -38,7 +38,7 @@ export function KalipEtiketEditor({dark,design,onChange,canEdit,assets,upload,co
   const box={id,x,y,width:Math.min(40000,roomW),height:Math.min(10000,roomH),rotation:0 as const,locked:false};let e:LabelElement;
   if(kind==="text"||kind==="field")e={...box,kind:"text",field:kind==="field"?CONTEXT_FIELDS[design.context][0]:null,text:kind==="text"?t("text"):null,fontSize:3000,bold:false,align:"start"};
   else if(kind==="qr"||kind==="barcode"){
-   const field=design.context==="RECEIPT"||design.context==="SHIPMENT"?"packageQr":design.context==="LOCATION"?"locationCode":"barcode";
+   const field=design.context==="SHIPMENT"?"trackingCode":design.context==="RECEIPT"?"packageQr":design.context==="LOCATION"?"locationCode":"barcode";
    const size=Math.min(28000,roomW,roomH);e=kind==="qr"?{...box,kind,width:size,height:size,field,locked:true}:{...box,kind,field,format:"CODE128",height:Math.min(18000,roomH),locked:true};
   }else e={...box,kind,stroke:300,height:kind==="line"?1000:Math.min(20000,roomH)};
   change({...design,elements:[...design.elements,e]});setSelected([id]);setPanel(true);
@@ -58,7 +58,7 @@ export function KalipEtiketEditor({dark,design,onChange,canEdit,assets,upload,co
  };
  const elementProperties=picked===undefined?<div className="lx-empty">{t("pick")}</div>:<><h2>{label(picked)}</h2>{picked.kind==="text"&&<>{picked.field===null?<KalipAlan label={t("text")} value={picked.text??""} maxLength={1000} disabled={!canEdit} onChange={e=>setElement({text:e.target.value})}/>:<KalipSecim label={t("field")} value={picked.field} options={CONTEXT_FIELDS[design.context].map(id=>({id,label:t(`fields.${id}`),d:LICON.tag,color:"2F5DA8"}))} color="2F5DA8" disabled={!canEdit} onPick={id=>setElement({field:id as LabelField})}/>}<KalipAlan label={t("font")} type="number" min={1} max={50} step={.5} value={picked.fontSize/1000} disabled={!canEdit} onChange={e=>setElement({fontSize:Math.round(Number(e.target.value)*1000)})}/><div className="lx-row"><button type="button" aria-pressed={picked.bold} onClick={()=>setElement({bold:!picked.bold})}>{t("bold")}</button>{button("align",LICON.grid,()=>setElement({align:picked.align==="start"?"middle":picked.align==="middle"?"end":"start"}))}</div></>}
   {picked.kind==="barcode"&&<KalipSecim label={t("barcode")} value={picked.format} color="2F5DA8" disabled={!canEdit} options={[{id:"CODE128",label:"Code128",d:LICON.tag,color:"2F5DA8"},...(design.context==="PRODUCT"?[{id:"EAN13",label:"EAN13",d:LICON.tag,color:"2F5DA8"}]:[])]} onPick={format=>setElement({format:format as "CODE128"|"EAN13"})}/>}
-  {isCode&&design.context==="SHIPMENT"&&<KalipSecim label={t("field")} value={picked.field} color="3B6A9E" disabled={!canEdit} options={["documentNo","packageQr"].map(id=>({id,label:t(`fields.${id}`),d:LICON.tag,color:"3B6A9E"}))} onPick={field=>setElement({field:field as LabelField})}/>}
+  {isCode&&design.context==="SHIPMENT"&&<KalipSecim label={t("field")} value={picked.field} color="3B6A9E" disabled={!canEdit} options={["trackingCode","documentNo","packageQr"].map(id=>({id,label:t(`fields.${id}`),d:LICON.tag,color:"3B6A9E"}))} onPick={field=>setElement({field:field as LabelField})}/>}
   {isCode&&<div className="lx-note">{t("identity")}</div>}
   <div className="lx-row">{(["width","height"] as const).map(k=><KalipAlan key={k} label={t(k)+" · mm"} type="number" step={.5} min={1} disabled={!canEdit} value={picked[k]/1000} onChange={e=>{const v=Math.round(Number(e.target.value)*1000);setElement(picked.kind==="qr"?{width:v,height:v}:{[k]:v});}}/>)}</div>
   <div className="lx-row">{(["x","y"] as const).map(k=><KalipAlan key={k} label={k.toUpperCase()+" · mm"} type="number" step={.5} value={picked[k]/1000} disabled={!canEdit} onChange={e=>setElement({[k]:Math.round(Number(e.target.value)*1000)})}/>)}</div>
