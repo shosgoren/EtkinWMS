@@ -1071,6 +1071,16 @@
     "recentAuthAction": "Yeniden giriş yapıp tekrar dene.",
     "loginLink": "Yeniden giriş yap",
     "actions": {
+      "label": {
+        "template_saved": "Etiket taslağı kaydedildi",
+        "template_published": "Etiket tasarımı yayımlandı",
+        "template_archived": "Etiket arşivi değişti",
+        "default_changed": "İşlem etiketi seçildi",
+        "printer_saved": "Yazıcı tercihi kaydedildi",
+        "preference_changed": "Etiket yazıcısı seçildi",
+        "asset_added": "Etiket logosu eklendi",
+        "print_prepared": "Etiket baskısı hazırlandı"
+      },
       "member": {
         "invited": "Üye davet edildi",
         "removed": "Üye çıkarıldı",

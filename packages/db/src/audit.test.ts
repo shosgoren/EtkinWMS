@@ -40,6 +40,7 @@ describe("eylem listesi", () => {
   it("kayıtlı eylemleri içerir (T-305: inbound_receipt.*, T-306: sales_order.*, T-307: pick_assignment.*/pick.*, T-309: count.* dahil)", () => {
     expect([...AUDIT_ACTIONS].sort()).toEqual(
       [
+        "label.template_saved", "label.template_published", "label.template_archived", "label.default_changed", "label.printer_saved", "label.preference_changed", "label.asset_added", "label.print_prepared",
         "member.invited", "member.removed", "member.role_changed", "member.left", "ownership.transferred",
         "invitation.revoked", "invitation.accepted", "field_user.created", "field_user.code_reset", "field_user.unlocked", "field_device.enrolled", "field_device.revoked", "tenant.created", "tenant.settings_changed",
         "onboarding.step_completed", "password_reset_link.issued", "audit.exported",
