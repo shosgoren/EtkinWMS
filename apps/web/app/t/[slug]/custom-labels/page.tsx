@@ -24,7 +24,9 @@ export default async function CustomLabelsPage({params,searchParams}:{params:Pro
   if(typeof q.source!=='string'||q.source.length>8000)notFound();let raw:unknown;try{raw=JSON.parse(q.source);}catch{notFound();}const source=parseLabelSourceRequest(raw),context=source.kind==='PRODUCTION'?'RECEIPT':source.kind,choices=await getLabelPrintChoices(p,context);
   if(choices.length===0)return shell(t('noTemplate'));
   const templateId=choices.some(c=>c.isDefault)?undefined:choices[0]!.id;
+  const copies=typeof q.copies==='string'&&/^\d{1,3}$/.test(q.copies)?Number(q.copies):1;if(copies<1||copies>100)return shell(t('copiesError'));
+  const nextHref=typeof q.batchNext==='string'&&q.batchNext.length<=4000?home+'/labels?'+new URLSearchParams(q.batchNext).toString():undefined;
   const initial=await previewCustomLabels(p,{source,locale,...(templateId?{templateId}:{})},packageReceivingEnabled());
-  return<CustomLabelPrintView key={JSON.stringify(source)} slug={slug} dark={dark} locale={locale} source={source} choices={choices} initial={initial} initialTemplateId={templateId}/>;
+  return<CustomLabelPrintView key={JSON.stringify(source)} slug={slug} dark={dark} locale={locale} source={source} choices={choices} initial={initial} initialTemplateId={templateId} initialCopies={copies} nextHref={nextHref}/>;
  }catch(e){if(e instanceof LabelPrintError)return shell(t(`errors.${e.reason}`));if(e instanceof AppError){if(e.code==='NOT_FOUND')notFound();if(e.code==='VALIDATION_FAILED')return shell(t('errors.DESIGN_INVALID'));if(e.code==='UNAUTHENTICATED')redirect(`/login?next=${encodeURIComponent(url)}`);if(e.code==='FORBIDDEN'&&e.detail==='MFA_REQUIRED')redirect(`/mfa?next=${encodeURIComponent(url)}`);if(e.code==='FORBIDDEN')return<KalipKilitliEkran title={t('title')} icon={{d:LICON.printer,color:'3B6A9E'}} text={t('locked')} hint={t('askOwner')} dark={dark} home={home}/>;}throw e;}
 }
