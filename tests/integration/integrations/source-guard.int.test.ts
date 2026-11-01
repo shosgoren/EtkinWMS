@@ -330,6 +330,45 @@ describe("(4) yarış: yön değişikliği", () => {
   });
 });
 
+describe("(4b) alma sayfası ile kart komutu kilitlenmesi (inceleme @ fe3f925)", () => {
+  it("sayfa akışı FOR NO KEY UPDATE alır, kartı kilitler, imleci günceller: eşzamanlı updateItem / saveParty 40P01 almaz, sayfa commit olunca biter", async () => {
+    const { w } = await world("SG-PAGE");
+    await setDir(w, "PRODUCTS", "PULL");
+    await setDir(w, "CONTACTS", "PULL");
+    const it1 = await item(w, true);
+    const p1 = await party(w, true);
+    for (const [flow, table, id, command] of [
+      ["PRODUCTS", "items", it1.id, () => updateItem(admin(w), { itemId: it1.id, pickPolicy: "FEFO" })],
+      ["CONTACTS", "parties", p1.id, async () => saveParty(admin(w), { id: p1.id, code: p1.code, name: "Acme", phone: "0212 555 11 22", deliveryMode: "CARRIER", expectedVersion: await partyVersion(p1.id) })],
+    ] as const) {
+      const page = new pg.Client({ connectionString: env.databaseUrlDirect });
+      await page.connect();
+      try {
+        // sync.ts pull sayfası: guardFlow inTenantPage (akış FOR NO KEY UPDATE) → kart satırı (apply / lockActiveCard) → imleç UPDATE.
+        await page.query("BEGIN");
+        await page.query("SELECT 1 FROM public.integration_flows WHERE tenant_id = $1 AND flow = $2 FOR NO KEY UPDATE", [w.tenantId, flow]);
+        await page.query(`SELECT 1 FROM public.${table} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [w.tenantId, id]);
+        let settled = false;
+        const r = (command as () => Promise<unknown>)().finally(() => {
+          settled = true;
+        });
+        r.catch(() => undefined);
+        await new Promise((res) => setTimeout(res, 400));
+        expect(settled).toBe(false); // komut akış satırında sayfanın arkasında bekliyor (kart kilidine hiç ulaşmadı)
+        await page.query("UPDATE public.integration_flows SET cursor = '2' WHERE tenant_id = $1 AND flow = $2", [w.tenantId, flow]);
+        // deadlock_timeout (1 sn) geçsin: döngü olsaydı PostgreSQL bir tarafı 40P01 ile keserdi.
+        await new Promise((res) => setTimeout(res, 1500));
+        await page.query("COMMIT");
+        await expect(r).resolves.toBeDefined();
+      } finally {
+        await page.end();
+      }
+    }
+    expect((await q<{ pick_policy: string }>("SELECT pick_policy FROM public.items WHERE id = $1", [it1.id]))[0]?.pick_policy).toBe("FEFO");
+    expect((await q<{ delivery_mode: string }>("SELECT delivery_mode FROM public.parties WHERE id = $1", [p1.id]))[0]?.delivery_mode).toBe("CARRIER");
+  });
+});
+
 describe("(5) kiracı yalıtımı", () => {
   it("A'nın PULL'u B'yi etkilemez; B'nin okuması A'nın kartının bağlılığını görmez", async () => {
     const { w: A } = await world("SG-TA");
