@@ -340,11 +340,12 @@ export function PartiesView({
   const canCreate = rights.create && !kk.create;
   const isNew = params.get("new") === "1" && canCreate;
   useKaynakYeniUyarisi(params.get("new") === "1" && kk.create, kk.createReason, kk.eylem);
-  const linked = useMemo(() => new Set(linkedIds.map((id) => id.toLowerCase())), [linkedIds]);
   // T-1058: kaydırınca eklenen sayfalar (sunucunun ilk sayfasının devamı); arama / arşiv değişince (yeni ilk sayfa) sıfırlanır.
-  const [ek, setEk] = useState<{ readonly bas: readonly PartyView[]; readonly rows: readonly PartyView[]; readonly cursor: string | null }>({ bas: ilkCariler, rows: [], cursor: nextCursor });
-  const guncel = ek.bas === ilkCariler ? ek : { bas: ilkCariler, rows: [], cursor: nextCursor };
+  // T-1201: sonraki sayfaların Paraşüt bağlılığı da sayfayla birlikte gelir (`linked`).
+  const [ek, setEk] = useState<{ readonly bas: readonly PartyView[]; readonly rows: readonly PartyView[]; readonly linked: readonly string[]; readonly cursor: string | null }>({ bas: ilkCariler, rows: [], linked: [], cursor: nextCursor });
+  const guncel = ek.bas === ilkCariler ? ek : { bas: ilkCariler, rows: [], linked: [], cursor: nextCursor };
   if (guncel !== ek) setEk(guncel);
+  const linked = useMemo(() => new Set([...linkedIds, ...guncel.linked].map((id) => id.toLowerCase())), [linkedIds, guncel.linked]);
   // Sonraki sayfalar arada kaymış olabilir: aynı cari iki kez çizilmez.
   const items = useMemo(() => {
     const ilk = new Set(ilkCariler.map((p) => p.id));
@@ -355,7 +356,7 @@ export function PartiesView({
     if (sonrakiImlec === null) return true;
     const r = await loadMorePartiesAction({ slug, q, archived, after: sonrakiImlec });
     if (!r.ok) return false;
-    setEk((o) => (o.bas !== ilkCariler ? o : { bas: o.bas, rows: [...o.rows, ...r.data.items], cursor: r.data.nextCursor }));
+    setEk((o) => (o.bas !== ilkCariler ? o : { bas: o.bas, rows: [...o.rows, ...r.data.items], linked: [...o.linked, ...r.data.linkedIds], cursor: r.data.nextCursor }));
     return true;
   }, [sonrakiImlec, slug, q, archived, ilkCariler]);
   // Kayda girip geri dönünce aynı uzunluk (sunucudan taze; yalnız sayı hatırlanır).
@@ -468,7 +469,7 @@ export function PartiesView({
               const meta = [t(`kind.${p.kind}`), p.city, p.phone, p.archived ? t("archived") : null].filter((x): x is string => x !== null && x !== "").join(" · ");
               return (
                 <KalipKart key={p.id} index={i} name={p.name} code={p.code} meta={meta} d={v.d} color={v.color} href={`${list}/${encodeURIComponent(p.id)}`} aria={`${p.name} · ${p.code} · ${meta}`} testId="party-card">
-                  <span hidden data-party={p.code} />
+                  <span hidden data-party={p.code} data-kaynak={kaynak.managed && linked.has(p.id.toLowerCase()) ? "parasut" : undefined} />
                 </KalipKart>
               );
             })}

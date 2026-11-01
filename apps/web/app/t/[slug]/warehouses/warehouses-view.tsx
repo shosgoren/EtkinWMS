@@ -342,8 +342,9 @@ export function WarehousesView({
 }) {
   const t = useTranslations("warehouses");
   // T-1055: kaydırınca eklenen sayfalar (sunucunun ilk sayfasının devamı); süzgeç / arama değişince (yeni ilk sayfa) sıfırlanır.
-  const [ek, setEk] = useState<{ readonly bas: readonly WarehouseView[]; readonly rows: readonly WarehouseView[]; readonly after: string | null }>({ bas: ilkDepolar, rows: [], after: nextAfter });
-  const guncel = ek.bas === ilkDepolar ? ek : { bas: ilkDepolar, rows: [], after: nextAfter };
+  // T-1201: sonraki sayfaların Paraşüt bağlılığı da sayfayla birlikte gelir (`linked`).
+  const [ek, setEk] = useState<{ readonly bas: readonly WarehouseView[]; readonly rows: readonly WarehouseView[]; readonly linked: readonly string[]; readonly after: string | null }>({ bas: ilkDepolar, rows: [], linked: [], after: nextAfter });
+  const guncel = ek.bas === ilkDepolar ? ek : { bas: ilkDepolar, rows: [], linked: [], after: nextAfter };
   if (guncel !== ek) setEk(guncel);
   // Sonraki sayfalar arada kaymış olabilir: aynı depo iki kez çizilmez.
   const warehouses = useMemo(() => {
@@ -355,7 +356,7 @@ export function WarehousesView({
     if (sonrakiAfter === null) return true;
     const r = await loadMoreWarehousesAction({ slug, q, archived, after: sonrakiAfter });
     if (!r.ok) return false;
-    setEk((o) => (o.bas !== ilkDepolar ? o : { bas: o.bas, rows: [...o.rows, ...r.data.rows], after: r.data.nextAfter }));
+    setEk((o) => (o.bas !== ilkDepolar ? o : { bas: o.bas, rows: [...o.rows, ...r.data.rows], linked: [...o.linked, ...r.data.linkedIds], after: r.data.nextAfter }));
     return true;
   }, [sonrakiAfter, slug, q, archived, ilkDepolar]);
   // Kayda girip geri dönünce aynı uzunluk (sunucudan taze; yalnız sayı hatırlanır).
@@ -390,7 +391,7 @@ export function WarehousesView({
   const kilitGerekceYetki = useKartKilitGerekce("warehouses");
   // T-1201: kaynak kilidi yetki kilidinden önce söylenir (daha özel). Satır kilidi: bölüm yönetiliyor + depo Paraşüt'e bağlı.
   const kk = useKaynakKilit(slug, "warehouses", kaynak);
-  const linkedSet = useMemo(() => new Set(linkedIds.map((id) => id.toLowerCase())), [linkedIds]);
+  const linkedSet = useMemo(() => new Set([...linkedIds, ...guncel.linked].map((id) => id.toLowerCase())), [linkedIds, guncel.linked]);
   const bagli = useCallback((w: { readonly id: string }): boolean => kaynak.managed && linkedSet.has(w.id.toLowerCase()), [kaynak.managed, linkedSet]);
   const kilitGerekce = useCallback((a: "create" | "edit" | "archive"): string => (a === "create" && kk.create ? kk.createReason : kilitGerekceYetki(a)), [kk.create, kk.createReason, kilitGerekceYetki]);
   const canCreate = rights.create && !kk.create;
@@ -642,7 +643,7 @@ export function WarehousesView({
                 const countText = w.locationCountCapped ? t("locationCountCapped", { count: w.locationCount }) : t("locationCount", { count: w.locationCount });
                 const state = active ? t("status.ACTIVE") : t("status.ARCHIVED");
                 return (
-                  <div key={w.id} role="listitem" data-testid="warehouse-card" data-status={w.status} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                  <div key={w.id} role="listitem" data-testid="warehouse-card" data-status={w.status} data-kaynak={bagli(w) ? "parasut" : undefined} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
                     <Link className="uc" style={{ animationDelay: `${i * 30}ms` }} href={`${base}/${encodeURIComponent(w.id)}`} aria-label={tk("cardAria", { name: w.name, code: w.code, count: countText, state })}>
                       <span className="uic" style={{ background: c(active ? "30475A" : "4E6476") }}>
                         <Ico d={LICON.depo} size={26} />

@@ -126,6 +126,8 @@ export interface ItemListView {
   readonly barcode?: string;
   /** T-1200: "Görsel" sütunu — kapak küçük resmi (`data:` adresi) ve görsel sayısı; görselsiz üründe yok. */
   readonly image?: { readonly thumb: string | null; readonly count: number };
+  /** T-1201: ürün bölümü "Paraşüt'ten al" ve ürün Paraşüt'e bağlı (ilk ve sonraki sayfalar aynı okumadan; ad/kod/arşiv kartta kilitli). */
+  readonly sourceLinked?: true;
 }
 
 /** Kod önerisi yanıt süresi sınırı; aşılırsa kod alanı açılır (T-259). */
@@ -797,7 +799,7 @@ export function ItemsView({
                     aria={tk("cardAria", { name: it.name, code: it.code, qty, unit: it.baseUnitCode, state })}
                     testId="item-card"
                   >
-                    <span hidden data-status={it.status} data-card-type={it.cardType} />
+                    <span hidden data-status={it.status} data-card-type={it.cardType} data-kaynak={it.sourceLinked === true ? "parasut" : undefined} />
                   </KalipKart>
                 );
               })}

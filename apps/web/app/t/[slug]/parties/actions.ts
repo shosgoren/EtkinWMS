@@ -8,6 +8,7 @@ import { PARTY_CODE_PREFIX, SUGGEST_RETRY_MAX, suggestCode, suggestedCodePrefix 
 import { PARTY_IMPORT_MAX_ROWS, importParties, listParties, saveParty, setPartyArchived, type SavePartyResult } from "@wms/domain/catalog/parties";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { PARTIES_PAGE_SIZE } from "./list-page.ts";
+import { getSourceLinkedIds } from "@wms/domain/integrations";
 
 const guardedAction = createProductionGuard(() => headers());
 
@@ -97,7 +98,10 @@ export async function loadMorePartiesAction(raw: unknown) {
   return guardedAction({ schema: moreSchema }, async (input, ctx) => {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
-    const page = await listParties({ db: getAppDb(), principal, tenantSlug: input.slug }, { q: input.q, archived: input.archived, limit: PARTIES_PAGE_SIZE, after: input.after });
-    return { items: page.items, nextCursor: page.nextCursor };
+    const call = { db: getAppDb(), principal, tenantSlug: input.slug };
+    const page = await listParties(call, { q: input.q, archived: input.archived, limit: PARTIES_PAGE_SIZE, after: input.after });
+    // T-1201: ilk sayfayla aynı — sayfadaki Paraşüt'e bağlı cariler tek toplu okumayla (bölüm "Paraşüt'ten al" değilse boş).
+    const linkedIds = page.items.length === 0 ? [] : await getSourceLinkedIds(call, "PARTY", page.items.map((p) => p.id));
+    return { items: page.items, nextCursor: page.nextCursor, linkedIds };
   })(raw);
 }

@@ -67,6 +67,9 @@ test("T-1201: Paraşüt'ten al — Yeni ürün, bağlı ürünün adı/kodu ve a
     await expect(page.getByTestId("items")).toBeVisible();
     const balon = await expectLocked(page, page.getByTestId("items-add"), CREATE, "ürünler › yeni");
     await expect(balon.getByRole("button", { name: "Şimdi eşitle" })).toBeVisible();
+    // Liste satırı Paraşüt bağlılığını taşır (ilk ve sonraki sayfalar aynı okumadan; int: source-guard-pages).
+    await page.goto(`/t/demo/items?q=${encodeURIComponent(code)}`);
+    await expect(page.getByTestId("item-card").filter({ has: page.locator('[data-kaynak="parasut"]') })).toHaveCount(1);
     await page.goto("/t/demo/items?new=1");
     await expect(page.getByTestId("items")).toBeVisible();
     await expect(page.getByTestId("item-form")).toHaveCount(0);
@@ -94,6 +97,9 @@ test("T-1201: Paraşüt'ten al — Yeni ürün, bağlı ürünün adı/kodu ve a
     await db("UPDATE public.integration_flows SET direction = 'BOTH' WHERE tenant_id = $1 AND integration_id = $2", [tenant.id, integrationId]);
     await page.goto("/t/demo/items");
     await expectOpen(page.getByTestId("items-add"), "iki yönlü › yeni");
+    await page.goto(`/t/demo/items?q=${encodeURIComponent(code)}`);
+    await expect(page.getByTestId("item-card")).toHaveCount(1);
+    await expect(page.locator('[data-kaynak="parasut"]')).toHaveCount(0);
     await page.goto(`/t/demo/items/${itemId}`);
     await expect(page.getByTestId("item-detail")).toBeVisible();
     await expect(page.getByTestId("item-source-note")).toHaveCount(0);

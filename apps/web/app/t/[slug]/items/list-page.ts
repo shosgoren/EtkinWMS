@@ -3,6 +3,7 @@
 import { listItemMainThumbs, listPrimaryBarcodes, searchItems } from "@wms/domain/catalog";
 import { listUnits } from "@wms/domain/catalog/units";
 import { sumItemsStock } from "@wms/domain/stock";
+import { getSourceLinkedIds } from "@wms/domain/integrations";
 import type { CardType, ItemListView, ItemStockView } from "./items-view.tsx";
 
 import { domainExtraFilters, type ItemExtraFilters } from "./filters.ts";
@@ -58,10 +59,12 @@ export async function loadItemsPage(call: Call, input: ItemsPageInput): Promise<
   const thumbOf = new Map(thumbs.map((x) => [x.itemId, { thumb: x.thumb, count: x.count }] as const));
   const stock = Object.fromEntries(sums.map((x) => [x.itemId, { have: x.have, min: x.min, available: x.available }] as const));
   const barcodeOf = new Map(barcodes.map((b) => [b.itemId, b.barcode] as const));
+  // T-1201: ilk ve sonraki sayfalar aynı yoldan — sayfadaki Paraşüt'e bağlı ürünler tek toplu okumayla (bölüm "Paraşüt'ten al" değilse boş).
+  const linked = new Set(ids.length === 0 ? [] : await getSourceLinkedIds(call, "ITEM", ids));
   const withBarcode = rows.map((r): ItemListView => {
     const barcode = barcodeOf.get(r.id);
     const image = thumbOf.get(r.id);
-    return { ...r, ...(barcode === undefined ? {} : { barcode }), ...(image === undefined ? {} : { image }) };
+    return { ...r, ...(barcode === undefined ? {} : { barcode }), ...(image === undefined ? {} : { image }), ...(linked.has(r.id.toLowerCase()) ? { sourceLinked: true as const } : {}) };
   });
   return { rows: withBarcode, stock, nextCursor: page.nextCursor, total: page.total, units };
 }
