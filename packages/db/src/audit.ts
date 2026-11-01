@@ -50,7 +50,7 @@ export const AUDIT_ACTIONS = [
   "item_barcode.added",
   "item_barcode.removed",
   "unit_conversion.set",
-  // T-1160 (0074): dönüşüm kaldırma (Geri al = yeniden `set`), ürün görseli ekle / değiştir / sil / geri al / kapak yap, min-maks stok.
+  // T-1200 (0074): dönüşüm kaldırma (Geri al = yeniden `set`), ürün görseli ekle / değiştir / sil / geri al / kapak yap, min-maks stok.
   "unit_conversion.removed",
   "item_image.added",
   "item_image.replaced",

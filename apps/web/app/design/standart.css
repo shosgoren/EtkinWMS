@@ -2789,7 +2789,7 @@ button.stpv-satir { cursor: pointer; }
   .dzp .stana-is.duz .job { row-gap: 8px; }
 }
 
-/* ---- T-1160 kayıt görseli (STANDART §3 şerit görseli + "Görsel ekle", §6 büyük görünüm; kaynak `StandartUrunKarti.dc.html`,
+/* ---- T-1200 kayıt görseli (STANDART §3 şerit görseli + "Görsel ekle", §6 büyük görünüm; kaynak `StandartUrunKarti.dc.html`,
    `StandartGorselBuyuk.dc.html`, liste küçük resmi `StandartUrunlerListe.dc.html`). Ortak bileşen `kalip/gorsel.tsx`. Oklar ve küçük
    düğmeler görünürde kaynak ölçüsünde, dokunma alanı ≥ 44 px (ALTIN-KURAL 12). Perde ortak `.kperde`; burada bulanıklık yazılmaz. ---- */
 .stkgsut { display: flex; flex-direction: column; gap: 6px; flex: none; }

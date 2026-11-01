@@ -1,4 +1,4 @@
-// T-1160 (güvenlik incelemesi MINOR-C): anahtarlı yuvalar — toplam, çalışma alanı ve kullanıcı payı; bırakma bir kez sayılır.
+// T-1200 (güvenlik incelemesi MINOR-C): anahtarlı yuvalar — toplam, çalışma alanı ve kullanıcı payı; bırakma bir kez sayılır.
 import { describe, expect, it } from "vitest";
 import { createKeyedSlots } from "./upload-slots.ts";
 

@@ -1,5 +1,5 @@
 "use client";
-// T-1160 (STANDART §3 üst şerit görseli + §6 büyük görünüm; kaynak `StandartUrunKarti.dc.html` şerit görseli ve "Görsel ekle",
+// T-1200 (STANDART §3 üst şerit görseli + §6 büyük görünüm; kaynak `StandartUrunKarti.dc.html` şerit görseli ve "Görsel ekle",
 // `StandartGorselBuyuk.dc.html` büyük görünüm): ORTAK kayıt görseli kalıbı. Ürün kartı ilk kullanıcı; cari / depo kartları aynı parçayı alır.
 // - Şerit: kapak görseli (yoksa tür simgesi), birden çok görselde oklar + "1 / 3"; dokununca büyük görünüm. Altında "Görsel ekle";
 //   dokunmatik cihazda ayrıca "Fotoğraf çek" (`<input capture>`, arka kamera).

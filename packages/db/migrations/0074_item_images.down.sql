@@ -1,4 +1,4 @@
--- 0074_item_images geri alma (T-1160, G-08): görsel satırı varsa veri kaybettirmez (bayrak: wms_meta.allow_destructive_down). Bekçi sayımı
+-- 0074_item_images geri alma (T-1200, G-08): görsel satırı varsa veri kaybettirmez (bayrak: wms_meta.allow_destructive_down). Bekçi sayımı
 -- RLS'ten bağımsız olmalı: sayımdan önce NO FORCE, sonra yeniden FORCE. Dönüşüm silme bekçisi 0040 sürümüne döner (örnek olmayan dönüşüm
 -- yine her zaman sessizce atlanır).
 DO $guard$

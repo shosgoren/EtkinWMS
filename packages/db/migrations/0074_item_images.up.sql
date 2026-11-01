@@ -1,4 +1,4 @@
--- 0074_item_images (T-1160, kullanıcı isteği 1 Kasım 2026 "görsel eklenemiyor; min/max girilemiyor; dönüşüm kaldırılamıyor"):
+-- 0074_item_images (T-1200, kullanıcı isteği 1 Kasım 2026 "görsel eklenemiyor; min/max girilemiyor; dönüşüm kaldırılamıyor"):
 -- (1) ürün görselleri tablosu, (2) kullanılmamış birim dönüşümünün silinebilmesi. G-08: GENİŞLETME — yeni tablo + 0040 silme bekçisi
 -- işlevinin yeni sürümü (CREATE OR REPLACE; 0040 dosyası değişmez). Min/maks stok için şema değişikliği YOK (0017 `item_stock_policies`
 -- sütun düzeyi INSERT/UPDATE zaten var).

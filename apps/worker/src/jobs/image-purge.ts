@@ -1,4 +1,4 @@
-// T-1160 (güvenlik incelemesi MINOR-2, KVKK): silinen ürün görsellerinin baytlarının süreli boşaltılması. Zamanlayıcı deseni `count-abandon.ts`
+// T-1200 (güvenlik incelemesi MINOR-2, KVKK): silinen ürün görsellerinin baytlarının süreli boşaltılması. Zamanlayıcı deseni `count-abandon.ts`
 // (worker içi döngü: açılışta bir + 15 dakikada bir, ACTIVE tenant'lar keyset sayfalarla). Her tenant için `withSystemTenant` bağlamında
 // (aynı RLS + FORCE; tenant kimliği yalnız `wms_worker` dar listeleme işlevinden) domain `purgeRemovedItemImages` çalışır: yalnız 10 dakikadan
 // eski silinmiş satırların `data`/`thumb` sütunları NULL'a çekilir (0074 bekçisi süreyi ayrıca zorlar). Kuyruk işi değildir (yeniden

@@ -140,7 +140,7 @@ async function snapshot(t: Fx): Promise<unknown> {
     packageSteps: await q("SELECT document_line_id, handling_unit_id, sequence_no FROM public.package_movement_steps WHERE tenant_id = $1 ORDER BY document_line_id"),
     packageOrigins: await q("SELECT id, document_id, lot_code, produced_on::text, expires_on::text FROM public.receipt_packages WHERE tenant_id = $1 ORDER BY id"),
     balances: await q("SELECT count(*)::int AS n, COALESCE(sum(quantity), 0)::text AS q, COALESCE(sum(reserved_quantity), 0)::text AS r FROM public.stock_balances WHERE tenant_id = $1"),
-    // T-1160: min / maks, dönüşüm ve görsel eylemleri B'de iz bırakmamalı.
+    // T-1200: min / maks, dönüşüm ve görsel eylemleri B'de iz bırakmamalı.
     policies: await q("SELECT warehouse_id, item_id, min_quantity::text, max_quantity::text FROM public.item_stock_policies WHERE tenant_id = $1 ORDER BY warehouse_id, item_id"),
     conversions: await q("SELECT item_id, unit_id, to_base_factor::text FROM public.unit_conversions WHERE tenant_id = $1 ORDER BY item_id, unit_id"),
     images: await q("SELECT id, is_main, removed_at FROM public.item_images WHERE tenant_id = $1 ORDER BY id"),
@@ -931,7 +931,7 @@ const ITEM_ACTIONS: Record<string, Call> = {
   setConversionAction: (slug) => itemActions.setConversionAction!({ slug, itemId: fx.B.item, unitId: fx.B.unit, factor: "12" }),
   addBarcodeAction: (slug) => itemActions.addBarcodeAction!({ slug, itemId: fx.B.item, unitId: null, barcode: `9${rnd()}`, quantity: null }),
   removeBarcodeAction: (slug) => itemActions.removeBarcodeAction!({ slug, barcodeId: fx.B.barcode }),
-  // T-1160: dönüşüm kaldırma, görsel sil / geri al / kapak yap (görsel kimliği rastgele: A bağlamında etkisiz), min / maks stok.
+  // T-1200: dönüşüm kaldırma, görsel sil / geri al / kapak yap (görsel kimliği rastgele: A bağlamında etkisiz), min / maks stok.
   removeConversionAction: (slug) => itemActions.removeConversionAction!({ slug, itemId: fx.B.item, unitId: fx.B.unit }),
   removeItemImageAction: (slug) => itemActions.removeItemImageAction!({ slug, itemId: fx.B.item, imageId: randomUUID() }),
   restoreItemImageAction: (slug) => itemActions.restoreItemImageAction!({ slug, itemId: fx.B.item, imageId: randomUUID(), main: true }),
@@ -1034,7 +1034,7 @@ describe("Server Action'lar", () => {
 
   for (const [name, call] of Object.entries({ ...ACTIONS, ...ITEM_ACTIONS, ...TASK_ACTIONS, ...RECEIPT_ACTIONS })) {
     it(`@AC-04 ${name}: A yöneticisi B'nin slug'ıyla -> NOT_FOUND (var olmayan slug ile aynı yanıt); B'de hiçbir değişiklik yok`, async () => {
-      // T-1160: eylem sayısı arttıkça bu döngü A yöneticisinin dakikalık kullanıcı kotasını (120) sonraki testler için tüketiyordu; bu
+      // T-1200: eylem sayısı arttıkça bu döngü A yöneticisinin dakikalık kullanıcı kotasını (120) sonraki testler için tüketiyordu; bu
       // testler kotayı değil kimlik reddini sınar → yalnız kullanıcı kapsamlı sayaçlar sıfırlanır (T-1116 deseni; kota ayrı testte).
       await adm.query("DELETE FROM public.request_rate_limits WHERE scope = 'web.user'");
       const victim = { membership: B.managerMembership, invitation: bInvite.invitationId };

@@ -1,4 +1,4 @@
-// Ürün görselleri (T-1160, 0074). Yazma `items.edit` (T-1141 kart anahtarı; gruptan verilmişse MFA ister — T-1142 `MFA_GRANTS`), okuma
+// Ürün görselleri (T-1200, 0074). Yazma `items.edit` (T-1141 kart anahtarı; gruptan verilmişse MFA ister — T-1142 `MFA_GRANTS`), okuma
 // `stock.view` (ürün kartıyla aynı). Hepsi `runTenantCommand`/`runTenantQuery` içinde: tenant yalnız doğrulanmış üyelikten gelir (I-01),
 // bağlam transaction-local (I-02), RLS + FORCE (I-03); audit aynı transaction'da (I-12).
 //

@@ -78,7 +78,7 @@ async function snapshot(t: TenantWorld): Promise<unknown> {
     barcodes: await q("SELECT id, item_id, unit_id, barcode, quantity::text AS q FROM public.item_barcodes WHERE tenant_id = $1 ORDER BY id"),
     units: await q("SELECT id, code, name, status FROM public.units WHERE tenant_id = $1 ORDER BY id"),
     audit: await q("SELECT count(*)::int AS n FROM public.audit_logs WHERE tenant_id = $1"),
-    // T-1160: min / maks ve görseller.
+    // T-1200: min / maks ve görseller.
     policies: await q("SELECT warehouse_id, item_id, min_quantity::text AS mn, max_quantity::text AS mx FROM public.item_stock_policies WHERE tenant_id = $1 ORDER BY warehouse_id, item_id"),
     images: await q("SELECT id, is_main, removed_at FROM public.item_images WHERE tenant_id = $1 ORDER BY id"),
   };
@@ -135,7 +135,7 @@ const calls = (): Record<string, Call> => ({
   setConversionAction: (slug) => act.setConversionAction!({ slug, itemId: B.itemId, unitId: B.boxUnitId, factor: "99" }),
   addBarcodeAction: (slug) => act.addBarcodeAction!({ slug, itemId: B.itemId, unitId: null, barcode: `9${rnd()}`, quantity: null }),
   removeBarcodeAction: (slug) => act.removeBarcodeAction!({ slug, barcodeId: bBarcode }),
-  // T-1160: dönüşüm kaldırma, görsel sil / geri al / kapak yap, min / maks (B'nin kimlikleri; görsel kimliği rastgele).
+  // T-1200: dönüşüm kaldırma, görsel sil / geri al / kapak yap, min / maks (B'nin kimlikleri; görsel kimliği rastgele).
   removeConversionAction: (slug) => act.removeConversionAction!({ slug, itemId: B.itemId, unitId: B.boxUnitId }),
   removeItemImageAction: (slug) => act.removeItemImageAction!({ slug, itemId: B.itemId, imageId: randomUUID() }),
   restoreItemImageAction: (slug) => act.restoreItemImageAction!({ slug, itemId: B.itemId, imageId: randomUUID() }),
@@ -192,7 +192,7 @@ describe("katalog eylemleri (API: Server Action)", () => {
       "archiveItem(B itemId)": (i) => act.archiveItemAction!({ slug: A.slug, itemId: i.item }),
       "removeBarcode(B barcodeId)": (i) => act.removeBarcodeAction!({ slug: A.slug, barcodeId: i.barcode }),
       "createItem(B baseUnitId)": (i) => act.createItemAction!({ slug: A.slug, code: `X-${rnd()}`, name: "Ele geçirme", baseUnitId: i.unit }),
-      // T-1160
+      // T-1200
       "removeConversion(B itemId)": (i) => act.removeConversionAction!({ slug: A.slug, itemId: i.item, unitId: A.boxUnitId }),
       "removeImage(B itemId)": (i) => act.removeItemImageAction!({ slug: A.slug, itemId: i.item, imageId: i.barcode }),
       "setImageMain(B itemId)": (i) => act.setItemImageMainAction!({ slug: A.slug, itemId: i.item, imageId: i.barcode }),

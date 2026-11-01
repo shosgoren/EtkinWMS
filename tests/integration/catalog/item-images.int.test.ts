@@ -1,4 +1,4 @@
-// T-1160 (0074): ürün görseli, min / maks stok ve birim dönüşümü kaldırma. Gerçek wms_app bağlantısı + RLS; fikstür migration rolüyle (adm).
+// T-1200 (0074): ürün görseli, min / maks stok ve birim dönüşümü kaldırma. Gerçek wms_app bağlantısı + RLS; fikstür migration rolüyle (adm).
 // Route katmanında yalnız kimlik çözümü taklit edilir (`lib/auth-service`, `getAppDb`); sarmalayıcı, yetki, RLS, sayaç, görsel işleme
 // (`sharp`) ve domain GERÇEKTİR. Veriler sentetik (G-09).
 // Senaryolar: ekle (ilk görsel kapak) / aynı bayt tekrar (idempotent) / değiştir / sil → kapak devri / geri al / kapak yap / 5 sınırı /

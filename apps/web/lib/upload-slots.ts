@@ -1,4 +1,4 @@
-// T-1160 (güvenlik incelemesi MINOR-C): süreç içi, anahtarlı eşzamanlılık yuvaları. Toplam sınırın içinde çalışma alanı ve kullanıcı başına
+// T-1200 (güvenlik incelemesi MINOR-C): süreç içi, anahtarlı eşzamanlılık yuvaları. Toplam sınırın içinde çalışma alanı ve kullanıcı başına
 // pay: tek bir kullanıcı ya da tek bir çalışma alanı bütün yuvaları tutup ötekileri aç bırakamaz. Kuyruk yok: yuva yoksa çağıran 429
 // döner. Dönen bırakma işlevi bir kez sayılır (finally'de çağrılır). Sayaçlar süreç belleğindedir (çok süreçli kurulumda süreç başına).
 

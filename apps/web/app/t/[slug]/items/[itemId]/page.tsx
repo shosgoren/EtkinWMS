@@ -68,7 +68,7 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
     // T-968: stok özeti (Nerede? + son hareketler) — okunamazsa bölümler çizilmez, kart yine açılır.
     const sourceInfo = await getProductSourceInfo(call, item.id);
     const stockCard = await getItemStockCard(call, item.id).catch(() => null);
-    // T-1160: görseller ve kapsamdaki depoların min / maks kayıtları (okunamazsa boş; kart yine açılır).
+    // T-1200: görseller ve kapsamdaki depoların min / maks kayıtları (okunamazsa boş; kart yine açılır).
     const images = await listItemImages(call, item.id).catch(() => []);
     const policies = await listItemStockPolicies(call, item.id).catch(() => []);
     const sum = (vals: readonly (string | null)[]): string | null => {

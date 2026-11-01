@@ -1,4 +1,4 @@
-// T-1160 (güvenlik incelemesi MINOR-A, MINOR-B): yükleme gövdesi okuma — zorunlu uzunluk, süre ve boyut sınırı, okuyucunun iptali,
+// T-1200 (güvenlik incelemesi MINOR-A, MINOR-B): yükleme gövdesi okuma — zorunlu uzunluk, süre ve boyut sınırı, okuyucunun iptali,
 // süreç genelinde okuma yuvası sayacı.
 import { describe, expect, it } from "vitest";
 import { AppError } from "@wms/shared/errors";

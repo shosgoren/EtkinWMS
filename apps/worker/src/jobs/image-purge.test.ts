@@ -1,4 +1,4 @@
-// T-1160 silinen görsel baytı boşaltma zamanlayıcısı birimi: sayfalama, toplam, askıdaki tenant, hata yolunda OK yazılmaması, durdurma.
+// T-1200 silinen görsel baytı boşaltma zamanlayıcısı birimi: sayfalama, toplam, askıdaki tenant, hata yolunda OK yazılmaması, durdurma.
 // DB davranışı (yalnız 10 dk'dan eski silinmiş satır, RLS) tests/integration/catalog/item-images.int.test.ts'tedir.
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";

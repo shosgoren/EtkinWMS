@@ -1,4 +1,4 @@
-// Ürün min/maks stok (T-1160; tablo `item_stock_policies` 0017, A-131: depo × ürün). Yazma `items.edit` (ürün kartı), okuma `stock.view`;
+// Ürün min/maks stok (T-1200; tablo `item_stock_policies` 0017, A-131: depo × ürün). Yazma `items.edit` (ürün kartı), okuma `stock.view`;
 // ikisi de depo kapsamına uyar (A-46/A-77: kapsam dışı depo görünmez ve yazılamaz). Şema değişikliği yok: wms_app'in sütun düzeyi
 // INSERT/UPDATE yetkisi 0017'den; DELETE yoktur — "minimum yok" = 0 / 0 (okumalar `min_quantity > 0` süzer).
 //

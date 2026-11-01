@@ -218,7 +218,7 @@ const countAbandonSchedule = startCountAbandonSchedule({
   logger,
 });
 
-// Silinen ürün görsellerinin baytları (T-1160, KVKK): açılışta bir kez + 15 dakikada bir; yalnız 10 dk'dan eski silinmiş satırlar, tenant başına
+// Silinen ürün görsellerinin baytları (T-1200, KVKK): açılışta bir kez + 15 dakikada bir; yalnız 10 dk'dan eski silinmiş satırlar, tenant başına
 // `withSystemTenant` (aynı RLS).
 const imagePurgeSchedule = startImagePurgeSchedule({
   listActiveTenantIds: (after, limit) => queue.listActiveTenantIds(after, limit),

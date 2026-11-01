@@ -1,4 +1,4 @@
-// T-1160: yükleme işleme — bayt imzası, yeniden kodlama (WebP), EXIF / konum silme, boyut sınırları. Görseller test içinde `sharp` ile
+// T-1200: yükleme işleme — bayt imzası, yeniden kodlama (WebP), EXIF / konum silme, boyut sınırları. Görseller test içinde `sharp` ile
 // üretilir (sentetik; dosya yok).
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";

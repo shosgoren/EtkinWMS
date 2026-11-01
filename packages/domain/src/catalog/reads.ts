@@ -185,7 +185,7 @@ export interface ItemConversionRow {
   readonly unitName: string;
   /** 1 birim = `factor` temel birim; kanonik decimal metin (I-09). */
   readonly factor: string;
-  /** T-1160: kaldırma kilidi — belge / mal kabul satırı ya da birimli barkod bu birimi kullanıyorsa nedeni; yoksa `null`. */
+  /** T-1200: kaldırma kilidi — belge / mal kabul satırı ya da birimli barkod bu birimi kullanıyorsa nedeni; yoksa `null`. */
   readonly usage: ConversionUsage | null;
 }
 

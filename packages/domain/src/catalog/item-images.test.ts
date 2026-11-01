@@ -1,4 +1,4 @@
-// T-1160: ürün görseli saf denetimleri — bayt imzasından tür (SVG / GIF / HEIC / metin reddi) ve domain'in yalnız yeniden kodlanmış
+// T-1200: ürün görseli saf denetimleri — bayt imzasından tür (SVG / GIF / HEIC / metin reddi) ve domain'in yalnız yeniden kodlanmış
 // WebP'yi kabul etmesi (DB'ye gitmeden önce: imza, boyut, kenar, kimlik biçimi).
 import { describe, expect, it } from "vitest";
 import { AppError } from "@wms/shared/errors";

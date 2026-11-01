@@ -65,7 +65,7 @@ export function KalipKartSerit({
   kutular: readonly KalipSayiKutusu[];
   islemler: readonly KalipKartIslem[];
   islemEtiket: string;
-  /** T-1160: kayıt görseli kutusu (`kalip/gorsel.tsx` `KalipKartGorsel`); yoksa tür simgesi. */
+  /** T-1200: kayıt görseli kutusu (`kalip/gorsel.tsx` `KalipKartGorsel`); yoksa tür simgesi. */
   gorsel?: ReactNode;
   children?: ReactNode;
 }) {

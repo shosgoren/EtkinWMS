@@ -271,10 +271,10 @@ Bir kullanıcının **yalnız belirli depoları** görmesi isteniyorsa hangi dep
 | created_at | timestamptz | — | Oluşma | — |
 
 - **Koruma:** RLS ENABLE + FORCE.
-- **Kaldırma (T-1160, 0074):** `wms_app` yalnız hiçbir belge satırı, mal kabul satırı ya da birimli barkodun kullanmadığı dönüşümü silebilir (silme bekçisi kullanılanı sessizce atlar; domain `removeUnitConversion` `IN_USE` verir). Örnek ürünün dönüşümü 0040'taki gibi silinir.
+- **Kaldırma (T-1200, 0074):** `wms_app` yalnız hiçbir belge satırı, mal kabul satırı ya da birimli barkodun kullanmadığı dönüşümü silebilir (silme bekçisi kullanılanı sessizce atlar; domain `removeUnitConversion` `IN_USE` verir). Örnek ürünün dönüşümü 0040'taki gibi silinir.
 
 ### item_images
-Ürün görselleri (T-1160, 0074). Sunucuda yeniden kodlanmış WebP olarak veritabanında tutulur (canlıda nesne deposu kapalı).
+Ürün görselleri (T-1200, 0074). Sunucuda yeniden kodlanmış WebP olarak veritabanında tutulur (canlıda nesne deposu kapalı).
 
 | Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
 |---|---|---|---|---|
@@ -898,7 +898,7 @@ Depo × ürün bazında minimum–maksimum stok seviyesi.
 | created_at | timestamptz | — | Oluşma | — |
 
 - **Koruma:** RLS ENABLE + FORCE.
-- **Yazma (T-1160):** ürün kartı › Min / maks stok (`setItemStockPolicy`, `items.edit`, depo kapsamı). Satır silinmez; 0 / 0 "minimum yok" anlamındadır (okumalar `min_quantity > 0` süzer).
+- **Yazma (T-1200):** ürün kartı › Min / maks stok (`setItemStockPolicy`, `items.edit`, depo kapsamı). Satır silinmez; 0 / 0 "minimum yok" anlamındadır (okumalar `min_quantity > 0` süzer).
 
 ### stock_alerts
 Min–maks kuralından doğan stok uyarısı.

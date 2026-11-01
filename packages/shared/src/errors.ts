@@ -67,12 +67,12 @@ export const ERROR_DETAILS = [
   "SEPARATION_OF_DUTIES",
   // T-1144: reddedilmiş demo talebinin aynı e-postasında açık ya da onaylı başka talep var (ikinci deneme alanı açılmaz).
   "DEMO_EMAIL_TAKEN",
-  // T-1160: ürün görseli (tür / bayt imzası / çözülemez; boyut; ürün başına sınır) ve min > maks.
+  // T-1200: ürün görseli (tür / bayt imzası / çözülemez; boyut; ürün başına sınır) ve min > maks.
   "IMAGE_INVALID",
   "IMAGE_TOO_LARGE",
   "IMAGE_LIMIT",
   "MIN_MAX_INVALID",
-  // T-1160 (güvenlik incelemesi): görsel işleme yuvaları dolu (429) ve çalışma alanı görsel kotası.
+  // T-1200 (güvenlik incelemesi): görsel işleme yuvaları dolu (429) ve çalışma alanı görsel kotası.
   "IMAGE_BUSY",
   "IMAGE_QUOTA",
   "IMAGE_TIMEOUT",

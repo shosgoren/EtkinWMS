@@ -1,4 +1,4 @@
-// T-1160 (güvenlik incelemesi MINOR-A, MINOR-B, MINOR-C): yükleme gövdesini sınırlı okur.
+// T-1200 (güvenlik incelemesi MINOR-A, MINOR-B, MINOR-C): yükleme gövdesini sınırlı okur.
 // - `Content-Length` ZORUNLU (yoksa 400 `IMAGE_LENGTH_REQUIRED`); tampon bu uzunlukla bir kez ayrılır (çift kopya yok); bildirilenden fazla
 //   bayt gelirse okuma kesilir (`IMAGE_TOO_LARGE`), eksik gelirse `IMAGE_INVALID`.
 // - En çok `max` bayt. Süre bildirilen uzunlukla orantılı: 5 sn + her 256 KiB için 1 sn, en çok 20 sn; ayrıca 3 sn hiç bayt gelmezse

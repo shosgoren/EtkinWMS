@@ -168,7 +168,7 @@ test("T-1047 Ürünler: Kart/Liste, sıralama, Sütunlar", async ({ page }) => {
   const tablo = page.getByTestId("items-table");
   await expect(tablo).toBeVisible();
   await expect(page.getByTestId("item-card")).toHaveCount(0);
-  // T-1160: ilk sütun artık "Görsel" (tuval `StandartUrunlerListe` sırası); Kod sütunu konumla değil başlık adıyla bulunur.
+  // T-1200: ilk sütun artık "Görsel" (tuval `StandartUrunlerListe` sırası); Kod sütunu konumla değil başlık adıyla bulunur.
   const kodBaslik = tablo.locator("th", { has: page.getByRole("button", { name: "Kod" }) });
   await expect(kodBaslik).toHaveCount(1);
   const kodSira = await tablo.locator("thead th").evaluateAll((ths) => ths.findIndex((t) => t.querySelector("button")?.textContent?.trim().startsWith("Kod") === true));
@@ -189,7 +189,7 @@ test("T-1047 Ürünler: Kart/Liste, sıralama, Sütunlar", async ({ page }) => {
   // Temizlik: varsayılan görünüm (diğer testler kart bekler).
   await page.getByTestId("kalip-sutunlar").click();
   await page.getByTestId("kalip-sutunlar-pencere").getByRole("button", { name: "Varsayılana dön" }).click();
-  // T-1160: Sütunlar penceresi (bir satır daha: Görsel) açıkken Kart'a basmak önce pencereyi kapatıp yerleşimi kaydırıyordu; pencere
+  // T-1200: Sütunlar penceresi (bir satır daha: Görsel) açıkken Kart'a basmak önce pencereyi kapatıp yerleşimi kaydırıyordu; pencere
   // açıkça kapatılır, sonra görünüm değişir.
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("kalip-sutunlar-pencere")).toHaveCount(0);

@@ -53,7 +53,7 @@ export async function loadItemsPage(call: Call, input: ItemsPageInput): Promise<
   const ids = rows.map((r) => r.id);
   const sums = await sumItemsStock(call, ids).catch(() => []);
   const barcodes = await listPrimaryBarcodes(call, ids).catch(() => []);
-  // T-1160: "Görsel" sütunu — kapak küçük resmi (`data:` adresi, ≤ 16 KiB) + görsel sayısı; okunamazsa sütun boş ("+").
+  // T-1200: "Görsel" sütunu — kapak küçük resmi (`data:` adresi, ≤ 16 KiB) + görsel sayısı; okunamazsa sütun boş ("+").
   const thumbs = await listItemMainThumbs(call, ids).catch(() => []);
   const thumbOf = new Map(thumbs.map((x) => [x.itemId, { thumb: x.thumb, count: x.count }] as const));
   const stock = Object.fromEntries(sums.map((x) => [x.itemId, { have: x.have, min: x.min, available: x.available }] as const));
