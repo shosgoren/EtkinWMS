@@ -12,11 +12,19 @@ describe('ready label designs protect first use',()=>{
   const svg=renderLabelSvg(d,{name:'SBR granül',code:'HM-001',packageQr:'EWMS:PKG:1:11111111-1111-4111-8111-111111111111',quantity:'200,125',unit:'KG',lot:'LOT-2026-01',productionDate:'01.11.2026',expiryDate:'01.11.2027',documentNo:'DVR-2026-001'});
   for(const v of['200,125','KG','LOT-2026-01','01.11.2026','01.11.2027','DVR-2026-001'])expect(svg).toContain(v);
  });
- it('shipment does not substitute a document identity for a missing physical package',()=>{
-  const d=readyLabelDesign('SHIPMENT');expect(()=>renderLabelSvg(d,{name:'Ürün',documentNo:'SVK-1'})).toThrow();
+ it('document shipment defaults to the document code; a package-bound design still requires its real package',()=>{
+  const d=readyLabelDesign('SHIPMENT');expect(renderLabelSvg(d,{name:'Ürün',documentNo:'SVK-1'})).toContain('SVK-1');
+  const physical={...d,elements:d.elements.map(e=>e.kind==='qr'?{...e,field:'packageQr' as const}:e)};expect(()=>renderLabelSvg(physical,{name:'Ürün',documentNo:'SVK-1'})).toThrow();
   expect(renderLabelSvg(d,{name:'Ürün',documentNo:'SVK-1',packageQr:'EWMS:PKG:1:11111111-1111-4111-8111-111111111111'})).toContain('SVK-1');
  });
  it('optional blank trace fields are not filled with sample data',()=>{
   const svg=renderLabelSvg(readyLabelDesign('RECEIPT'),{name:'SBR',packageQr:'EWMS:PKG:1:11111111-1111-4111-8111-111111111111'});expect(svg).not.toContain('LOT-2026');expect(svg).not.toContain('undefined');
  });
+});
+
+it.each(['PRODUCT','RECEIPT'] as const)('%s ready label prints a real long product identifier without clipping',context=>{
+ const code='11111111-1111-4111-8111-111111111111';
+ const common={name:'SBR granül',code,unit:'KG'};const values=context==='PRODUCT'?{...common,barcode:'ETK-HM-001'}:{...common,packageQr:'EWMS:PKG:1:'+code,quantity:'200',lot:'LABEL-LOT',productionDate:'01.10.2026',expiryDate:'01.10.2027',documentNo:'GIR-2026-001'};
+ const svg=renderLabelSvg(readyLabelDesign(context),values);
+ expect(svg.replace(/<[^>]*>/g,'')).toContain(code);expect(svg).toContain('font-size="2000"');
 });
