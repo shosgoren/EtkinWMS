@@ -6606,8 +6606,7 @@
       "excel": "Excel",
       "reports": "Raporlar",
       "settings": "Ayarlar",
-      "integrations": "Entegrasyon",
-      "labels": "Etiket tasarımı"
+      "integrations": "Entegrasyon"
     },
     "sectionSub": "{on}/{n} açık",
     "sectionFixed": "Rol ile gelir · gruba verilmez",
@@ -6657,13 +6656,6 @@
       },
       "integrations": {
         "manage": "Paraşüt ve entegrasyonlar"
-      },
-      "labels": {
-        "view": "Şablonları gör",
-        "design": "Tasarım yap",
-        "publish": "Yayınla ve işlemlere ata",
-        "print": "Özel etiket bas",
-        "printers": "Yazıcı tercihlerini yönet"
       }
     },
     "mfaNote": "İki adımlı doğrulama ister",

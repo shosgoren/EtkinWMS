@@ -153,16 +153,3 @@ describe("cardRights", () => {
     expect(cardRights(["NOPE"], ["settings.manage", "data.import"], "warehouses")).toEqual({ create: false, edit: false, archive: false, import: false });
   });
 });
-
-// T-1149: no new design/publish authority from a legacy warehouse role.
-it("custom labels have independent grantable permissions; publishing/printers require MFA", () => {
-  for (const key of ["labels.view", "labels.design", "labels.publish", "labels.print", "labels.printers"] as const) {
-    expect(hasPermission(["TENANT_ADMIN"], key)).toBe(true);
-    expect(hasPermission(["PICKER"], key)).toBe(false);
-    expect(hasPermission(["PICKER"], key, [key])).toBe(true);
-    expect(GRANTABLE).toContain(key);
-  }
-  expect(MFA_GRANTS).toContain("labels.publish");
-  expect(MFA_GRANTS).toContain("labels.printers");
-  expect(MFA_GRANTS).not.toContain("labels.print");
-});
