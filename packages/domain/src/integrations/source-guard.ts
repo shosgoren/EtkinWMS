@@ -99,25 +99,6 @@ export async function assertSourceCreateAllowed(tx: AccessTx, tenantId: string, 
   if (rule.managed) throw sourceManagedError("CREATE");
 }
 
-/**
- * Var olan kartı değiştiren komut: kilitli kural + bağlılık. `ownedChanged` sağlayıcı alanlarından biri gerçekten değişiyorsa true olmalı;
- * arşiv/geri açma için `archive: true`. Dönen değer: kart yönetiliyor ve bağlı mı (çağıran ek karar verebilir).
- */
-export async function assertSourceEditAllowed(
-  tx: AccessTx,
-  tenantId: string,
-  card: SourceCard,
-  entityId: string,
-  change: { readonly ownedChanged?: boolean; readonly archive?: boolean },
-): Promise<boolean> {
-  const rule = await readSourceRule(tx, tenantId, card, { lock: true });
-  const linked = await sourceLinked(tx, tenantId, card, entityId, rule);
-  if (!linked) return false;
-  if (change.archive === true) throw sourceManagedError("ARCHIVE");
-  if (change.ownedChanged === true) throw sourceManagedError("FIELD");
-  return true;
-}
-
 /** Ekran gösterimi (yalnız okuma; karar yine komutta): bölüm kuralı + istenirse tek kartın bağlılığı. */
 export interface SourceLockView {
   readonly managed: boolean;

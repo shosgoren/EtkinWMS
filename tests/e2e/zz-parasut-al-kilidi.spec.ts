@@ -44,11 +44,12 @@ test("T-1201: Paraşüt'ten al — Yeni ürün, bağlı ürünün adı/kodu ve a
   const code = `T1201-${itemId.slice(0, 6)}`.toUpperCase();
   // Durum ERROR (bağlantı kesilmedi → kural geçerli): worker zamanlayıcısı yalnız CONNECTED bağlantıyı çalıştırır, sentetik kutuyu açmaya uğraşmaz.
   const box = JSON.stringify({ v: 2, kid: "synthetic", iv: "synthetic", tag: "synthetic", ct: "synthetic" });
-  const created = await db<{ id: string }>(
-    "INSERT INTO public.integrations (tenant_id, id, provider, status, account_ref, connected_by, connected_membership_id, connected_at, credentials) VALUES ($1, $2, 'PARASUT', 'ERROR', 'e2e-1201', $3, $4, now(), $5::jsonb) ON CONFLICT ON CONSTRAINT integrations_tenant_provider_key DO NOTHING RETURNING id",
+  const [existing] = await db<{ id: string }>("SELECT id FROM public.integrations WHERE tenant_id = $1 AND provider = 'PARASUT'", [tenant.id]);
+  if (existing !== undefined) throw new Error("e2e: demo tenant'ta beklenmeyen Paraşüt bağlantısı");
+  await db(
+    "INSERT INTO public.integrations (tenant_id, id, provider, status, account_ref, connected_by, connected_membership_id, connected_at, credentials) VALUES ($1, $2, 'PARASUT', 'ERROR', 'e2e-1201', $3, $4, now(), $5::jsonb)",
     [tenant.id, integrationId, tenant.owner_user, tenant.owner, box],
   );
-  if (created.length !== 1) throw new Error("e2e: demo tenant'ta beklenmeyen Paraşüt bağlantısı");
   try {
     await db("INSERT INTO public.integration_flows (tenant_id, integration_id, flow, direction, enabled) VALUES ($1, $2, 'PRODUCTS', 'PULL', true)", [tenant.id, integrationId]);
     await db(
