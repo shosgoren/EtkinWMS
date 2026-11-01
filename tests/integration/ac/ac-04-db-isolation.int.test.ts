@@ -16,6 +16,7 @@ import { randomUUID } from "node:crypto";
 //
 // Ek (T-102 security-reviewer @77317fe MINOR, Supervisor): security_events sunucu alanı zorlaması,
 // session_replication_role=replica altında tetikleyici/TRUNCATE reddi, tetikleyicilerin tgenabled='A' denetimi.
+import { seedLabels } from "../labels/fixtures.ts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import pg from "pg";
 import { sql } from "../../../packages/db/node_modules/drizzle-orm/index.js";
@@ -355,6 +356,7 @@ beforeAll(async () => {
     await admin.query("INSERT INTO public.integration_webhooks (tenant_id, integration_id, model, action, external_id, status) VALUES ($1, $2, 'product', 'update', '1', 'DELETED')", [w.tenantId, igId]);
     // T-1140 (0069): iki yönlü eşitleme işareti + cari yaşam döngüsü durumu (fikstür carisi; kart FK'si yok).
     await admin.query("INSERT INTO public.integration_card_states (tenant_id, system, entity_type, entity_id, local_sig) SELECT $1, 'PARASUT', 'PARTY', id, md5(id::text) FROM public.parties WHERE tenant_id = $1 AND code_key = 'AC04-CARI'", [w.tenantId]);
+    await seedLabels(admin, w); // T-1148: all new tenant label tables enter dynamic AC04 coverage.
     // T-1006 (0056): kurulum yolculuğu seçim satırı (tenant başına tek).
     await admin.query("INSERT INTO public.setup_journeys (tenant_id, skipped) VALUES ($1, '{labels}'::text[])", [w.tenantId]);
   }

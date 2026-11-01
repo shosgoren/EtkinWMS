@@ -64,10 +64,16 @@ const BOLUM: Record<YetkiBolum, { readonly d: string; readonly ton: StTon; reado
   excel: { d: LICON.excel, ton: "ok", color: "2F7D5B" },
   reports: { d: SICON.grafik, ton: "turuncu", color: "E56A00" },
   settings: { d: LICON.gear, ton: "gri", color: "4E6476" },
+  labels: { d: LICON.printer, ton: "mavi", color: "2F5DA8" },
   integrations: { d: SICON.baglanti, ton: "parasut", color: "E56A00" },
 };
 /** Satır simgesi işlem adından (`<bölüm>.<işlem>`). */
 const ISLEM: Record<string, string> = {
+  view: LICON.box,
+  design: LICON.pencil,
+  publish: LICON.check,
+  print: LICON.printer,
+  printers: LICON.gear,
   create: LICON.plus,
   edit: LICON.pencil,
   archive: SICON.arsiv,
