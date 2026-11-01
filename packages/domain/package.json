@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./labels/store": "./src/labels/store.ts",
     "./identity/permissions": "./src/identity/permissions.ts",
     "./identity/access": "./src/identity/access.ts",
     "./identity/invitations": "./src/identity/invitations.ts",
@@ -51,7 +52,8 @@
     "./platform/plans": "./src/platform/plans.ts",
     "./platform/site-content": "./src/platform/site-content.ts",
     "./platform/events": "./src/platform/events.ts",
-    "./voice": "./src/voice/index.ts"
+    "./voice": "./src/voice/index.ts",
+    "./labels/print": "./src/labels/print.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"

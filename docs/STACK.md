@@ -62,6 +62,8 @@ Kaynak sözdizimi: `<dosya>#<json.yolu>` (package.json alanı) veya `docker-comp
 | next-intl | next-intl | 4.14.9 | apps/web/package.json#dependencies.next-intl | T-109, ADR-002 |
 | QR kod üretici (MFA kurulum ekranı; yalnızca istemcide SVG, ağ isteği yok) | qrcode | 1.5.4 | apps/web/package.json#dependencies.qrcode | T-912 |
 | QR kod tipleri | @types/qrcode | 1.5.5 | apps/web/package.json#devDependencies.@types/qrcode | T-912 |
+| Etiket QR matris üretimi (tarayıcı/sunucu ortak; mevcut sürüm) | qrcode | 1.5.4 | packages/shared/package.json#dependencies.qrcode | T-1157 |
+| Ortak QR kod tipleri | @types/qrcode | 1.5.5 | packages/shared/package.json#devDependencies.@types/qrcode | T-1157 |
 
 Sürüm notları (kaynak: kurulu `package.json`/`pnpm-lock.yaml`, 2026-10-05):
 - **Kapsam kuralı (T-004b):** Workspace'lerin (`pnpm-lock.yaml#importers`) `package.json` dosyalarındaki her doğrudan bağımlılık (`dependencies`, `devDependencies`, `optionalDependencies`; `workspace:` hariç) bu tabloda kaynağıyla kilitli bir satıra sahip olmalıdır; eksikse `node scripts/check-docs.mjs` FAIL verir.

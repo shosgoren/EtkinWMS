@@ -305,6 +305,8 @@ function files(dir: string, re: RegExp): string[] {
 // ---------------------------------------------------------------------------------------------
 
 const LOADERS = [
+  // T-1166: label workspace resolves membership itself; shared A/B/anonymous/MFA assertions apply.
+  "label-designs/page.tsx",
   // T-903c: every pilot loader must enforce its own tenant boundary.
   "stock/page.tsx",
   "stock/documents/page.tsx",

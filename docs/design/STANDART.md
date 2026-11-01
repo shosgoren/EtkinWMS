@@ -64,3 +64,7 @@ Bu belgenin sonucu:
 6. Form kalıbı → bütün yeni/düzenle ekranları.
 7. Ayar kalıbı → Ayarlar sekmeleri, İş akışı, Entegrasyonlar.
 8. Veri gerektirenler (ayrı iş): ürün görselleri, kişiye özel sütun/çubuk düzeni kaydı, Paraşüt alan sahipliği, pasif durum.
+
+## Etiket düzenleyici ortak uzantısı (T-1159/T-1161, B-166)
+- Liste/ayar kabı değişmez. Düzenleyici `KalipEtiketEditor`, EtiketEditor.dc.html `.lx` kaynağının üretilmiş CSS'ini kullanır; masaüstü araç/tuval/özellik, dokunmatikte tek panel ve iki parmak görünümü, telefonda büyük araç simgeleri ve hedefe dokunma.
+- Ad/ölçü/kullanım/sürüm alanları ortak KalipAlan/Secim/Anahtar/Dugme parçalarıyla aynı özellik panelinde; ayrı ekran CSS'i yok. KalipEkran alt Geri/Ana ekran/Modüller ve KalipCikis korunur. Kaydet yalnız gerçek sunucu sonucu; Kaydet ve kullan yayın/varsayılan yetkisi ister. Üretilmiş SVG örnek önizlemedir; gerçek etiket kaynağı ayrı yetkili baskı yolundan gelir.
