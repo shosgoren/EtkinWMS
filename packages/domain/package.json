@@ -35,6 +35,7 @@
     "./catalog/barcodes": "./src/catalog/barcodes.ts",
     "./catalog/gs1": "./src/catalog/gs1.ts",
     "./catalog/quantity": "./src/catalog/quantity.ts",
+    "./catalog/item-images": "./src/catalog/item-images.ts",
     "./warehouse": "./src/warehouse/index.ts",
     "./operations": "./src/operations/index.ts",
     "./labels": "./src/labels/index.ts",

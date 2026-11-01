@@ -61,6 +61,10 @@ export const SOURCES = [
   // T-1006: ilk kurulum yolculuğu (Pano kartı, adım listesi, spot + ipucu kartı, stok sorusu, kutlama); yalnız "YENİ" bölümü `.dzj`
   // (perde ortak `.kperde`; kaynaktaki `.pv-*` yalnız tuval önizlemesi).
   { name: "yolculuk", file: "docs/design/source/Yolculuk.dc.html", sha256: "073ab2d47dfcc51f6663ead9ad3278a5530c09596c195899d03620f8ebe09b0a", scope: "dzj", palette: "none", device: "fr", section: "YENİ" },
+  // T-1200: ürün görseli büyük görünüm (Standart tuvali "7"): kaynağın bileşen sınıfları (`.arr` oklar, `.th` küçük resimler, `.h`, `.ico`)
+  // `.dzgb` kabında. Diğer Standart* artboard'larının (şerit görseli, liste küçük resmi) stili satır içidir (style=); onların kalıp
+  // karşılığı elle yazılan `standart.css` ortak katmanıdır (T-1042/T-1049 deseni, DESIGN-PARITY).
+  { name: "gorsel-buyuk", file: "docs/design/source/StandartGorselBuyuk.dc.html", sha256: "f2e7218f4be79267b64640d5be80b2b04d39db1a15e39646a187c25257b1b329", scope: "dzgb", palette: "none" },
 ];
 
 // Kaynak detect(): w < 700 mobil; dokunmatik ya da w < 1100 tablet; aksi masaüstü.

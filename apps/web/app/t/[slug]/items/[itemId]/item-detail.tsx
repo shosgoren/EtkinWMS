@@ -18,6 +18,10 @@
 // Hareketler (son 50 belge + toplam) · Birimler · Barkodlar · Takip (lotlar, seriler) · Paraşüt · Değişiklik geçmişi (`audit.view`).
 // Sekme verisi yalnız o sekme açıkken sunucuda okunur (`tabData`). Eski `Banner` ve elle biçimli satırlar kalıp parçalarına geçti
 // (`KalipKartNot`, `KalipKartSatirlar`).
+// T-1200 (kullanıcı 1 Kasım): şeritte ürün görseli (ortak `KalipKartGorsel`: ekle · fotoğraf çek · büyük görünüm · kapak yap · değiştir ·
+// sil + Geri al); Genel'de Minimum / Maksimum stok satırı her zaman (tanımsızsa "Tanımlı değil") ve kalem → tam ekran form `?minmax=1`
+// (depo başına; domain min ≤ maks, ölçek, ≥ 0); Birimler'de dönüşüm satırına "Kaldır" (belge / mal kabul / barkod kullanıyorsa kilitli +
+// neden; kaldırınca "Geri al" balonu aynı katsayıyı geri yazar). Kurallar sunucuda.
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -40,9 +44,22 @@ import { KalipAlan, KalipGrup, KalipKilit, KalipSabit } from "../../kalip/form.t
 import { approx, fmtGun, fmtQty, stockTone } from "../../kalip/format.ts";
 import { KalipSecim, KalipSecimGrubu } from "../../kalip/secim.tsx";
 import { KalipKilitliDugme, useKartKilitGerekce } from "../../kalip/kilitli.tsx";
+import { gorselGonder, KalipKartGorsel, type KalipGorsel } from "../../kalip/gorsel.tsx";
 import type { KartYetki as CardRights } from "../../kalip/kart-yetki.ts";
 import { kdz } from "../../kalip/tokens.ts";
-import { addBarcodeAction, archiveItemAction, loadMoreItemTrackingAction, removeBarcodeAction, setConversionAction, updateItemAction } from "../actions.ts";
+import {
+  addBarcodeAction,
+  archiveItemAction,
+  loadMoreItemTrackingAction,
+  removeBarcodeAction,
+  removeConversionAction,
+  removeItemImageAction,
+  restoreItemImageAction,
+  setConversionAction,
+  setItemImageMainAction,
+  setStockPolicyAction,
+  updateItemAction,
+} from "../actions.ts";
 import { CARD_VISUAL } from "../card-visual.ts";
 import { CARD_TYPES, errorKey, ServerErrorBanner, toServerError } from "../items-view.tsx";
 import type { CardType, ServerError, UnitOption } from "../items-view.tsx";
@@ -69,7 +86,28 @@ export interface ConversionView {
   readonly unitCode: string;
   readonly unitName: string;
   readonly factor: string;
+  /** T-1200: kaldırma kilidi (belge / mal kabul satırı ya da birimli barkod kullanıyor); yoksa `null`. */
+  readonly usage?: "DOCUMENT" | "BARCODE" | null;
 }
+/** T-1200: ürün görseli (sunucu `listItemImages`). */
+export interface ItemImageClient {
+  readonly id: string;
+  readonly isMain: boolean;
+  readonly width: number;
+  readonly height: number;
+  readonly version: string;
+  readonly thumb: string;
+}
+/** T-1200: depo başına min / maks (sunucu `listItemStockPolicies`, kapsamdaki etkin depolar). */
+export interface StockPolicyView {
+  readonly warehouseId: string;
+  readonly warehouseCode: string;
+  readonly warehouseName: string;
+  readonly min: string | null;
+  readonly max: string | null;
+}
+/** Ürün başına görsel sınırı (domain `ITEM_IMAGES_MAX` ile aynı). */
+const IMAGES_MAX = 5;
 export interface BarcodeView {
   readonly id: string;
   readonly barcode: string;
@@ -82,8 +120,8 @@ export interface BarcodeView {
 const PICK = ["FIFO", "FEFO"] as const;
 const TRACKING = ["NONE", "LOT", "SERIAL", "LOT_AND_SERIAL"] as const;
 const SCALES = [0, 1, 2, 3, 4, 5, 6] as const;
-type ItemForm = "edit" | "kod" | "conv" | "barcode";
-const FORMS: readonly ItemForm[] = ["edit", "kod", "conv", "barcode"];
+type ItemForm = "edit" | "kod" | "conv" | "barcode" | "minmax";
+const FORMS: readonly ItemForm[] = ["edit", "kod", "conv", "barcode", "minmax"];
 const c = (hex: string): string => kdz("dzd", hex);
 /** Kart içi küçük işlem düğmesi (kaynak `.btn`); kilitliyken soluk. */
 const actBtn = (bg: string, locked = false): CSSProperties => ({ background: c(bg), color: c("FFFFFF"), minHeight: 48, opacity: locked ? 0.5 : 1 });
@@ -449,6 +487,90 @@ function BarcodeForm({ slug, dark, item, units, onBack, onDone }: { slug: string
   );
 }
 
+/** Ondalık virgülü noktaya çevirir (sunucu yalnız nokta kabul eder; I-09 dizgi olarak kalır). */
+const nokta = (v: string): string => v.trim().replace(",", ".");
+
+/** T-1200: min / maks stok — TAM EKRAN FORM (`?minmax=1`). Depo seçilir (tek depoda seçili), değerler o deponun kaydından gelir.
+ * Kurallar (≥ 0, ürünün ondalık hassasiyeti, min ≤ maks) sunucuda; burada erken uyarı. 0 / 0 = minimum yok. */
+function MinMaxForm({ slug, dark, item, policies, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; policies: readonly StockPolicyView[]; onBack: () => void; onDone: () => void }) {
+  const tk = useTranslations("items.detail.k");
+  const terr = useTranslations("items.errors");
+  const first = policies[0];
+  const of = (id: string): StockPolicyView | undefined => policies.find((p) => p.warehouseId === id);
+  const [initial] = useState(() => ({ warehouseId: first?.warehouseId ?? "", min: first?.min ?? "", max: first?.max ?? "" }));
+  const [v, setV] = useState(initial);
+  const set = (k: keyof typeof v, val: string): void => setV((cur) => ({ ...cur, [k]: val }));
+  const rules: AlanKurali[] = [
+    { name: "warehouseId", label: tk("mmWarehouse"), required: true },
+    { name: "min", label: tk("mmMin"), required: true, kind: "decimal", maxLength: 40 },
+    {
+      name: "max",
+      label: tk("mmMax"),
+      required: true,
+      kind: "decimal",
+      maxLength: 40,
+      check: (val, all) => (typeof val === "string" && typeof all.min === "string" && approx(nokta(all.min)) > approx(nokta(val)) ? tk("mmMaxLow") : null),
+    },
+  ];
+  async function save(): Promise<KaydetSonuc> {
+    const r = await setStockPolicyAction({ slug, itemId: item.id, warehouseId: v.warehouseId, min: nokta(v.min), max: nokta(v.max) });
+    if (!r.ok) {
+      const e = toServerError(r.error);
+      const key = errorKey(e);
+      if (key === "validation_failed_min_max_invalid") return { ok: false, alan: { max: tk("mmMaxLow") } };
+      if (key === "validation_failed_quantity_scale") return { ok: false, alan: { min: tk("mmScale", { n: item.quantityScale }) } };
+      return itemErr(e, (k) => terr(k), (k) => (k === "validation_failed" ? "min" : null));
+    }
+    return { ok: true };
+  }
+  const wh = of(v.warehouseId);
+  const pick = (id: string): void => {
+    const p = of(id);
+    setV({ warehouseId: id, min: p?.min ?? "", max: p?.max ?? "" });
+  };
+  const opts = policies.map((p) => ({ id: p.warehouseId, label: p.warehouseName, sub: p.warehouseCode, keys: [p.warehouseCode], d: SICON.depo }));
+  return (
+    <KalipFormEkran
+      dark={dark}
+      title={tk("mmTitle")}
+      icon={{ d: SICON.uyari, color: "C2702A" }}
+      subtitle={`${item.name} · ${item.code}`}
+      testId="minmax-form"
+      values={v}
+      initial={initial}
+      rules={rules}
+      onSave={save}
+      onDone={onDone}
+      onBack={onBack}
+      saveAria={tk("mmSave")}
+      savedText={tk("mmSaved")}
+      preview={
+        <KalipOnizleme
+          name={item.name}
+          code={item.code}
+          d={SICON.uyari}
+          color="C2702A"
+          kind={wh?.warehouseName ?? tk("mmTitle")}
+          rows={[
+            { k: tk("mmMin"), v: v.min.trim() === "" ? "—" : `${v.min.trim()} ${item.baseUnitCode}` },
+            { k: tk("mmMax"), v: v.max.trim() === "" ? "—" : `${v.max.trim()} ${item.baseUnitCode}` },
+          ]}
+        />
+      }
+    >
+      <KalipGrup title={tk("mmTitle")} sub={tk("mmHint", { unit: item.baseUnitCode })} d={SICON.uyari} color="C2702A">
+        {opts.length <= 6 ? (
+          <KalipSecimGrubu name="warehouseId" label={tk("mmWarehouse")} value={v.warehouseId} color="30475A" onPick={pick} options={opts} testId="minmax-warehouse" />
+        ) : (
+          <KalipSecim name="warehouseId" label={tk("mmWarehouse")} value={v.warehouseId} color="30475A" list icon={{ d: SICON.depo, color: "30475A" }} onPick={pick} options={opts} testId="minmax-warehouse" />
+        )}
+        <KalipAlan label={`${tk("mmMin")} *`} hint={tk("mmMinHint", { unit: item.baseUnitCode })} name="min" value={v.min} onChange={(e) => set("min", e.target.value)} inputMode="decimal" autoComplete="off" maxLength={40} />
+        <KalipAlan label={`${tk("mmMax")} *`} hint={tk("mmMaxHint", { unit: item.baseUnitCode })} name="max" value={v.max} onChange={(e) => set("max", e.target.value)} inputMode="decimal" autoComplete="off" maxLength={40} />
+      </KalipGrup>
+    </KalipFormEkran>
+  );
+}
+
 /** T-1116 "Stok ve yer" (kaynak `StandartUrunKartiStok.dc.html`): sunucu satırları → Depo › Raf yeri › Lot › Palet › Koli pivotu. */
 function StokPivot({ pivot, have, unit }: { pivot: ItemStockPivot; have: string; unit: string }) {
   const tk = useTranslations("items.detail.k");
@@ -593,6 +715,9 @@ export function ItemDetail({
   item,
   conversions,
   barcodes,
+  images = [],
+  policies = [],
+  policySum = { min: null, max: null },
 }: {
   slug: string;
   dark: boolean;
@@ -608,6 +733,12 @@ export function ItemDetail({
   item: ItemDetailItem;
   conversions: readonly ConversionView[];
   barcodes: readonly BarcodeView[];
+  /** T-1200: etkin görseller (kapak önce). */
+  images?: readonly ItemImageClient[];
+  /** T-1200: kapsamdaki etkin depoların min / maks kayıtları. */
+  policies?: readonly StockPolicyView[];
+  /** T-1200: kapsamdaki min / maks toplamı (sunucu decimal toplamı; politika yoksa `null`). */
+  policySum?: { readonly min: string | null; readonly max: string | null };
 }) {
   const t = useTranslations("items");
   const td = useTranslations("items.detail");
@@ -712,6 +843,86 @@ export function ItemDetail({
     });
   }
 
+  // T-1200: görsel işlemleri (ortak `KalipKartGorsel` çağırır). Başarıda balon + ses; geri dönüşü olan işlemde "Geri al".
+  const imgBase = `/api/t/${encodeURIComponent(slug)}/items/${encodeURIComponent(item.id)}/images`;
+  const gorseller: KalipGorsel[] = images.map((g) => ({ id: g.id, src: `${imgBase}/${encodeURIComponent(g.id)}?v=${encodeURIComponent(g.version)}`, thumb: g.thumb, isMain: g.isMain, width: g.width, height: g.height }));
+  const imgFail = (e: ServerError): false => {
+    const key = errorKey(e);
+    feedback.error(`${terr(key)} ${terr(`${key}Action`)}`.trim());
+    return false;
+  };
+  const undoRefresh = async (call: () => Promise<{ ok: boolean }>): Promise<void> => {
+    const r = await call();
+    if (r.ok) feedback.ok(tk("imgUndone"));
+    else feedback.error(tk("imgUndoFailed"));
+    router.refresh();
+  };
+  const gorselIslem = {
+    ekle: async (file: Blob, replaces?: string): Promise<boolean> => {
+      const r = await gorselGonder(replaces === undefined ? imgBase : `${imgBase}?replaces=${encodeURIComponent(replaces)}`, file);
+      if (!r.ok) return imgFail(r.error);
+      router.refresh();
+      const yeni = r.data.imageId;
+      if (!r.data.changed) {
+        feedback.info(tk("imgSame"));
+        return true;
+      }
+      const old = replaces;
+      const wasMain = old !== undefined && images.some((g) => g.id === old && g.isMain);
+      feedback.undo(tk(old === undefined ? "imgAdded" : "imgReplaced"), tk("undo"), () =>
+        undoRefresh(async () => {
+          const a = await removeItemImageAction({ slug, itemId: item.id, imageId: yeni });
+          if (!a.ok || old === undefined) return a;
+          return restoreItemImageAction({ slug, itemId: item.id, imageId: old, main: wasMain });
+        }),
+      );
+      return true;
+    },
+    kapak: async (id: string): Promise<boolean> => {
+      const r = await setItemImageMainAction({ slug, itemId: item.id, imageId: id });
+      if (!r.ok) return imgFail(toServerError(r.error));
+      router.refresh();
+      const prev = r.data.previousMainId;
+      if (prev === null || prev === id) feedback.ok(tk("imgMain"));
+      else feedback.undo(tk("imgMain"), tk("undo"), () => undoRefresh(() => setItemImageMainAction({ slug, itemId: item.id, imageId: prev })));
+      return true;
+    },
+    sil: async (id: string): Promise<boolean> => {
+      const r = await removeItemImageAction({ slug, itemId: item.id, imageId: id });
+      if (!r.ok) return imgFail(toServerError(r.error));
+      router.refresh();
+      const wasMain = r.data.wasMain;
+      feedback.undo(tk("imgRemoved"), tk("undo"), () => undoRefresh(() => restoreItemImageAction({ slug, itemId: item.id, imageId: id, main: wasMain })));
+      return true;
+    },
+  };
+
+  /** T-1200: dönüşümü kaldır; "Geri al" aynı katsayıyı yeniden yazar (domain `setUnitConversion`). */
+  async function onRemoveConversion(cv: ConversionView): Promise<void> {
+    if (busy !== null) return;
+    setBusy(`conv:${cv.unitId}`);
+    setError(null);
+    setNotice(null);
+    const r = await removeConversionAction({ slug, itemId: item.id, unitId: cv.unitId });
+    setBusy(null);
+    if (!r.ok) {
+      const e = toServerError(r.error);
+      if (errorKey(e) === "validation_failed_in_use") {
+        feedback.error(tk("convInUseDoc"));
+        router.refresh();
+        return;
+      }
+      feedback.error();
+      setError(e);
+      return;
+    }
+    router.refresh();
+    const factor = r.data.factor ?? cv.factor;
+    feedback.undo(tk("convRemoved", { unit: cv.unitCode }), tk("undo"), () =>
+      undoRefresh(() => setConversionAction({ slug, itemId: item.id, unitId: cv.unitId, factor })),
+    );
+  }
+
   // T-968 (KalipDetay): toplam, "Nerede?" ve son hareketler gerçek stok sorgusundan (kapsamdaki depolar). Veri yoksa bölüm çizilmez.
   const vis = CARD_VISUAL[item.cardType];
   const tur = TUR_TON[item.cardType];
@@ -799,7 +1010,36 @@ export function ItemDetail({
     { key: "pick", etiket: t("form.pick"), deger: tp(item.pickPolicy), d: SICON.list, ton: "camgobegi" },
     { key: "tracking", etiket: t("form.tracking"), deger: tt(item.trackingMode), d: SICON.qr, ton: "camgobegi", ...(fixedLock === undefined ? {} : { kilit: fixedLock }) },
     { key: "scale", etiket: t("form.scale"), deger: item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale }), d: SICON.birim, ton: "gri", ...(fixedLock === undefined ? {} : { kilit: fixedLock }) },
-    ...(stockCard?.min === null || stockCard?.min === undefined ? [] : [{ key: "min", etiket: tk("boxMin"), deger: `${fq(stockCard.min)} ${unit}`, d: SICON.uyari, ton: "turuncu" as const }]),
+    // T-1200: min / maks her zaman görünür (tanımsızsa "Tanımlı değil") ve kalemle düzenlenir (`?minmax=1`; depo yoksa kilitli + neden).
+    ...[
+      { key: "min", etiket: tk("infoMin"), v: policySum.min },
+      { key: "max", etiket: tk("infoMax"), v: policySum.max },
+    ].map(
+      (x): KalipBilgi => ({
+        key: x.key,
+        etiket: x.etiket,
+        deger: <span data-testid={`item-${x.key}`}>{x.v === null ? tk("mmNone") : `${fq(x.v)} ${unit}`}</span>,
+        d: SICON.uyari,
+        ton: "turuncu",
+        ...(active
+          ? {
+              islem: (
+                <KalipKilitliDugme
+                  kilitli={!writable || policies.length === 0}
+                  gerekce={!writable ? kilitGerekce("edit") : tk("mmNoWarehouse")}
+                  kilitIkonu={false}
+                  onClick={() => open("minmax")}
+                  aria-label={tk("mmEditFor", { name: item.name })}
+                  title={tk("mmTitle")}
+                  data-testid={`item-${x.key}-edit`}
+                >
+                  <Ico d={writable && policies.length > 0 ? SICON.kalem : LICON.lock} size={18} />
+                </KalipKilitliDugme>
+              ),
+            }
+          : {}),
+      }),
+    ),
   ];
   const sourceRows: KalipBilgi[] = Object.entries(sourceInfo).sort(([a], [b]) => a.localeCompare(b)).flatMap(([provider, info]) => {
     const name = provider === "PARASUT" ? "Paraşüt" : provider === "LOGO" ? "Logo" : provider;
@@ -823,6 +1063,7 @@ export function ItemDetail({
 
   if (form === "edit") return <ItemEditForm key="edit" slug={slug} dark={dark} item={item} fixed={fixed} units={units} onBack={() => back()} onDone={() => back(td("done.saved"))} />;
   if (form === "conv") return <ConversionForm key="conv" slug={slug} dark={dark} item={item} units={otherUnits} conversions={conversions} onBack={() => back()} onDone={() => back(td("done.conversion"))} />;
+  if (form === "minmax" && policies.length > 0) return <MinMaxForm key="minmax" slug={slug} dark={dark} item={item} policies={policies} onBack={() => back()} onDone={() => back(tk("mmSaved"))} />;
   if (form === "barcode") return <BarcodeForm key="barcode" slug={slug} dark={dark} item={item} units={otherUnits} onBack={() => back()} onDone={() => back(td("done.barcodeAdded"))} />;
   if (form === "kod") {
     return (
@@ -922,7 +1163,37 @@ export function ItemDetail({
         <KalipKartSatirlar
           etiket={td("conversionsTitle")}
           bos={td("conversionsEmpty")}
-          satirlar={conversions.map((cv) => ({ key: cv.unitId, baslik: td("conversionLine", { unit: cv.unitCode, factor: cv.factor, base: unit }), d: SICON.cevrim, ton: "mor", testId: "conversion-row" }))}
+          satirlar={conversions.map((cv) => {
+            // T-1200: belge / mal kabul satırı ya da barkod kullanıyorsa kaldırılamaz (geçmiş korunur): kilitli düğme + neden.
+            const inUse = cv.usage === "DOCUMENT" ? tk("convInUseDoc") : cv.usage === "BARCODE" ? tk("convInUseBarcode") : null;
+            const kilit = editLocked ? kilitGerekce("edit") : inUse;
+            return {
+              key: cv.unitId,
+              baslik: td("conversionLine", { unit: cv.unitCode, factor: cv.factor, base: unit }),
+              d: SICON.cevrim,
+              ton: "mor" as const,
+              testId: "conversion-row",
+              ...(writable || editLocked
+                ? {
+                    altta: (
+                      <KalipKilitliDugme
+                        kilitli={kilit !== null}
+                        {...(kilit === null ? {} : { gerekce: kilit })}
+                        className="btn"
+                        style={actBtn("C62828", kilit !== null)}
+                        aria-busy={busy === `conv:${cv.unitId}` || undefined}
+                        onClick={() => void onRemoveConversion(cv)}
+                        aria-label={tk("convRemoveFor", { unit: cv.unitCode })}
+                        data-testid="conversion-remove"
+                      >
+                        <Ico d={LICON.trash} size={18} />
+                        {tk("convRemove")}
+                      </KalipKilitliDugme>
+                    ),
+                  }
+                : {}),
+            };
+          })}
         />
         {editLocked ? (
           <div>
@@ -1066,7 +1337,30 @@ export function ItemDetail({
       >
         <KalipKayitKart
           testId="item-kart"
-          serit={<KalipKartSerit etiket={tk("hero")} ad={item.name} d={vis.d} tur={tur} etiketler={etiketler} kutular={kutular} islemler={islemler} islemEtiket={tk("quick")} />}
+          serit={
+            <KalipKartSerit
+              etiket={tk("hero")}
+              ad={item.name}
+              d={vis.d}
+              tur={tur}
+              etiketler={etiketler}
+              kutular={kutular}
+              islemler={islemler}
+              islemEtiket={tk("quick")}
+              gorsel={
+                <KalipKartGorsel
+                  ad={item.name}
+                  kod={item.code}
+                  d={vis.d}
+                  gorseller={gorseller}
+                  dark={dark}
+                  sinir={IMAGES_MAX}
+                  yetki={{ yazilabilir: writable, kilitli: editLocked, gerekce: kilitGerekce("edit") }}
+                  islem={gorselIslem}
+                />
+              }
+            />
+          }
           sekmeler={<KalipKartSekmeler etiket={tk("tabs")} sekmeler={sekmeler} secili={secili} href={sekmeHref} />}
           ana={
             <>

@@ -29,10 +29,10 @@ async function versions(adm: pg.Client) { return (await adm.query<{version: stri
 
 it("pilot migrations go 37 → 27 → 37 on an empty scratch database", async () => {
   await scratch(async (url, adm) => {
-    expect(await versions(adm)).toEqual(["0073", "0072", "0071"]);
-    expect((await migrateDown({url, to:"0027", wmsEnv:"staging"})).reverted).toEqual(["0073", "0072", "0071", "0070", "0069", "0068", "0067", "0066", "0065", "0064", "0063", "0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055", "0054", "0053", "0052", "0051", "0050", "0049", "0048", "0047", "0046", "0045", "0044", "0043", "0042", "0041", "0040", "0039", "0038", "0037", "0036", "0035", "0034", "0033", "0032", "0031", "0030", "0029", "0028"]);
+    expect(await versions(adm)).toEqual(["0074", "0073", "0072"]);
+    expect((await migrateDown({url, to:"0027", wmsEnv:"staging"})).reverted).toEqual(["0074", "0073", "0072", "0071", "0070", "0069", "0068", "0067", "0066", "0065", "0064", "0063", "0062", "0061", "0060", "0059", "0058", "0057", "0056", "0055", "0054", "0053", "0052", "0051", "0050", "0049", "0048", "0047", "0046", "0045", "0044", "0043", "0042", "0041", "0040", "0039", "0038", "0037", "0036", "0035", "0034", "0033", "0032", "0031", "0030", "0029", "0028"]);
     expect((await adm.query("SELECT to_regclass('public.stock_document_links') AS links, to_regclass('public.production_recipes') AS recipes")).rows[0]).toEqual({links:null, recipes:null});
-    expect((await migrateUp({url})).applied).toEqual(["0028", "0029", "0030", "0031", "0032", "0033", "0034", "0035", "0036", "0037", "0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065", "0066", "0067", "0068", "0069", "0070", "0071", "0072", "0073"]);
+    expect((await migrateUp({url})).applied).toEqual(["0028", "0029", "0030", "0031", "0032", "0033", "0034", "0035", "0036", "0037", "0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065", "0066", "0067", "0068", "0069", "0070", "0071", "0072", "0073", "0074"]);
     expect((await migrateUp({url})).applied).toEqual([]);
     expect((await adm.query("SELECT count(*)::int AS n FROM pg_trigger WHERE tgname='production_recipe_lines_insert_guard'")).rows[0]?.n).toBe(1);
   });
@@ -52,7 +52,7 @@ it("linked transfer history blocks downgrade without changing stock or losing li
       expect(await listStockOverview(params)).toEqual(before);
       expect((await adm.query("SELECT count(*)::int AS n FROM public.stock_document_links")).rows[0]?.n).toBe(1);
       expect((await versions(adm))[0]).toBe("0028");
-      expect((await migrateUp({url})).applied).toEqual(["0029","0030","0031","0032","0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065", "0066", "0067", "0068", "0069", "0070", "0071", "0072", "0073"]);
+      expect((await migrateUp({url})).applied).toEqual(["0029","0030","0031","0032","0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065", "0066", "0067", "0068", "0069", "0070", "0071", "0072", "0073", "0074"]);
       expect(await listStockOverview(params)).toEqual(before);
     } finally { await app.close(); }
   });
@@ -75,7 +75,7 @@ it("saved recipes block removal of the seal and recipe schema, preserving defini
       expect((await adm.query("SELECT count(*)::int AS n FROM public.production_recipes")).rows[0]?.n).toBe(1);
       expect((await adm.query("SELECT count(*)::int AS n FROM public.production_recipe_lines")).rows[0]?.n).toBe(1);
       // 0031 (kart türü/birimler) mühürden bağımsızdır: geri alınır, 0030 mührü kalır; ileri alma 0031–0037 sürümlerini uygular.
-      expect((await migrateUp({url})).applied).toEqual(["0031","0032","0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065", "0066", "0067", "0068", "0069", "0070", "0071", "0072", "0073"]);
+      expect((await migrateUp({url})).applied).toEqual(["0031","0032","0033","0034","0035","0036","0037","0038","0039","0040","0041","0042","0043","0044","0045","0046","0047","0048","0049","0050","0051","0052","0053","0054", "0055", "0056", "0057","0058", "0059", "0060", "0061", "0062", "0063", "0064", "0065", "0066", "0067", "0068", "0069", "0070", "0071", "0072", "0073", "0074"]);
     } finally { await app.close(); }
   });
 }, 120000);

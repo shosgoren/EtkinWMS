@@ -168,11 +168,17 @@ test("T-1047 Ürünler: Kart/Liste, sıralama, Sütunlar", async ({ page }) => {
   const tablo = page.getByTestId("items-table");
   await expect(tablo).toBeVisible();
   await expect(page.getByTestId("item-card")).toHaveCount(0);
-  const ilk = async (): Promise<string> => (await tablo.locator("tbody tr").first().locator("td").first().innerText()).trim();
+  // T-1200: ilk sütun artık "Görsel" (tuval `StandartUrunlerListe` sırası); Kod sütunu konumla değil başlık adıyla bulunur.
+  const kodBaslik = tablo.locator("th", { has: page.getByRole("button", { name: "Kod" }) });
+  await expect(kodBaslik).toHaveCount(1);
+  const kodSira = await tablo.locator("thead th").evaluateAll((ths) => ths.findIndex((t) => t.querySelector("button")?.textContent?.trim().startsWith("Kod") === true));
+  expect(kodSira).toBeGreaterThanOrEqual(0);
+  const ilk = async (): Promise<string> => (await tablo.locator("tbody tr").first().locator("td").nth(kodSira).innerText()).trim();
   await tablo.getByRole("button", { name: "Kod" }).click();
   const artan = await ilk();
+  expect(artan).not.toBe("");
   await tablo.getByRole("button", { name: "Kod" }).click();
-  await expect(tablo.locator("th").first()).toHaveAttribute("aria-sort", "descending");
+  await expect(kodBaslik).toHaveAttribute("aria-sort", "descending");
   expect(await ilk()).not.toBe(artan);
   await page.getByTestId("kalip-sutunlar").click();
   await page.getByTestId("kalip-sutunlar-pencere").getByLabel("Birim", { exact: true }).uncheck();
@@ -183,6 +189,10 @@ test("T-1047 Ürünler: Kart/Liste, sıralama, Sütunlar", async ({ page }) => {
   // Temizlik: varsayılan görünüm (diğer testler kart bekler).
   await page.getByTestId("kalip-sutunlar").click();
   await page.getByTestId("kalip-sutunlar-pencere").getByRole("button", { name: "Varsayılana dön" }).click();
+  // T-1200: Sütunlar penceresi (bir satır daha: Görsel) açıkken Kart'a basmak önce pencereyi kapatıp yerleşimi kaydırıyordu; pencere
+  // açıkça kapatılır, sonra görünüm değişir.
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("kalip-sutunlar-pencere")).toHaveCount(0);
   await page.getByTestId("kalip-gorunum").locator('[data-gorunum="kart"]').click();
   await expect(page.getByTestId("item-card").first()).toBeVisible();
 });

@@ -6,6 +6,8 @@ export * from "./items.ts";
 export * from "./reads.ts";
 export * from "./quantity.ts";
 export * from "./units.ts";
+export * from "./item-images.ts";
+export * from "./stock-policy.ts";
 export * from "./handling-units.ts";
 export * from "./lots.ts";
 export * from "./serials.ts";
