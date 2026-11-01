@@ -21,3 +21,10 @@ describe('ready label designs protect first use',()=>{
   const svg=renderLabelSvg(readyLabelDesign('RECEIPT'),{name:'SBR',packageQr:'EWMS:PKG:1:11111111-1111-4111-8111-111111111111'});expect(svg).not.toContain('LOT-2026');expect(svg).not.toContain('undefined');
  });
 });
+
+it.each(['PRODUCT','RECEIPT'] as const)('%s ready label prints a real long product identifier without clipping',context=>{
+ const code='11111111-1111-4111-8111-111111111111';
+ const common={name:'SBR granül',code,unit:'KG'};const values=context==='PRODUCT'?{...common,barcode:'ETK-HM-001'}:{...common,packageQr:'EWMS:PKG:1:'+code,quantity:'200',lot:'LABEL-LOT',productionDate:'01.10.2026',expiryDate:'01.10.2027',documentNo:'GIR-2026-001'};
+ const svg=renderLabelSvg(readyLabelDesign(context),values);
+ expect(svg.replace(/<[^>]*>/g,'')).toContain(code);expect(svg).toContain('font-size="2000"');
+});
