@@ -531,7 +531,15 @@
     "validation_failed_code_mismatch": "The confirmation code doesn't match the terminal.",
     "validation_failed_code_mismatchAction": "Type the 6-digit code shown on the terminal again; after 3 wrong tries the QR is renewed.",
     "validation_failed_site_invalid": "Sales page text is invalid.",
-    "validation_failed_site_invalidAction": "Keep the headline within 80, the highlighted line within 60 and the subtitle within 400 characters; do not use < or >."
+    "validation_failed_site_invalidAction": "Keep the headline within 80, the highlighted line within 60 and the subtitle within 400 characters; do not use < or >.",
+    "validation_failed_image_invalid": "This file is not an image or its type is not supported.",
+    "validation_failed_image_invalidAction": "Choose a JPEG, PNG or WebP photo (SVG and HEIC are not accepted).",
+    "validation_failed_image_too_large": "The image is too large.",
+    "validation_failed_image_too_largeAction": "Choose a photo of at most 5 MB.",
+    "validation_failed_image_limit": "A record can have at most 5 images.",
+    "validation_failed_image_limitAction": "Delete an image first or use Replace.",
+    "validation_failed_min_max_invalid": "The minimum cannot be greater than the maximum.",
+    "validation_failed_min_max_invalidAction": "Enter a maximum equal to or greater than the minimum."
   },
   "serverErrors": {
     "code": "Error code: {code}",
@@ -908,7 +916,18 @@
       "removed": "You removed a barcode from an item."
     },
     "unit_conversion": {
-      "set": "You set an item's unit conversion."
+      "set": "You set an item's unit conversion.",
+      "removed": "You removed an item's unit conversion."
+    },
+    "item_image": {
+      "added": "You added an image to an item.",
+      "replaced": "You replaced an item's image.",
+      "removed": "You deleted an item's image.",
+      "restored": "You restored an item's image.",
+      "main_set": "You changed an item's cover image."
+    },
+    "item_stock_policy": {
+      "set": "You set an item's min / max stock."
     },
     "lot": {
       "created": "You created a lot."
@@ -1139,7 +1158,18 @@
         "removed": "Barcode removed"
       },
       "unit_conversion": {
-        "set": "Unit conversion set"
+        "set": "Unit conversion set",
+        "removed": "Unit conversion removed"
+      },
+      "item_image": {
+        "added": "Image added",
+        "replaced": "Image replaced",
+        "removed": "Image deleted",
+        "restored": "Image restored",
+        "main_set": "Cover image changed"
+      },
+      "item_stock_policy": {
+        "set": "Min / max stock set"
       },
       "lot": {
         "created": "Lot added"
@@ -1692,7 +1722,36 @@
         "historyAll": "All · audit log",
         "historyUnread": "History could not be read · refresh the page",
         "more": "Show more",
-        "moreFailed": "Could not load more · try again"
+        "moreFailed": "Could not load more · try again",
+        "imgAdded": "Image added.",
+        "imgReplaced": "Image replaced.",
+        "imgRemoved": "Image deleted.",
+        "imgMain": "Cover image changed.",
+        "imgUndone": "Undone.",
+        "imgUndoFailed": "Could not undo; refresh the page and check.",
+        "imgSame": "This image is already added.",
+        "undo": "Undo",
+        "infoMin": "Minimum stock",
+        "infoMax": "Maximum stock",
+        "mmNone": "Not set",
+        "mmTitle": "Min / max stock",
+        "mmEditFor": "Change min / max stock for {name}",
+        "mmNoWarehouse": "Add a warehouse first; min / max is per warehouse.",
+        "mmWarehouse": "Warehouse",
+        "mmMin": "Minimum",
+        "mmMax": "Maximum",
+        "mmMinHint": "Keep at least this many {unit} in this warehouse (0 = no minimum).",
+        "mmMaxHint": "Top up to at most this many when buying ({unit}).",
+        "mmHint": "Values are in {unit} and per warehouse.",
+        "mmMaxLow": "The maximum cannot be less than the minimum.",
+        "mmScale": "{n, plural, =0 {This item takes whole numbers only.} other {This item takes at most # decimals.}}",
+        "mmSave": "Save min / max stock",
+        "mmSaved": "Min / max stock saved.",
+        "convRemove": "Remove",
+        "convRemoveFor": "Remove the {unit} conversion",
+        "convRemoved": "{unit} conversion removed.",
+        "convInUseDoc": "This unit is used in documents; it cannot be removed because past records are kept.",
+        "convInUseBarcode": "A barcode uses this unit; remove the barcode first."
       }
     },
     "errors": {
@@ -1728,7 +1787,17 @@
       "internal": "Something went wrong.",
       "internalAction": "Try again shortly; if it continues, send the error code to support.",
       "validation_failed_plan_limit": "You have reached your plan's item limit.",
-      "validation_failed_plan_limitAction": "Archive items you no longer use, or contact us to upgrade your plan."
+      "validation_failed_plan_limitAction": "Archive items you no longer use, or contact us to upgrade your plan.",
+      "validation_failed_image_invalid": "This file is not an image or its type is not supported.",
+      "validation_failed_image_invalidAction": "Choose a JPEG, PNG or WebP photo (SVG and HEIC are not accepted).",
+      "validation_failed_image_too_large": "The image is too large.",
+      "validation_failed_image_too_largeAction": "Choose a photo of at most 5 MB.",
+      "validation_failed_image_limit": "An item can have at most 5 images.",
+      "validation_failed_image_limitAction": "Delete an image first or use Replace.",
+      "validation_failed_min_max_invalid": "The minimum cannot be greater than the maximum.",
+      "validation_failed_min_max_invalidAction": "Enter a maximum equal to or greater than the minimum.",
+      "validation_failed_quantity_scale": "The quantity has more decimals than this item allows.",
+      "validation_failed_quantity_scaleAction": "Enter fewer decimal places."
     },
     "locked": "You do not have permission to view products.",
     "lockedAction": "Ask your workspace manager.",
@@ -1793,7 +1862,10 @@
       "colState": "Status",
       "removed": "Removed",
       "removedTag": "REMOVED",
-      "pendingTag": "ARCHIVE PENDING"
+      "pendingTag": "ARCHIVE PENDING",
+      "colImage": "Image",
+      "imageNone": "No image",
+      "imageCount": "{n, plural, one {# image} other {# images}}"
     },
     "productLabels": {
       "filter": "Filter",
@@ -5219,6 +5291,30 @@
       "loading": "Loading…",
       "retry": "Couldn't load · try again",
       "top": "Back to top"
+    },
+    "gorsel": {
+      "add": "Add image",
+      "addShort": "Add",
+      "photo": "Take photo",
+      "open": "Images ({n}) — enlarge",
+      "alt": "{name} image {i}",
+      "count": "{i} / {n}",
+      "prev": "Previous image",
+      "next": "Next image",
+      "close": "Close",
+      "title": "{name} images",
+      "sub": "{code} · image {i} / {n}",
+      "group": "Images",
+      "thumb": "Image {i}",
+      "thumbOpen": "Image {i} (open)",
+      "main": "Make cover",
+      "mainTag": "Cover",
+      "replace": "Replace",
+      "remove": "Delete",
+      "saved": "Saved",
+      "hint": "Use the arrow keys or swipe · Esc closes",
+      "limit": "A record can have at most 5 images; delete one first or use Replace.",
+      "tooBig": "The file is too large: choose a photo of at most 5 MB."
     }
   },
   "saha": {

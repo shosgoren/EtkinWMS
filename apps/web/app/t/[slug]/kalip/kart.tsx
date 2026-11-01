@@ -54,6 +54,7 @@ export function KalipKartSerit({
   kutular,
   islemler,
   islemEtiket,
+  gorsel,
   children,
 }: {
   etiket: string;
@@ -64,13 +65,17 @@ export function KalipKartSerit({
   kutular: readonly KalipSayiKutusu[];
   islemler: readonly KalipKartIslem[];
   islemEtiket: string;
+  /** T-1145: kayıt görseli kutusu (`kalip/gorsel.tsx` `KalipKartGorsel`); yoksa tür simgesi. */
+  gorsel?: ReactNode;
   children?: ReactNode;
 }) {
   return (
     <section className={`stkserit ${ton(tur)}`} aria-label={etiket}>
-      <span className="stkgorsel" aria-hidden="true">
-        <Ico d={d} size={40} />
-      </span>
+      {gorsel ?? (
+        <span className="stkgorsel" aria-hidden="true">
+          <Ico d={d} size={40} />
+        </span>
+      )}
       <span className="stkad">
         <b role="heading" aria-level={1}>
           {ad}

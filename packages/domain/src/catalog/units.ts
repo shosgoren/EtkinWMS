@@ -202,6 +202,62 @@ export async function setUnitConversion(
   });
 }
 
+/** T-1145: dönüşümü kullanan kayıt (kaldırma kilidi): belge / mal kabul satırı (işlenmiş geçmiş değişmez, I-08/I-09) ya da birimli barkod. */
+export type ConversionUsage = "DOCUMENT" | "BARCODE";
+
+/** Ürün + birim çiftini kullanan kayıt (0072 silme bekçisiyle aynı tanım). Salt SELECT. */
+export async function conversionUsage(tx: AccessTx, tenantId: string, itemId: string, unitId: string): Promise<ConversionUsage | null> {
+  const r = await tx.execute<{ doc: boolean; bc: boolean }>(sql`
+    SELECT EXISTS (SELECT 1 FROM public.document_lines x WHERE x.tenant_id = ${tenantId}::uuid AND x.item_id = ${itemId}::uuid AND x.unit_id = ${unitId}::uuid)
+        OR EXISTS (SELECT 1 FROM public.inbound_receipt_lines x WHERE x.tenant_id = ${tenantId}::uuid AND x.item_id = ${itemId}::uuid AND x.unit_id = ${unitId}::uuid) AS doc,
+           EXISTS (SELECT 1 FROM public.item_barcodes x WHERE x.tenant_id = ${tenantId}::uuid AND x.item_id = ${itemId}::uuid AND x.unit_id = ${unitId}::uuid) AS bc`);
+  if (r[0]?.doc === true) return "DOCUMENT";
+  if (r[0]?.bc === true) return "BARCODE";
+  return null;
+}
+
+/**
+ * T-1145: birim dönüşümünü kaldır (Geri al = aynı katsayıyla `setUnitConversion`). Belge / mal kabul satırı ya da birimli barkod o ürün +
+ * birimi kullanıyorsa `VALIDATION_FAILED`/`IN_USE` (işlenmiş belge katsayının kopyasını taşır; geçmiş korunur). Ürün satırı FOR UPDATE
+ * kilitlenir: belge satırı ekleyen açık işlemler (ürün FK KEY SHARE) bitince sayılır. DB bekçisi (0072) aynı kuralla kullanılan satırı
+ * silmez; etkilenen satır sayısı denetlenir. Dönüşüm yoksa `changed: false`.
+ */
+export async function removeUnitConversion(
+  params: CatalogCommandParams,
+  input: { readonly itemId: string; readonly unitId: string },
+): Promise<{ readonly changed: boolean; readonly factor: string | null }> {
+  const itemId = parseUuid(input.itemId);
+  const unitId = parseUuid(input.unitId);
+  const { requestId, ...access } = params;
+  return runTenantCommand({ ...access, permission: "items.edit" }, async (tx, actor) => {
+    const item = await loadItem(tx, actor.tenantId, itemId, "update");
+    if (item === undefined) throw new AppError("NOT_FOUND");
+    if (item.status !== "ACTIVE") throw new AppError("VALIDATION_FAILED");
+    const cur = await tx.execute<{ to_base_factor: string }>(
+      sql`SELECT to_base_factor::text AS to_base_factor FROM public.unit_conversions
+           WHERE tenant_id = ${actor.tenantId}::uuid AND item_id = ${itemId}::uuid AND unit_id = ${unitId}::uuid FOR UPDATE`,
+    );
+    const factor = cur[0]?.to_base_factor;
+    if (factor === undefined) return { changed: false, factor: null };
+    const usage = await conversionUsage(tx, actor.tenantId, itemId, unitId);
+    if (usage !== null) throw new AppError("VALIDATION_FAILED", { detail: "IN_USE" });
+    const del = await tx.execute<{ x: number }>(
+      sql`DELETE FROM public.unit_conversions WHERE tenant_id = ${actor.tenantId}::uuid AND item_id = ${itemId}::uuid AND unit_id = ${unitId}::uuid RETURNING 1 AS x`,
+    );
+    if (del.length !== 1) throw new AppError("VALIDATION_FAILED", { detail: "IN_USE" });
+    const canonicalFactor = factor.includes(".") ? factor.replace(/0+$/, "").replace(/\.$/, "") : factor;
+    await appendAudit(tx, {
+      action: "unit_conversion.removed",
+      actorUserId: actor.userId,
+      entityType: "item",
+      entityId: itemId,
+      requestId: requestId ?? null,
+      changeSummary: { unit_id: unitId, previous_factor: canonicalFactor },
+    });
+    return { changed: true, factor: canonicalFactor };
+  });
+}
+
 export type ItemHeader = {
   readonly id: string;
   readonly code: string;

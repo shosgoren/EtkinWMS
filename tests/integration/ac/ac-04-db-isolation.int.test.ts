@@ -355,6 +355,11 @@ beforeAll(async () => {
     await admin.query("INSERT INTO public.integration_webhooks (tenant_id, integration_id, model, action, external_id, status) VALUES ($1, $2, 'product', 'update', '1', 'DELETED')", [w.tenantId, igId]);
     // T-1140 (0069): iki yönlü eşitleme işareti + cari yaşam döngüsü durumu (fikstür carisi; kart FK'si yok).
     await admin.query("INSERT INTO public.integration_card_states (tenant_id, system, entity_type, entity_id, local_sig) SELECT $1, 'PARASUT', 'PARTY', id, md5(id::text) FROM public.parties WHERE tenant_id = $1 AND code_key = 'AC04-CARI'", [w.tenantId]);
+    // T-1145 (0072): ürün görseli (en küçük RIFF....WEBP imzalı bayt dizisi; içerik denetimi DB CHECK'inde yalnız imza + boyut).
+    await admin.query(
+      "INSERT INTO public.item_images (tenant_id, item_id, data, thumb, width, height, sha256, is_main) VALUES ($1, $2, $3, $3, 1, 1, md5($1::text) || md5($2::text), true)",
+      [w.tenantId, w.itemId, Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(4), Buffer.from("WEBP"), Buffer.alloc(4)])],
+    );
     // T-1006 (0056): kurulum yolculuğu seçim satırı (tenant başına tek).
     await admin.query("INSERT INTO public.setup_journeys (tenant_id, skipped) VALUES ($1, '{labels}'::text[])", [w.tenantId]);
   }

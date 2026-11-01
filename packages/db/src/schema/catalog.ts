@@ -9,9 +9,11 @@
 //   indeksi bilerek benzersiz değildir (A-69).
 // - Tablo nesneleri yalnızca `@wms/db/internal/schema` alt yolundan açılır, genel yüzeye yalnızca tipler çıkar.
 import { sql } from "drizzle-orm";
-import { boolean, check, date, index, integer, jsonb, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, customType, date, index, integer, jsonb, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
+/** T-1145: görsel baytları (PostgreSQL `bytea`). */
+const bytea = customType<{ data: Uint8Array }>({ dataType: () => "bytea" });
 
 export const CATALOG_STATUSES = ["ACTIVE", "ARCHIVED"] as const;
 export type CatalogStatus = (typeof CATALOG_STATUSES)[number];
@@ -97,6 +99,29 @@ export const unitConversions = pgTable(
     unique("unit_conversions_tenant_id_id_key").on(t.tenantId, t.id),
     unique("unit_conversions_tenant_item_unit_key").on(t.tenantId, t.itemId, t.unitId),
     index("unit_conversions_tenant_unit_idx").on(t.tenantId, t.unitId),
+  ],
+);
+
+/** T-1145 (0072): ürün görselleri — yeniden kodlanmış WebP + küçük resim; yumuşak silme (`removed_at`), baytlar sonra boşaltılır. */
+export const itemImages = pgTable(
+  "item_images",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    itemId: uuid("item_id").notNull(),
+    contentType: text("content_type").notNull().default("image/webp"),
+    data: bytea("data"),
+    thumb: bytea("thumb"),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    sha256: text("sha256").notNull(),
+    isMain: boolean("is_main").notNull().default(false),
+    removedAt: timestamptz("removed_at"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("item_images_tenant_id_id_key").on(t.tenantId, t.id),
+    index("item_images_tenant_item_idx").on(t.tenantId, t.itemId, t.createdAt),
   ],
 );
 

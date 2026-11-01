@@ -59,4 +59,15 @@ export const SICON = {
   palet: "M3 17h18M5 17v3M12 17v3M19 17v3M5 7h14v10H5z",
   chevRight: "M9 6l6 6-6 6",
   chevOpen: "M6 9l6 6 6-6",
+  /** T-1145 ürün görseli (kaynak `StandartUrunKarti.dc.html` şerit görseli + "Görsel ekle", `StandartGorselBuyuk.dc.html` büyük görünüm,
+   *  `StandartUrunlerListe.dc.html` liste küçük resmi). */
+  gorsel: "M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4M15 9h.01",
+  gorselListe: "M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4",
+  gorselEkle: "M4 8h3l2-3h6l2 3h3v12H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  gOnceki: "M15 18l-6-6 6-6",
+  gKapat: "M6 6l12 12M18 6L6 18",
+  gArti: "M12 5v14M5 12h14",
+  gKapak: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z",
+  gSil: "M4 7h16M6 7v13h12V7M9 4h6M10 11v6M14 11v6",
+  gTamam: "M5 12l5 5 9-10",
 } as const;
