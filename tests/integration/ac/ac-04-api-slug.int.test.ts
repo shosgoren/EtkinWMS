@@ -353,6 +353,7 @@ const LOADERS = [
 const SHELL_LOADERS = ["field/layout.tsx", "field/page.tsx"] as const;
 /** T-312: etiket sayfası kaynak (depo) ister; kaynaksız çağrı tenant'a hiç dokunmaz, bu yüzden özel blokta `?warehouse=` ile sınanır. */
 const LABELS = "labels/page.tsx" as const;
+const CUSTOM_LABELS = "custom-labels/page.tsx" as const;
 /** T-216: ürün ayrıntısı ek bir dinamik segment (`itemId`) ister; ortak döngüde değil, aşağıdaki özel bloktadır. */
 const ITEM_DETAIL = "items/[itemId]/page.tsx" as const;
 /** T-1090: cari kartı (`partyId` parametresi `itemId` argümanıyla verilir). */
@@ -369,7 +370,7 @@ type Loader = (props: {
 
 /** `[warehouseId]` yükleyicisi için kimlik: verilmezse slug A'nınsa A'nın, değilse B'nin deposu (çapraz tenant denemesi). */
 async function runLoader(
-  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | typeof PARTY_CARD | (typeof SHELL_LOADERS)[number] | typeof LABELS | (typeof PACKAGE_LOADERS)[number] | typeof PACKAGE_MOVEMENT_LOADER,
+  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | typeof PARTY_CARD | (typeof SHELL_LOADERS)[number] | typeof LABELS | typeof CUSTOM_LABELS | (typeof PACKAGE_LOADERS)[number] | typeof PACKAGE_MOVEMENT_LOADER,
   slug: string,
   warehouseId?: string,
   itemId?: string,
@@ -390,6 +391,29 @@ async function runLoader(
 }
 
 describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
+  it("@AC-04 custom label source: cross-tenant, missing slug, outsider and anonymous remain closed; own empty workspace renders without stock mutation", async () => {
+    const beforeA = await snapshot(A), beforeB = await snapshot(B);
+    const source = JSON.stringify({kind:"PRODUCT",itemIds:[itemB.id]});
+    as(A.admin);
+    const cross = await runLoader(CUSTOM_LABELS,B.slug,undefined,undefined,{source});
+    as(A.admin);
+    expect(await runLoader(CUSTOM_LABELS,`yok-${rnd()}`,undefined,undefined,{source})).toEqual(cross);
+    as(outsider.id);
+    expect(await runLoader(CUSTOM_LABELS,B.slug,undefined,undefined,{source})).toEqual(cross);
+    expect(cross).toEqual({outcome:"notFound"});
+    expect(JSON.stringify(cross)).not.toContain(itemB.name);
+    as(null);
+    expect((await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source})).to).toMatch(/^\/login\?next=/);
+    as(A.admin);
+    const own = await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source:JSON.stringify({kind:"PRODUCT",itemIds:[itemA.id]})});
+    expect(own.outcome).toBe("render");
+    expect(JSON.stringify(own.value)).toContain("noTemplate");
+    expect(await runLoader(CUSTOM_LABELS,A.slug)).toEqual({outcome:"notFound"});
+    expect(await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source:"{}"})).not.toEqual({outcome:"redirect"});
+    expect(await snapshot(A)).toEqual(beforeA);
+    expect(await snapshot(B)).toEqual(beforeB);
+  });
+
   for (const rel of SHELL_LOADERS) {
     it(`@AC-04 sayfa ${rel}: B'nin slug'ıyla da var olmayan slug'la da aynı yapı (yalnızca istenen slug yankılanır); B'ye ait ad/kimlik çizilmez (404 kararı üst layout.tsx'te)`, async () => {
       as(A.admin);
@@ -439,7 +463,7 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
 
 describe("sayfa yükleyicileri (/t/<slug>)", () => {
   it("@AC-04 kapsam: apps/web/app/t/[slug] altındaki her page/layout bu tabloda (yeni yükleyici testsiz kalamaz)", () => {
-    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, PARTY_CARD, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER, LOCATION_CARD].sort());
+    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, CUSTOM_LABELS, ITEM_DETAIL, PARTY_CARD, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER, LOCATION_CARD].sort());
   });
 
   for (const rel of LOADERS) {
