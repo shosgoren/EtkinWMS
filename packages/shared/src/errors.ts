@@ -67,7 +67,7 @@ export const ERROR_DETAILS = [
   "SEPARATION_OF_DUTIES",
   // T-1144: reddedilmiş demo talebinin aynı e-postasında açık ya da onaylı başka talep var (ikinci deneme alanı açılmaz).
   "DEMO_EMAIL_TAKEN",
-  // T-1145: ürün görseli (tür / bayt imzası / çözülemez; boyut; ürün başına sınır) ve min > maks.
+  // T-1160: ürün görseli (tür / bayt imzası / çözülemez; boyut; ürün başına sınır) ve min > maks.
   "IMAGE_INVALID",
   "IMAGE_TOO_LARGE",
   "IMAGE_LIMIT",

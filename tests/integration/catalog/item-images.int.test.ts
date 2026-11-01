@@ -1,4 +1,4 @@
-// T-1145 (0072): ürün görseli, min / maks stok ve birim dönüşümü kaldırma. Gerçek wms_app bağlantısı + RLS; fikstür migration rolüyle (adm).
+// T-1160 (0074): ürün görseli, min / maks stok ve birim dönüşümü kaldırma. Gerçek wms_app bağlantısı + RLS; fikstür migration rolüyle (adm).
 // Route katmanında yalnız kimlik çözümü taklit edilir (`lib/auth-service`, `getAppDb`); sarmalayıcı, yetki, RLS, sayaç, görsel işleme
 // (`sharp`) ve domain GERÇEKTİR. Veriler sentetik (G-09).
 // Senaryolar: ekle (ilk görsel kapak) / aynı bayt tekrar (idempotent) / değiştir / sil → kapak devri / geri al / kapak yap / 5 sınırı /
@@ -429,7 +429,7 @@ describe("birim dönüşümü kaldırma", () => {
     expect(await failure(removeUnitConversion(admin(A), { itemId: A.itemId, unitId: A.boxUnitId }))).toBe("VALIDATION_FAILED/IN_USE");
     const left = await adm.query("SELECT 1 FROM public.unit_conversions WHERE tenant_id = $1 AND unit_id = $2 AND item_id = ANY($3::uuid[])", [A.tenantId, A.boxUnitId, [A.itemId, A.itemNoneId]]);
     expect(left.rowCount).toBe(2);
-    // DB bekçisi (0072): uygulama rolünün ham DELETE'i kullanılan satırı atlar.
+    // DB bekçisi (0074): uygulama rolünün ham DELETE'i kullanılan satırı atlar.
     expect(await asApp(A.tenantId, async (c) => (await c.query("DELETE FROM public.unit_conversions WHERE item_id = ANY($1::uuid[]) AND unit_id = $2", [[A.itemId, A.itemNoneId], A.boxUnitId])).rowCount)).toBe(0);
   });
 

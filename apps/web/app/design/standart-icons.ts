@@ -59,7 +59,7 @@ export const SICON = {
   palet: "M3 17h18M5 17v3M12 17v3M19 17v3M5 7h14v10H5z",
   chevRight: "M9 6l6 6-6 6",
   chevOpen: "M6 9l6 6 6-6",
-  /** T-1145 ürün görseli (kaynak `StandartUrunKarti.dc.html` şerit görseli + "Görsel ekle", `StandartGorselBuyuk.dc.html` büyük görünüm,
+  /** T-1160 ürün görseli (kaynak `StandartUrunKarti.dc.html` şerit görseli + "Görsel ekle", `StandartGorselBuyuk.dc.html` büyük görünüm,
    *  `StandartUrunlerListe.dc.html` liste küçük resmi). */
   gorsel: "M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4M15 9h.01",
   gorselListe: "M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4",

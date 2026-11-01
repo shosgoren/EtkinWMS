@@ -1,4 +1,4 @@
--- 0072_item_images (T-1145, kullanıcı isteği 1 Kasım 2026 "görsel eklenemiyor; min/max girilemiyor; dönüşüm kaldırılamıyor"):
+-- 0074_item_images (T-1160, kullanıcı isteği 1 Kasım 2026 "görsel eklenemiyor; min/max girilemiyor; dönüşüm kaldırılamıyor"):
 -- (1) ürün görselleri tablosu, (2) kullanılmamış birim dönüşümünün silinebilmesi. G-08: GENİŞLETME — yeni tablo + 0040 silme bekçisi
 -- işlevinin yeni sürümü (CREATE OR REPLACE; 0040 dosyası değişmez). Min/maks stok için şema değişikliği YOK (0017 `item_stock_policies`
 -- sütun düzeyi INSERT/UPDATE zaten var).
@@ -26,7 +26,7 @@
 DO $pre$
 BEGIN
   IF pg_catalog.to_regclass('public.integration_card_states') IS NULL OR pg_catalog.to_regprocedure('public.unit_conversions_sample_delete_guard()') IS NULL THEN
-    RAISE EXCEPTION '0072_item_images: 0069 / 0040 önkoşulu yok';
+    RAISE EXCEPTION '0074_item_images: 0069 / 0040 önkoşulu yok';
   END IF;
 END
 $pre$;
@@ -136,22 +136,22 @@ DECLARE
   r text;
 BEGIN
   IF NOT pg_catalog.has_table_privilege('wms_app', 'public.item_images', 'SELECT') THEN
-    RAISE EXCEPTION '0072_item_images: wms_app okuyamıyor';
+    RAISE EXCEPTION '0074_item_images: wms_app okuyamıyor';
   END IF;
   IF pg_catalog.has_table_privilege('wms_app', 'public.item_images', 'DELETE') OR pg_catalog.has_table_privilege('wms_app', 'public.item_images', 'TRUNCATE') THEN
-    RAISE EXCEPTION '0072_item_images: wms_app silebiliyor';
+    RAISE EXCEPTION '0074_item_images: wms_app silebiliyor';
   END IF;
   IF NOT (SELECT relrowsecurity AND relforcerowsecurity FROM pg_catalog.pg_class WHERE oid = 'public.item_images'::regclass) THEN
-    RAISE EXCEPTION '0072_item_images: RLS zorlanmıyor';
+    RAISE EXCEPTION '0074_item_images: RLS zorlanmıyor';
   END IF;
   IF (SELECT tgenabled FROM pg_catalog.pg_trigger WHERE tgrelid = 'public.unit_conversions'::regclass AND tgname = 'unit_conversions_sample_delete_guard') <> 'A' THEN
-    RAISE EXCEPTION '0072_item_images: dönüşüm silme bekçisi her zaman etkin değil';
+    RAISE EXCEPTION '0074_item_images: dönüşüm silme bekçisi her zaman etkin değil';
   END IF;
   FOREACH r IN ARRAY ARRAY['wms_auth', 'wms_worker'] LOOP
     IF pg_catalog.to_regrole(r) IS NOT NULL
        AND (pg_catalog.has_table_privilege(r, 'public.item_images', 'SELECT') OR pg_catalog.has_table_privilege(r, 'public.item_images', 'INSERT')
             OR pg_catalog.has_table_privilege(r, 'public.item_images', 'UPDATE') OR pg_catalog.has_table_privilege(r, 'public.item_images', 'DELETE')) THEN
-      RAISE EXCEPTION '0072_item_images: % rolü erişebiliyor', r;
+      RAISE EXCEPTION '0074_item_images: % rolü erişebiliyor', r;
     END IF;
   END LOOP;
 END

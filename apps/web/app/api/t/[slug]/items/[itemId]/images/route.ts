@@ -1,4 +1,4 @@
-// T-1145: ürün görseli yükleme (ekle ya da `?replaces=<görsel>` ile değiştir). Gövde ham dosya baytlarıdır (multipart yok).
+// T-1160: ürün görseli yükleme (ekle ya da `?replaces=<görsel>` ile değiştir). Gövde ham dosya baytlarıdır (multipart yok).
 // Sıra: routeGuard (Origin zorunlu, IP/kullanıcı sınırı, oturum) → aynı site → slug/kimlik biçimi → `items.edit` + MFA ön denetimi ve
 // tenant sayacı (`limitVerifiedTenant`; yetkisiz çağıran gövdeyi okutamaz, dosya çözülmez) → kullanıcı başına dakikada 20 yükleme →
 // gövde en çok 5 MiB okunur (fazlası okunmadan kesilir) → `processItemImage` (bayt imzası, yeniden kodlama, EXIF silme) → domain

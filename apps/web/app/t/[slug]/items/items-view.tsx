@@ -47,7 +47,7 @@ const DETAILED = [
   "validation_failed_in_use",
   "validation_failed_plan_limit",
   "validation_failed_unit_conversion_invalid",
-  // T-1145: ürün görseli ve min / maks.
+  // T-1160: ürün görseli ve min / maks.
   "validation_failed_image_invalid",
   "validation_failed_image_too_large",
   "validation_failed_image_limit",
@@ -115,7 +115,7 @@ export interface ItemListView {
   readonly oldCode?: string;
   /** T-1117: listenin "Barkod" sütunu — ürünün ilk barkodu (temel birimdeki önce); yoksa alan yok. */
   readonly barcode?: string;
-  /** T-1145: "Görsel" sütunu — kapak küçük resmi (`data:` adresi) ve görsel sayısı; görselsiz üründe yok. */
+  /** T-1160: "Görsel" sütunu — kapak küçük resmi (`data:` adresi) ve görsel sayısı; görselsiz üründe yok. */
   readonly image?: { readonly thumb: string; readonly count: number };
 }
 
@@ -471,7 +471,7 @@ export function ItemsView({
   useKalipDerinlik(items.length, sonrakiImlec !== null, dahaYukle);
   const sutunlar = useMemo<readonly KalipSutun<ItemsSatir>[]>(
     () => [
-      // T-1145 (tuval `StandartUrunlerListe.dc.html` "Görsel" sütunu): kapak küçük resmi, birden çok görselde nokta göstergesi; görselsiz
+      // T-1160 (tuval `StandartUrunlerListe.dc.html` "Görsel" sütunu): kapak küçük resmi, birden çok görselde nokta göstergesi; görselsiz
       // satırda aynı hizada "+". Satırın kendisi ürün kartını açar (iç içe bağlantı yok).
       { id: "image", baslik: tk("colImage"), deger: (r) => <KalipListeGorsel gorsel={r.it.image} etiket={r.it.image === undefined ? tk("imageNone") : tk("imageCount", { n: r.it.image.count })} />, sirala: (r) => r.it.image?.count ?? 0 },
       { id: "code", baslik: tk("colCode"), sabit: true, deger: (r) => (r.it.oldCode === undefined ? r.it.code : t("renamedNote", { code: r.it.code, old: r.it.oldCode })), sirala: (r) => r.it.code },

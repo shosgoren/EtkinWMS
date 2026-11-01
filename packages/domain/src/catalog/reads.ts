@@ -185,7 +185,7 @@ export interface ItemConversionRow {
   readonly unitName: string;
   /** 1 birim = `factor` temel birim; kanonik decimal metin (I-09). */
   readonly factor: string;
-  /** T-1145: kaldırma kilidi — belge / mal kabul satırı ya da birimli barkod bu birimi kullanıyorsa nedeni; yoksa `null`. */
+  /** T-1160: kaldırma kilidi — belge / mal kabul satırı ya da birimli barkod bu birimi kullanıyorsa nedeni; yoksa `null`. */
   readonly usage: ConversionUsage | null;
 }
 
@@ -223,7 +223,7 @@ export async function listItemConversions(params: CatalogReadParams, itemIdRaw: 
            ORDER BY u.code, c.id
            LIMIT ${CHILD_LIST_MAX}`,
     );
-    // Kullanım tanımı `conversionUsage` (units.ts) ve 0072 silme bekçisiyle aynı.
+    // Kullanım tanımı `conversionUsage` (units.ts) ve 0074 silme bekçisiyle aynı.
     return rows.map((r) => ({ unitId: r.unit_id, unitCode: r.unit_code, unitName: r.unit_name, factor: canonical(r.factor), usage: r.doc ? "DOCUMENT" : r.bc ? "BARCODE" : null }));
   });
 }

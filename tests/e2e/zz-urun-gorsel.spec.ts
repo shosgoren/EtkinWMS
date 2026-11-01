@@ -1,4 +1,4 @@
-// T-1145 (kullanıcı isteği 1 Kasım): ürün kartında görsel ekle → şeritte ve listede görünür → büyük görünüm; min / maks stok girilir
+// T-1160 (kullanıcı isteği 1 Kasım): ürün kartında görsel ekle → şeritte ve listede görünür → büyük görünüm; min / maks stok girilir
 // (min > maks alan hatası, sonra kayıt); kullanılmayan birim dönüşümü kaldırılır ve "Geri al" ile geri gelir. Sunucu kuralları (bayt
 // imzası, EXIF, yetki, kiracı yalıtımı, IN_USE) int testinde (tests/integration/catalog/item-images.int.test.ts).
 // Kullanıcı: demo "Yönetici" (paylaşılan oturum). Ürün bu spec için açılır (sentetik).
@@ -15,7 +15,7 @@ const PNG = Buffer.from(
   "base64",
 );
 
-test("T-1145: görsel ekle + listede küçük resim, min / maks gir, dönüşümü kaldır ve geri al", async ({ page }) => {
+test("T-1160: görsel ekle + listede küçük resim, min / maks gir, dönüşümü kaldır ve geri al", async ({ page }) => {
   test.setTimeout(120_000);
   const [tenant] = await db<{ id: string }>("SELECT id FROM public.tenants WHERE slug = 'demo' LIMIT 1");
   if (tenant === undefined) throw new Error("e2e: demo tenant yok");

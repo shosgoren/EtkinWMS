@@ -1,4 +1,4 @@
--- 0072_item_images geri alma (T-1145, G-08): görsel satırı varsa veri kaybettirmez (bayrak: wms_meta.allow_destructive_down). Bekçi sayımı
+-- 0074_item_images geri alma (T-1160, G-08): görsel satırı varsa veri kaybettirmez (bayrak: wms_meta.allow_destructive_down). Bekçi sayımı
 -- RLS'ten bağımsız olmalı: sayımdan önce NO FORCE, sonra yeniden FORCE. Dönüşüm silme bekçisi 0040 sürümüne döner (örnek olmayan dönüşüm
 -- yine her zaman sessizce atlanır).
 DO $guard$
@@ -9,7 +9,7 @@ BEGIN
   SELECT EXISTS (SELECT 1 FROM public.item_images) INTO used;
   ALTER TABLE public.item_images FORCE ROW LEVEL SECURITY;
   IF used AND COALESCE(pg_catalog.current_setting('wms_meta.allow_destructive_down', true), 'off') <> 'on' THEN
-    RAISE EXCEPTION '0072_item_images down: ürün görseli var; veri kaybettiren geri alma bu ortamda kapalı';
+    RAISE EXCEPTION '0074_item_images down: ürün görseli var; veri kaybettiren geri alma bu ortamda kapalı';
   END IF;
 END
 $guard$;

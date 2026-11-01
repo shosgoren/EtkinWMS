@@ -1,4 +1,4 @@
-// Ürün görselleri (T-1145, 0072). Yazma `items.edit` (T-1141 kart anahtarı; gruptan verilmişse MFA ister — T-1142 `MFA_GRANTS`), okuma
+// Ürün görselleri (T-1160, 0074). Yazma `items.edit` (T-1141 kart anahtarı; gruptan verilmişse MFA ister — T-1142 `MFA_GRANTS`), okuma
 // `stock.view` (ürün kartıyla aynı). Hepsi `runTenantCommand`/`runTenantQuery` içinde: tenant yalnız doğrulanmış üyelikten gelir (I-01),
 // bağlam transaction-local (I-02), RLS + FORCE (I-03); audit aynı transaction'da (I-12).
 //
@@ -20,13 +20,13 @@ export type ImageInputType = "image/jpeg" | "image/png" | "image/webp";
 
 /** Yükleme (ham dosya) üst sınırı. */
 export const IMAGE_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
-/** Saklanan (yeniden kodlanmış) görsel ve küçük resim üst sınırları (0072 CHECK ile aynı). */
+/** Saklanan (yeniden kodlanmış) görsel ve küçük resim üst sınırları (0074 CHECK ile aynı). */
 export const IMAGE_STORED_MAX_BYTES = 1_048_576;
 export const IMAGE_THUMB_MAX_BYTES = 16_384;
 /** Saklanan görselin uzun kenarı ve küçük resmin kutusu (px). */
 export const IMAGE_MAX_SIDE = 1280;
 export const IMAGE_THUMB_SIDE = 160;
-/** Ürün başına etkin görsel sınırı (0072 tetikleyicisiyle aynı). */
+/** Ürün başına etkin görsel sınırı (0074 tetikleyicisiyle aynı). */
 export const ITEM_IMAGES_MAX = 5;
 
 const startsWith = (b: Uint8Array, sig: readonly number[], at = 0): boolean => b.length >= at + sig.length && sig.every((x, i) => b[at + i] === x);

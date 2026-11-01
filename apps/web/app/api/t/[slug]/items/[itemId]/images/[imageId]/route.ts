@@ -1,4 +1,4 @@
-// T-1145: ürün görselini sunma (yalnız kiracı yetkisiyle). Oturum + üyelik + `stock.view` + RLS domain'de (`getItemImage`); başka
+// T-1160: ürün görselini sunma (yalnız kiracı yetkisiyle). Oturum + üyelik + `stock.view` + RLS domain'de (`getItemImage`); başka
 // tenant'ın / silinmiş / olmayan görseli `NOT_FOUND` (varlık sızmaz). Yanıt yalnız `image/webp` (saklanan biçim; imza yeniden denetlenir),
 // `nosniff`, betik çalıştırmayan CSP + sandbox, `inline` (kaydetme adı sabit), yalnız aynı köken. Adres `?v=<sürüm>` taşır (içerik
 // özeti): içerik değişince adres değişir, bu yüzden tarayıcıda özel (paylaşılmayan) uzun önbellek güvenlidir. `?t=1` küçük resim.

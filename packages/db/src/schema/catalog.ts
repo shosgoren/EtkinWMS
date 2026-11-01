@@ -12,7 +12,7 @@ import { sql } from "drizzle-orm";
 import { boolean, check, customType, date, index, integer, jsonb, numeric, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 const timestamptz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
-/** T-1145: görsel baytları (PostgreSQL `bytea`). */
+/** T-1160: görsel baytları (PostgreSQL `bytea`). */
 const bytea = customType<{ data: Uint8Array }>({ dataType: () => "bytea" });
 
 export const CATALOG_STATUSES = ["ACTIVE", "ARCHIVED"] as const;
@@ -102,7 +102,7 @@ export const unitConversions = pgTable(
   ],
 );
 
-/** T-1145 (0072): ürün görselleri — yeniden kodlanmış WebP + küçük resim; yumuşak silme (`removed_at`), baytlar sonra boşaltılır. */
+/** T-1160 (0074): ürün görselleri — yeniden kodlanmış WebP + küçük resim; yumuşak silme (`removed_at`), baytlar sonra boşaltılır. */
 export const itemImages = pgTable(
   "item_images",
   {

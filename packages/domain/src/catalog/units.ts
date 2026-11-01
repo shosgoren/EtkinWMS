@@ -202,10 +202,10 @@ export async function setUnitConversion(
   });
 }
 
-/** T-1145: dönüşümü kullanan kayıt (kaldırma kilidi): belge / mal kabul satırı (işlenmiş geçmiş değişmez, I-08/I-09) ya da birimli barkod. */
+/** T-1160: dönüşümü kullanan kayıt (kaldırma kilidi): belge / mal kabul satırı (işlenmiş geçmiş değişmez, I-08/I-09) ya da birimli barkod. */
 export type ConversionUsage = "DOCUMENT" | "BARCODE";
 
-/** Ürün + birim çiftini kullanan kayıt (0072 silme bekçisiyle aynı tanım). Salt SELECT. */
+/** Ürün + birim çiftini kullanan kayıt (0074 silme bekçisiyle aynı tanım). Salt SELECT. */
 export async function conversionUsage(tx: AccessTx, tenantId: string, itemId: string, unitId: string): Promise<ConversionUsage | null> {
   const r = await tx.execute<{ doc: boolean; bc: boolean }>(sql`
     SELECT EXISTS (SELECT 1 FROM public.document_lines x WHERE x.tenant_id = ${tenantId}::uuid AND x.item_id = ${itemId}::uuid AND x.unit_id = ${unitId}::uuid)
@@ -217,9 +217,9 @@ export async function conversionUsage(tx: AccessTx, tenantId: string, itemId: st
 }
 
 /**
- * T-1145: birim dönüşümünü kaldır (Geri al = aynı katsayıyla `setUnitConversion`). Belge / mal kabul satırı ya da birimli barkod o ürün +
+ * T-1160: birim dönüşümünü kaldır (Geri al = aynı katsayıyla `setUnitConversion`). Belge / mal kabul satırı ya da birimli barkod o ürün +
  * birimi kullanıyorsa `VALIDATION_FAILED`/`IN_USE` (işlenmiş belge katsayının kopyasını taşır; geçmiş korunur). Ürün satırı FOR UPDATE
- * kilitlenir: belge satırı ekleyen açık işlemler (ürün FK KEY SHARE) bitince sayılır. DB bekçisi (0072) aynı kuralla kullanılan satırı
+ * kilitlenir: belge satırı ekleyen açık işlemler (ürün FK KEY SHARE) bitince sayılır. DB bekçisi (0074) aynı kuralla kullanılan satırı
  * silmez; etkilenen satır sayısı denetlenir. Dönüşüm yoksa `changed: false`.
  */
 export async function removeUnitConversion(

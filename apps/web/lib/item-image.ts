@@ -1,4 +1,4 @@
-// T-1145: ürün görseli yükleme işleme (yalnız sunucu). Tür bayt imzasından (`sniffImageType`: JPEG / PNG / WebP; SVG, GIF, HEIC, metin
+// T-1160: ürün görseli yükleme işleme (yalnız sunucu). Tür bayt imzasından (`sniffImageType`: JPEG / PNG / WebP; SVG, GIF, HEIC, metin
 // reddedilir — dosya adı ve istemcinin bildirdiği tür dikkate alınmaz), boyut ≤ 5 MiB. `sharp` (Next'in görsel bağımlılığı, aynı sürüm)
 // görseli çözer ve YENİDEN KODLAR: EXIF yönü uygulanır, bütün meta veri (EXIF / konum / ICC dışı) atılır, uzun kenar ≤ 1280 px, WebP; ayrıca
 // ≤ 16 KiB küçük resim. Çözülen biçim imzayla eşleşmezse ret. Piksel bombasına karşı giriş ≤ 40 MP; hareketli görselin yalnız ilk karesi.

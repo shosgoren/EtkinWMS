@@ -18,7 +18,7 @@
 // Hareketler (son 50 belge + toplam) · Birimler · Barkodlar · Takip (lotlar, seriler) · Paraşüt · Değişiklik geçmişi (`audit.view`).
 // Sekme verisi yalnız o sekme açıkken sunucuda okunur (`tabData`). Eski `Banner` ve elle biçimli satırlar kalıp parçalarına geçti
 // (`KalipKartNot`, `KalipKartSatirlar`).
-// T-1145 (kullanıcı 1 Kasım): şeritte ürün görseli (ortak `KalipKartGorsel`: ekle · fotoğraf çek · büyük görünüm · kapak yap · değiştir ·
+// T-1160 (kullanıcı 1 Kasım): şeritte ürün görseli (ortak `KalipKartGorsel`: ekle · fotoğraf çek · büyük görünüm · kapak yap · değiştir ·
 // sil + Geri al); Genel'de Minimum / Maksimum stok satırı her zaman (tanımsızsa "Tanımlı değil") ve kalem → tam ekran form `?minmax=1`
 // (depo başına; domain min ≤ maks, ölçek, ≥ 0); Birimler'de dönüşüm satırına "Kaldır" (belge / mal kabul / barkod kullanıyorsa kilitli +
 // neden; kaldırınca "Geri al" balonu aynı katsayıyı geri yazar). Kurallar sunucuda.
@@ -86,10 +86,10 @@ export interface ConversionView {
   readonly unitCode: string;
   readonly unitName: string;
   readonly factor: string;
-  /** T-1145: kaldırma kilidi (belge / mal kabul satırı ya da birimli barkod kullanıyor); yoksa `null`. */
+  /** T-1160: kaldırma kilidi (belge / mal kabul satırı ya da birimli barkod kullanıyor); yoksa `null`. */
   readonly usage?: "DOCUMENT" | "BARCODE" | null;
 }
-/** T-1145: ürün görseli (sunucu `listItemImages`). */
+/** T-1160: ürün görseli (sunucu `listItemImages`). */
 export interface ItemImageClient {
   readonly id: string;
   readonly isMain: boolean;
@@ -98,7 +98,7 @@ export interface ItemImageClient {
   readonly version: string;
   readonly thumb: string;
 }
-/** T-1145: depo başına min / maks (sunucu `listItemStockPolicies`, kapsamdaki etkin depolar). */
+/** T-1160: depo başına min / maks (sunucu `listItemStockPolicies`, kapsamdaki etkin depolar). */
 export interface StockPolicyView {
   readonly warehouseId: string;
   readonly warehouseCode: string;
@@ -490,7 +490,7 @@ function BarcodeForm({ slug, dark, item, units, onBack, onDone }: { slug: string
 /** Ondalık virgülü noktaya çevirir (sunucu yalnız nokta kabul eder; I-09 dizgi olarak kalır). */
 const nokta = (v: string): string => v.trim().replace(",", ".");
 
-/** T-1145: min / maks stok — TAM EKRAN FORM (`?minmax=1`). Depo seçilir (tek depoda seçili), değerler o deponun kaydından gelir.
+/** T-1160: min / maks stok — TAM EKRAN FORM (`?minmax=1`). Depo seçilir (tek depoda seçili), değerler o deponun kaydından gelir.
  * Kurallar (≥ 0, ürünün ondalık hassasiyeti, min ≤ maks) sunucuda; burada erken uyarı. 0 / 0 = minimum yok. */
 function MinMaxForm({ slug, dark, item, policies, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; policies: readonly StockPolicyView[]; onBack: () => void; onDone: () => void }) {
   const tk = useTranslations("items.detail.k");
@@ -733,11 +733,11 @@ export function ItemDetail({
   item: ItemDetailItem;
   conversions: readonly ConversionView[];
   barcodes: readonly BarcodeView[];
-  /** T-1145: etkin görseller (kapak önce). */
+  /** T-1160: etkin görseller (kapak önce). */
   images?: readonly ItemImageClient[];
-  /** T-1145: kapsamdaki etkin depoların min / maks kayıtları. */
+  /** T-1160: kapsamdaki etkin depoların min / maks kayıtları. */
   policies?: readonly StockPolicyView[];
-  /** T-1145: kapsamdaki min / maks toplamı (sunucu decimal toplamı; politika yoksa `null`). */
+  /** T-1160: kapsamdaki min / maks toplamı (sunucu decimal toplamı; politika yoksa `null`). */
   policySum?: { readonly min: string | null; readonly max: string | null };
 }) {
   const t = useTranslations("items");
@@ -843,7 +843,7 @@ export function ItemDetail({
     });
   }
 
-  // T-1145: görsel işlemleri (ortak `KalipKartGorsel` çağırır). Başarıda balon + ses; geri dönüşü olan işlemde "Geri al".
+  // T-1160: görsel işlemleri (ortak `KalipKartGorsel` çağırır). Başarıda balon + ses; geri dönüşü olan işlemde "Geri al".
   const imgBase = `/api/t/${encodeURIComponent(slug)}/items/${encodeURIComponent(item.id)}/images`;
   const gorseller: KalipGorsel[] = images.map((g) => ({ id: g.id, src: `${imgBase}/${encodeURIComponent(g.id)}?v=${encodeURIComponent(g.version)}`, thumb: g.thumb, isMain: g.isMain, width: g.width, height: g.height }));
   const imgFail = (e: ServerError): false => {
@@ -897,7 +897,7 @@ export function ItemDetail({
     },
   };
 
-  /** T-1145: dönüşümü kaldır; "Geri al" aynı katsayıyı yeniden yazar (domain `setUnitConversion`). */
+  /** T-1160: dönüşümü kaldır; "Geri al" aynı katsayıyı yeniden yazar (domain `setUnitConversion`). */
   async function onRemoveConversion(cv: ConversionView): Promise<void> {
     if (busy !== null) return;
     setBusy(`conv:${cv.unitId}`);
@@ -1010,7 +1010,7 @@ export function ItemDetail({
     { key: "pick", etiket: t("form.pick"), deger: tp(item.pickPolicy), d: SICON.list, ton: "camgobegi" },
     { key: "tracking", etiket: t("form.tracking"), deger: tt(item.trackingMode), d: SICON.qr, ton: "camgobegi", ...(fixedLock === undefined ? {} : { kilit: fixedLock }) },
     { key: "scale", etiket: t("form.scale"), deger: item.quantityScale === 0 ? t("form.scaleInteger") : t("form.scaleDecimals", { count: item.quantityScale }), d: SICON.birim, ton: "gri", ...(fixedLock === undefined ? {} : { kilit: fixedLock }) },
-    // T-1145: min / maks her zaman görünür (tanımsızsa "Tanımlı değil") ve kalemle düzenlenir (`?minmax=1`; depo yoksa kilitli + neden).
+    // T-1160: min / maks her zaman görünür (tanımsızsa "Tanımlı değil") ve kalemle düzenlenir (`?minmax=1`; depo yoksa kilitli + neden).
     ...[
       { key: "min", etiket: tk("infoMin"), v: policySum.min },
       { key: "max", etiket: tk("infoMax"), v: policySum.max },
@@ -1164,7 +1164,7 @@ export function ItemDetail({
           etiket={td("conversionsTitle")}
           bos={td("conversionsEmpty")}
           satirlar={conversions.map((cv) => {
-            // T-1145: belge / mal kabul satırı ya da barkod kullanıyorsa kaldırılamaz (geçmiş korunur): kilitli düğme + neden.
+            // T-1160: belge / mal kabul satırı ya da barkod kullanıyorsa kaldırılamaz (geçmiş korunur): kilitli düğme + neden.
             const inUse = cv.usage === "DOCUMENT" ? tk("convInUseDoc") : cv.usage === "BARCODE" ? tk("convInUseBarcode") : null;
             const kilit = editLocked ? kilitGerekce("edit") : inUse;
             return {
