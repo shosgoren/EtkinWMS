@@ -42,7 +42,7 @@
     "tests/integration/ac/ac-23-concurrent-consumers.int.test.ts": 11,
     "tests/integration/ac/ac-28-runtime.int.test.ts": 16,
     "tests/integration/audit-immutability.int.test.ts": 43,
-    "tests/integration/labels/label-print.int.test.ts": 48,
+    "tests/integration/labels/label-print.int.test.ts": 60,
     "tests/integration/labels/label-printers.int.test.ts": 30,
     "tests/integration/labels/label-schema.int.test.ts": 33,
     "tests/integration/labels/label-store.int.test.ts": 53,
