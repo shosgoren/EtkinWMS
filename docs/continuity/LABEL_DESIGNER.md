@@ -1,6 +1,6 @@
 # Etiket tasarım editörü — B-166 uygulama planı
 
-Tarih: 1 Kasım 2026. Durum: PLAN; uygulama geliştirilmedi/yayımlanmadı.
+Tarih: 1 Kasım 2026. Durum: GELİŞTİRME BAŞLADI; T-1146 tasarım kaynağı hazırlanıyor. Henüz uygulama/yayın yok.
 Plan kartı: [T-1145](../tasks/T-1145.md). Başlangıç kaynak main: `9c046c6f015aa2448cbc82bff86fbbbd88ac6c20`.
 Otorite: kullanıcı kararı + ALTIN-KURAL, STANDART, DESIGN-PARITY, INVARIANTS ve ADR-022. Bu belge onların istisnası değildir.
 
@@ -114,3 +114,9 @@ Her aşama başlamadan ayrı boş T numarasıyla kart, gerçek dosya kapsamı ve
 - Her iş kendi changes parçası + bu belgenin ilgili durumunu günceller. Push öncesi prepush, gitleaks, riskin istediği bağımsız inceleme; korunan dosya/ADR/migration için mevcut protokol. Gösterilmeyen test sonucu UNKNOWN.
 
 Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/akış/kabul/devir dokümanı. Yapılmayan: ekran, migration, uygulama kodu, logo yükleme, baskı motoru, cihaz testi ve canlı yayın.
+
+## 1 Kasım ek kullanıcı kararı — yetki ve şablon yazıcısı
+- Modül görüntüleme, taslak düzenleme, yayın/varsayılan atama, baskı ve yazıcı tercih yönetimi ayrı sunucu yetkileridir; Yetkiler ekranında gruba atanır. Özel tasarım yetkisi olmayan saha personeli izinli hazır şablonu kullanabilir.
+- Etkin tercih sırası: şablonun bu cihazdaki yazıcısı → şablonun firma yazıcısı → cihazın genel yazıcısı → firmanın genel yazıcısı → sistem yazdırma iletişim kutusu. “Genel tercihi kullan” açık seçenektir. Desteklenmeyen/çevrimdışı açık bir şablon tercihi sessizce başka yazıcıya gitmez.
+- Tarayıcıdan fiziksel yazıcıları listeleme ve sessiz yönlendirme garanti edilmez. Köprü yokken kayıtlı tercih baskı profili/önerisidir; sistem iletişim kutusunda seçim gerekir. Gerçek otomatik rota yalnız yetkili ve yeteneği doğrulanmış köprüde açılır; arayüz bu ayrımı söyler.
+- T-1146 ortak kaynak: docs/design/source/EtiketEditor.dc.html; örnek verili işlevsel tasarım, henüz backend yetki/kayıt/baskı değil.
