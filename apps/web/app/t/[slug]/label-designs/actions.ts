@@ -30,9 +30,10 @@ export async function labelTemplateAction(raw:unknown){return guard({schema:iden
 export async function labelSaveAction(raw:unknown){return guard({schema:save},async(input,ctx)=>{const{slug,...body}=input;return saveLabelTemplate(await context(slug,ctx,"labels.design"),body);})(raw);}
 export async function labelPublishAction(raw:unknown){return guard({schema:publish},async(input,ctx)=>{const{slug,...body}=input;return publishLabelTemplate(await context(slug,ctx,"labels.publish"),body);})(raw);}
 export async function labelAssignAction(raw:unknown){return guard({schema:assign},async(input,ctx)=>{const{slug,...body}=input;return assignLabelDefault(await context(slug,ctx,"labels.publish"),body);})(raw);}
-export async function labelArchiveAction(raw:unknown){return guard({schema:archive},async(input,ctx)=>{const{slug,...body}=input;return archiveLabelTemplate(await context(slug,ctx,"labels.design"),body);})(raw);}
+export async function labelArchiveAction(raw:unknown){return guard({schema:archive},async(input,ctx)=>{const{slug,...body}=input;return archiveLabelTemplate(await context(slug,ctx,"labels.publish"),body);})(raw);}
 export async function labelRestoreAction(raw:unknown){return guard({schema:restore},async(input,ctx)=>{const{slug,...body}=input;return restoreLabelDraft(await context(slug,ctx,"labels.design"),body);})(raw);}
 export async function labelLogoUploadAction(raw:unknown){return guard({schema:logo},async(input,ctx)=>{
+ await context(input.slug,ctx,"labels.view");
  const p=await context(input.slug,ctx,"labels.design"),bytes=Buffer.from(input.png,"base64");if(bytes.length>128*1024)throw new AppError("VALIDATION_FAILED");
  const result=await uploadLabelLogo(p,bytes);return{...result,uri:`data:image/png;base64,${(await readLabelLogo(p,result.id)).toString("base64")}`};
 })(raw);}

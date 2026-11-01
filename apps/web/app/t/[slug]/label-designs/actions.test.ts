@@ -10,7 +10,7 @@ vi.mock('../../../../lib/action-guard.ts',async()=>{
 });
 import{labelWorkspaceAction,labelTemplateAction,labelSaveAction,labelPublishAction,labelAssignAction,labelArchiveAction,labelRestoreAction,labelLogoUploadAction,labelLogoReadAction,labelPrinterSaveAction,labelPreferenceAction,labelExportAction}from'./actions.ts';
 const id='33333333-3333-4333-8333-333333333333',base={slug:'motive',id};
-beforeEach(()=>{vi.clearAllMocks();state.authenticated=true;state.origin='https://wms.test';for(const f of Object.values(state.calls))f.mockResolvedValue({id,version:1});state.calls.readLabelLogo!.mockResolvedValue(Buffer.from('canonical-png'));});
+beforeEach(()=>{vi.clearAllMocks();state.authenticated=true;state.origin='https://wms.test';state.tenant.mockReset().mockResolvedValue(undefined);for(const f of Object.values(state.calls))f.mockResolvedValue({id,version:1});state.calls.readLabelLogo!.mockResolvedValue(Buffer.from('canonical-png'));});
 describe('label action trusted boundary',()=>{
  it.each([
   [labelWorkspaceAction,{slug:'motive',deviceId:id},'getLabelWorkspace','labels.view'],
@@ -18,7 +18,7 @@ describe('label action trusted boundary',()=>{
   [labelSaveAction,{...base,name:'Raf',expectedVersion:1,design:{}},'saveLabelTemplate','labels.design'],
   [labelPublishAction,{...base,expectedVersion:1,expectedDefaultVersion:0},'publishLabelTemplate','labels.publish'],
   [labelAssignAction,{...base,expectedDefaultVersion:0},'assignLabelDefault','labels.publish'],
-  [labelArchiveAction,{...base,expectedVersion:1,archived:true},'archiveLabelTemplate','labels.design'],
+  [labelArchiveAction,{...base,expectedVersion:1,archived:true},'archiveLabelTemplate','labels.publish'],
   [labelRestoreAction,{...base,expectedVersion:1,versionId:id},'restoreLabelDraft','labels.design'],
   [labelLogoReadAction,base,'readLabelLogo','labels.view'],
   [labelPrinterSaveAction,{slug:'motive',name:'Epson',expectedVersion:0,dpi:300,offsetX:0,offsetY:0,active:true},'saveLabelPrinter','labels.printers'],
@@ -34,6 +34,15 @@ describe('label action trusted boundary',()=>{
  });
  it('authentication, foreign Origin and verified-tenant rejection cannot reach a domain operation',async()=>{
   state.authenticated=false;expect((await labelTemplateAction(base)).ok).toBe(false);state.authenticated=true;state.origin='https://foreign.test';expect((await labelTemplateAction(base)).ok).toBe(false);state.origin='https://wms.test';state.tenant.mockRejectedValueOnce(new Error('blocked'));expect((await labelTemplateAction(base)).ok).toBe(false);expect(state.calls.getLabelTemplate).not.toHaveBeenCalled();
+ });
+
+ it('publication-only precheck archives without demanding a design grant',async()=>{
+  state.tenant.mockImplementation(async(access)=>{if(access.permission==='labels.design')throw new Error('no design grant');});
+  const r=await labelArchiveAction({...base,expectedVersion:1,archived:true});expect(r.ok).toBe(true);expect(state.calls.archiveLabelTemplate).toHaveBeenCalledTimes(1);expect(state.tenant).toHaveBeenCalledWith(expect.objectContaining({permission:'labels.publish'}),expect.anything());
+ });
+ it('known missing view permission rejects an upload before any asset is committed',async()=>{
+  state.tenant.mockImplementation(async(access)=>{if(access.permission==='labels.view')throw new Error('no view grant');});
+  const r=await labelLogoUploadAction({slug:'motive',png:Buffer.alloc(80,4).toString('base64')});expect(r.ok).toBe(false);expect(state.calls.uploadLabelLogo).not.toHaveBeenCalled();expect(state.calls.readLabelLogo).not.toHaveBeenCalled();
  });
  it('uploads bounded decoded bytes and returns only the canonical server asset',async()=>{
   const bytes=Buffer.alloc(80,4),r=await labelLogoUploadAction({slug:'motive',png:bytes.toString('base64')});expect(r.ok).toBe(true);if(r.ok)expect(r.data.uri).toBe('data:image/png;base64,'+Buffer.from('canonical-png').toString('base64'));expect(state.calls.uploadLabelLogo).toHaveBeenCalledWith(expect.objectContaining({tenantSlug:'motive'}),bytes);expect(state.calls.readLabelLogo).toHaveBeenCalledWith(expect.anything(),id);
