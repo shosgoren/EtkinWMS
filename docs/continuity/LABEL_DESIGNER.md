@@ -154,3 +154,5 @@ Servis prepush ilk koşusu yeni root audit çevirilerini eksik buldu; auditLog v
 Servis AC04 filtresi, export testindeki önceki test verisine bağımlılığı buldu. Kendi26sürümlük geçmişi ve kesinBtenant kimlik kümesi ile tekbaşına ve tamdosya kabulü zorunlu; kontrol kaldırılmaz. Güncel hedefint/prepush tekrar gerekir.
 
 Servis son hedef gerçekDBint11/11 geçti. Exporttestindeki iki yeni kontrol için assertiontabanı53→55 yükseldi; tam prepush ve korunan taban sonrası yenilenmiş bağımsız rapor zorunlu.
+
+**Servis son kapı:** Güncel tam prepush YEŞİL: lint/typecheck,5438birim, tüm bekçiler, AC04 387. Son kaynak11int geçti; bağımsız rapor0/0/0 @53244b1 önceki199birim+11int ve aynı işkodunu, yeni test/metadata farkını ayırarak doğruladı. CI/deploy/baskı ekranı hâlâ ayrı bekler.
