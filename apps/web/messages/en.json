@@ -6843,6 +6843,22 @@
       "locationName": "Bin name",
       "warehouseName": "Warehouse",
       "customerName": "Customer"
-    }
+    },
+    "printers": "Printers",
+    "newPrinter": "Add printer",
+    "templatePrinter": "Printer for this label",
+    "generalPrinter": "General printer",
+    "thisDevice": "On this device",
+    "company": "Company-wide",
+    "printer": "Printer profile",
+    "inherit": "Use general preference",
+    "systemPrinter": "Select in system dialog",
+    "printerClosed": "Inactive",
+    "active": "Active",
+    "printerHint": "This is a print profile. Choose the final printer in the system dialog.",
+    "printerSaved": "Printer preference saved",
+    "saveForPrinter": "Save the label first to select its printer",
+    "calibration": "Print offset",
+    "calibrationError": "Offset must be between −10 and +10 mm"
   }
 }

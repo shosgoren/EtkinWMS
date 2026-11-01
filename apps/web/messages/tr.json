@@ -6843,6 +6843,22 @@
       "locationName": "Raf yeri adı",
       "warehouseName": "Depo",
       "customerName": "Müşteri"
-    }
+    },
+    "printers": "Yazıcılar",
+    "newPrinter": "Yazıcı ekle",
+    "templatePrinter": "Bu etiketin yazıcısı",
+    "generalPrinter": "Genel yazıcı",
+    "thisDevice": "Bu cihazda",
+    "company": "Firma genelinde",
+    "printer": "Yazıcı profili",
+    "inherit": "Genel tercihi kullan",
+    "systemPrinter": "Sistem penceresinde seç",
+    "printerClosed": "Kapalı",
+    "active": "Etkin",
+    "printerHint": "Bu bir baskı profili. Son yazıcı seçimi sistem penceresinde yapılır.",
+    "printerSaved": "Yazıcı tercihi kaydedildi",
+    "saveForPrinter": "Yazıcı seçmek için önce etiketi kaydet",
+    "calibration": "Baskı kaydırma",
+    "calibrationError": "Kaydırma −10 ile +10 mm arasında olmalı"
   }
 }

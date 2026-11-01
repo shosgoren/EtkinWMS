@@ -159,3 +159,8 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - /label-designs sunucu oturum/yetki kontrolü ve yalnız seçili taslağın kanonik logoları. Ortak liste/context/arşiv/arama/keyset; hazır tasarım → gerçek action kayıt → yetkili yayın/varsayılan. Yarım iş çıkış koruması; sürüm çakışmasında sessiz üzerine yazma yok. Taslak kaydı açık Kaydet eylemidir; otomatik kayıt iddiası yok.
 - Ad/ölçü/yayın/sürüm ayarları ortak özellik panelinde; logo yerel JPG/WebP/PNG'den sınırlı PNG'ye dönüşür, sunucu yeniden doğrular. Kullanımda olan sürüm taslak değişiminden etkilenmez; tarihsel sürüm yalnız taslağa alınır. Kaynak/gerçek barkod üretimi bu ekranın işi değildir.
 - Webtypegen/tsc/hedefESLint ve mevcut parite/UI/action417birim geçti. Henüz gerçek UI etkileşim e2e/bağımsız inceleme/prepush/CI/canlı yok. Yazıcı paneli ve gerçek işlem etiketleri sıradadır.
+
+### T-1162 yazıcı ekranı (yerel)
+- Genel profil ve her etikette ayrı profil; firma/genelcihaz seçenekleri gerçek CAS action ile kaydedilir. Yeni şablon önce kaydedilmeden şablon tercihi yapılamaz; yanlışlıkla genel tercihe yazılmaz. Profiller adı/DPI/kalibrasyon/aktiflik ile ortak form kalıbındadır, URL veya ağ hedefi yoktur.
+- Tarayıcı tercihinin fiziksel yazıcı seçmediği kısa notla görünür. Kapalı profil başka yazıcıya sessiz düşmez; Genel tercihi kullan açık seçenektir. Değişiklik yalnız labels.printers/MFA.
+- Webtypegen/tsc/ESLint ve tercih/UI/action426birim geçti. UI uçtan uca ve baskı kaynağı/CI/yayın bekler; OS/fiziksel yazıcı kabulü yapılmadı.
