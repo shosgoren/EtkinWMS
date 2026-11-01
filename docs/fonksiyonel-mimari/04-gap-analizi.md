@@ -2,26 +2,36 @@
 
 > **Bu bölüm neyi anlatır?** 01–03 bölümlerinde kod okunurken bulunan eksiklerin tek listesi ve önerilen geliştirme sırası.
 >
-> **Nasıl okunur?** Her satırda: ne eksik, iş açısından ne sonucu var, hangi bölümde ayrıntısı var, BACKLOG'daki kimliği ve **29 Ekim durumu** (Açık / Kısmen / Kapandı). 23 Ekim'de "Yeni" yazan satırlar T-1028 parçasıyla BACKLOG'a **B-149…B-154**, 28 Ekim'de yeni yazanlar T-1113 ile **B-199…B-206** olarak girdi; satırlarda artık o numara yazılıdır. 29 Ekim'de eklenen **G-95…G-99** satırları T-1132 ile BACKLOG'a **B-214…B-218** olarak girdi (kararlar B-212, B-213).
+> **Nasıl okunur?** Her satırda: ne eksik, iş açısından ne sonucu var, hangi bölümde ayrıntısı var, BACKLOG'daki kimliği ve **1 Kasım durumu** (Açık / Kısmen / Kapandı). 23 Ekim'de "Yeni" yazan satırlar T-1028 parçasıyla BACKLOG'a **B-149…B-154**, 28 Ekim'de yeni yazanlar T-1113 ile **B-199…B-206**, 29 Ekim'de eklenen **G-95…G-99** T-1132 ile **B-214…B-218** olarak girdi (kararlar B-212, B-213). 1 Kasım'da eklenen **G-100…G-105** satırları T-1133…T-1142 işlerinin kendi bulgularıdır ve BACKLOG'da zaten numaralıdır (**B-219…B-246**); satırlarda o numara yazılıdır.
 >
 > **Boyut (kaba tahmin, tek geliştirici):** **S** küçük (tek PR, yaklaşık 1 gün) · **M** orta (birkaç gün) · **L** büyük (bir hafta ve üstü). **UI** = mevcut veri yeter, yalnız ekran · **UI+R** = şema değişmez ama yeni okuma işlevi gerekir · **DATA** = migration (veritabanı değişikliği) + yeni iş kuralı gerekir.
 >
 > **Güvenlik satırları (🔒):** Depo herkese açık olduğundan güvenlik açıklarının ayrıntısı burada yazılmaz. Yalnız BACKLOG kimliği ve genel başlık verilir. Ayrıntı gizli danışma taslağındadır (GHSA-jxfh-5j2f-4mvg).
 >
-> **Kaynak:** ilk sürüm 23 Ekim 2026, main `36f3a13` kod okuması; ikinci sürüm main `8e2710d` · 28 Ekim (T-1029…T-1110). **Bu güncelleme: main `2022915` · 29 Ekim 2026** — `0f2d5c0..2022915` arası commit'ler (T-1111…T-1131, PR 246–268), görev kartları `docs/tasks/T-1111…T-1131`, katlanmış STATE/BACKLOG satırları ve `apps/web` içinde arama. Testler, canlı sistem ve veritabanı bu belge için çalıştırılmadı. "Kodda yok" ifadesi arama sonucudur; canlılık yalnız STATE'e göre yazılır.
+> **Kaynak:** ilk sürüm 23 Ekim 2026, main `36f3a13` kod okuması; ikinci sürüm main `8e2710d` · 28 Ekim (T-1029…T-1110); üçüncü sürüm main `2022915` · 29 Ekim (T-1111…T-1131). **Bu güncelleme: main `008070a` · 1 Kasım 2026** — `3620f31..008070a` arası birleşmeler (T-1133…T-1142, PR 270–279), görev kartları `docs/tasks/T-1133…T-1142`, katlanmış STATE/BACKLOG satırları, migration 0066–0070 ve kod araması. Testler, canlı sistem ve veritabanı bu belge için çalıştırılmadı. "Kodda yok" ifadesi arama sonucudur; canlılık yalnız STATE'e göre yazılır (STATE 1 Kasım: canlı main `008070a`, şema 0070).
 
-### 28 Ekim'den bu yana ne değişti? (kısa, 29 Ekim)
+### 29 Ekim'den bu yana ne değişti? (kısa, 31 Ekim – 1 Kasım)
 
-İki günde **onaylı tuvaldeki ekranların çoğu koda geçti** ve eski tasarım öğeleri temizlendi; hepsi migration'sız, ikisi hariç:
+İki günün işi neredeyse tümüyle **Paraşüt entegrasyonu** ve **yetki**ydi: on PR (T-1133…T-1142), beş migration (0066–0070). STATE'e göre hepsi canlıda (canlı main `008070a`, 1 Kasım; deploy-vps: yedek → migration → kuyruk → derin sağlık). Gerçek Paraşüt hesabıyla deneme henüz yapılmadı; aşağıdaki "UNKNOWN"lar oradan doğar.
 
-- **Ekranlar tuvale:** Ayarlar › Entegrasyonlar alt bölümler + her zaman görünen yön seçimi (T-1112) · yönetici ana ekranı: Bekleyen işler + İşler ızgarası (T-1115), Düzenle'de yetkili her işi ekle/kaldır (T-1128) · ürün kartı: Kullanılabilir/Ayrılmış kutuları, Stok ve yer pivotu, Hareketler · Takip · Değişiklik geçmişi (T-1116) · yeni cari formu 3 sütun + ürün listesinde Kullanılabilir/Barkod (T-1117).
-- **Veritabanı (2 migration):** **0064** cari kısa ad, ilçe, varsayılan teslimat (T-1117) · **0065** ürünün temel birimi, miktar hassasiyeti ve takip modu ilk kullanıma kadar değişebilir (T-1129; tek "kullanılmış" tanımı veritabanında, A-87/A-107 güncellendi). İkisinin de canlıda olduğu bu belge için doğrulanmadı (UNKNOWN).
-- **Eski tasarım kalmadı:** belge formlarının içi (T-1119; G-91 kapandı), pencere/uyarı/kilitli durumlar (T-1121), saha ekranları (T-1122). Ortak `KalipBildirim`, `KalipDugme`, `KalipSecimAra` + sunucu aramalı seçim sayfası.
-- **Rehber ve kısayol:** Rehber her ekranda şimşek halkasında (T-1120), telefonda halka açılıp kapanmıyor (T-1123), halka ekrana sığıyor (T-1131); rehber sırayla odaklanır, bölüm değişince katlanır, kaldığı yerden sürer (T-1124); kart yapılacak yeri hiçbir görünümde örtmez (T-1130).
-- **Etkin ve ses servisi:** "entegrasyon" komutu yeni ekranı açar (T-1118); ses servisi belleği makineden bağımsız (T-1114, T-1125 THP kapalı, T-1126 `CT2_USE_MKL=0`).
-- **Açık PR'lar kapandı:** T-1111 (PR 246) ve T-1070 (PR 244) birleşti. Açık kalan tek PR: 250 (T-1071, başka oturum) — migration numarası çakışıyor (G-98).
+| Tarih | İş | Ne değişti (sade) | Migration |
+| :--- | :--- | :--- | :--- |
+| 31 Ekim | T-1133 (PR 271) | Paraşüt'e bağlanmak **3 adım**: BAĞLAN → Paraşüt'te giriş + izin → şirket seç. Müşteri anahtar girmez; Etkin'in ortak uygulaması sunucuda. Firmanın kendi uygulaması "Gelişmiş" altında kalır ve önceliklidir. | — |
+| 31 Ekim | T-1134 (PR 272) | Entegrasyonlar ekranı düzeltmeleri: biçimli boş durum, telefonda 2×2 yön düğmeleri, Alan sahipliği "YAKINDA", "Muhasebe programı" metni, 44 px "Şimdi çalıştır", rehber deliği akış satırında, kapalı pencere klavyeden kapalı. | — |
+| 31 Ekim | T-1135 (PR 270) | **Güvenlik kilitleri** (kullanıcı kararı 30 Ekim — stok sahibi Etkin): stok toplamı ile irsaliye birlikte açılamaz, stok Devir tamamlanmadan açılamaz, miktar ondalık metin (I-09), kapat/aç irsaliye kaçırmaz, kesin red tekrar denenmez, 40 dk takılan koşu TIMEOUT, koşu günlüğü budanır, vergi numarasız cari ad + şehirle eşlenir. | **0066** |
+| 31 Ekim | T-1136 (PR 274) | Yön seçiminin sonucu satır altında tek cümle; dolu katalogda yeni "al" / "gönder" önce onay ister (Vazgeç eski yönü korur). | — |
+| 31 Ekim | T-1137 (PR 275) | **Sağlık bandı** (koptu / takıldı / yarıda kaldı / eşitlenmedi → tek düğme); "Bekleyenler ve hatalar"da irsaliye ve kart satırı **çözüm düğmeleri** (Yeniden gönder · Gönderildi say · Gönderme · Yeniden dene); Excel kaynak kartı Paraşüt'ün yanında. | — |
+| 31 Ekim | T-1138 (PR 273) | Paraşüt **anlık bildirim** (webhook): ürün/cari değişikliği beklemeden gelir; açıkken tam tarama 15 dk'ya, depo 3 dk'ya düşer. | **0067** |
+| 31 Ekim | T-1139 (PR 276) | **E-posta + parola ile bağlanma kalktı** (kullanıcı kararı "eski yöntem olmasın"); o yolla kurulmuş bağlantılar kesildi, ekranda tek "Yeniden bağlan". Veri silinmedi. | **0068** (yalnız veri) |
+| 31 Ekim | T-1140 (PR 278) | **Gerçek iki yönlü**: değişen taraf öbürüne yansır, ikisi de değiştiyse son değişen kazanır (zamanı bilinmiyorsa Paraşüt); "Etkin'den gönder" düzeltmeleri de gönderir; cari ve depo Paraşüt'te silinince/arşivlenince ürün gibi arşive alınır; arşivli raftaki stok toplama girmez. | **0069** |
+| 31 Ekim | T-1141 (PR 277) | **Kart yetkileri**: ürün / cari / depo / raf yeri yazmaları bölüm × işlem anahtarına bağlandı; yetkisiz kullanıcı kilitli düğme + sarı "yetkin yok · yöneticine sor" balonu görür. Rol erişimi değişmedi. | — |
+| 1 Kasım | T-1142 (PR 279) | Yeni **Yetkiler** ekranı: her yetki aç/kapa, anında kayıt, hazır şablonlar, kişi görünümünde her yetkinin kaynağı; 12 kart anahtarı gruba verilebilir; ürün/cari/depo anahtarları iki adımlı doğrulama ister; paylaşılan birim adı yalnız Yönetici. | **0070** |
 
-Kapanan ya da kısmen kapanan satırlar: G-26 (kısmen), G-80 (kısmen), G-83, G-84 (kısmen), G-85, G-86, G-88, G-90 (kısmen), G-91. Yeni satırlar: **G-95…G-99**. Sonda yeni bölüm: **4.10 Geliştirme önerileri ve yeni fikirler**.
+Kapanan ya da kısmen kapanan satırlar: **G-13 Kapandı** (T-1137), G-80 (kısmen, daha ileri), G-92 (kısmen: cari/depo kaynak arşivi), 🔒 B-67 (kısmen: kart yazmaları `settings.manage`'den ayrıldı). G-98 değişti: açık PR 250'nin migration'ı artık **0071** olmalı. Yeni satırlar: **G-100…G-105**. 4.10 yenilendi.
+
+### 28 Ekim'den 29 Ekim'e ne değişti? (kısa)
+
+Onaylı tuvaldeki ekranların çoğu koda geçti (Entegrasyonlar alt bölümleri T-1112, yönetici ana ekranı T-1115/T-1128, ürün kartı T-1116, yeni cari T-1117), eski tasarım öğeleri temizlendi (T-1119, T-1121, T-1122), rehber ve kısayol düzeltildi (T-1120, T-1123, T-1124, T-1130, T-1131), ses servisi belleği sabitlendi (T-1114, T-1125, T-1126). İki migration: 0064 cari ayrıntıları, 0065 ürün sabit alanları (STATE'e göre artık canlı şemada). O gün kapananlar: G-83, G-85, G-86, G-88, G-91; yeni satırlar G-95…G-99.
 
 ### 23 Ekim'den bu yana ne değişti? (kısa)
 
@@ -33,7 +43,7 @@ Bu beş günde yapılan işlerin çoğu **görünüm ve kullanım kolaylığıyd
 
 Sunucuda komutu yazılmış ama hiçbir düğme çağırmıyor. Bu işler genellikle **ucuzdur**: iş kuralı ve veritabanı hazır, yalnız ekran (tuval → birebir aktarım, I-18) gerekir. 28 Ekim araması: `setWorkPriorityAction`, `updateWorkShiftAction`, `resolveProblemAction` (`apps/web/app/t/[slug]/work-actions.ts`) ve `leaveTenantAction` (`members/actions.ts`) tanımlı ama hiçbir ekran dosyası çağırmıyor; `reverseDocument`, `cancelInboundReceipt`, `createCustomerReturn`, `updateDraftOrder` web tarafında hiç geçmiyor.
 
-| # | Eksik | İş sonucu (sade) | Ayrıntı | BACKLOG | Boyut | 29 Ekim |
+| # | Eksik | İş sonucu (sade) | Ayrıntı | BACKLOG | Boyut | 1 Kasım |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | G-01 | **Ters kayıt düğmesi** (`reverseDocument`) | İşlenmiş bir fiş yanlışsa kullanıcı düzeltemiyor. Belge kartı artık kayıt kartı kalıbında (T-1091) ama "Ters kayıt" düğmesi yok. | 02b §2B.7 | B-149 | S · UI | Açık |
 | G-02 | **Teslim iptali** (`cancelInboundReceipt`) ve **taslak fiş düzenleme** (`updateDraft`) | Yanlış açılmış beklenen teslim kapatılamıyor; taslak fiş düzeltilemiyor. | 02b §2B.1, §2B.7 | B-149 | S · UI | Açık |
@@ -47,18 +57,18 @@ Sunucuda komutu yazılmış ama hiçbir düğme çağırmıyor. Bu işler genell
 | G-10 | **Paketli üretim** (4 eylem) | QR'lı paketten üretime tüketim ekranda yok. | 02c §11 | B-50 ile | M · UI | Açık |
 | G-11 | **Yeniden yerleştirme görevi** sahada "Başla" yok | Görev doğuyor ama saha personeli başlatamıyor. | 02c §2 | B-149 | S · UI | Açık |
 | G-12 | **Alandan ayrılma** (`leaveTenantAction`) | Kullanıcı bir firmadan kendisi çıkamıyor. | 02a | B-55 ile | S · UI | Açık |
-| G-13 | **Paraşüt "CHECK" (sonucu belirsiz) irsaliyesi** için karar düğmesi | Belirsiz gönderim yalnız listede durur, çözülemez. | 02d ERP | B-113 | S–M · UI | Açık |
+| G-13 | **Paraşüt "CHECK" (sonucu belirsiz) irsaliyesi** için karar düğmesi | T-1137 ile ekranda satır satır: Yeniden gönder (onaylı) · Gönderildi say · Gönderme; bekletilen kart için Yeniden dene. Kalan: Paraşüt irsaliye numarasını bağlama ve eşlemeyi ekrandan düzeltme (G-101). | 02d ERP | B-113 | S–M · UI | **Kapandı** (T-1137) |
 | G-14 | **Güvenilen cihaz listesi + tekil iptal** | "30 gün hatırla" cihazları tek tek kaldırılamıyor (toplu iptal var). | 02a Giriş | B-76 kalanı | S · UI+R | Açık |
 | G-15 | **Müşteri kapatma** (`tenants.status = CLOSING`) | Panelde müşteri kapatma/silme düğmesi yok; yalnız operatör betiği (T-1005, canlıda çalıştırılmadı). ⚠️ Müşteri verisi kalıcı silinir, kullanıcıya önceden haber şartı var. | 02d Müşteriler | B-43, B-137 | M · UI + süreç | Açık |
 | G-16 | **Destek: müşterinin "Çözüldü" demesi, ekran görüntüsü eki, "Erişim iste"** | Destek akışı yarım. | 02d Destek | B-88, B-89, B-90, B-44 | M–L · DATA (ek için G-43) | Açık |
 
-### Onaylı masaüstü tuvali ile kod arasındaki fark (28 Ekim; 29 Ekim durumu)
+### Onaylı masaüstü tuvali ile kod arasındaki fark (28 Ekim; 1 Kasım durumu)
 
-26 Ekim'de onaylanan masaüstü tuvali (STANDART kalıpları) ile kodun karşılaştırması; son sütun 29 Ekim durumudur. Bir satırda birden çok parça varsa her parçanın boyutu ve türü ayrı yazılır; **UI** parçaları migration'sız hemen yapılabilir, **DATA** parçaları ayrı iş olarak sonraya kalır.
+26 Ekim'de onaylanan masaüstü tuvali (STANDART kalıpları) ile kodun karşılaştırması; son sütun 1 Kasım durumudur. Bir satırda birden çok parça varsa her parçanın boyutu ve türü ayrı yazılır; **UI** parçaları migration'sız hemen yapılabilir, **DATA** parçaları ayrı iş olarak sonraya kalır.
 
-| # | Eksik | İş sonucu (sade) | Parçalar ve boyut | BACKLOG | 29 Ekim |
+| # | Eksik | İş sonucu (sade) | Parçalar ve boyut | BACKLOG | 1 Kasım |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| G-80 | **Ayarlar › Entegrasyonlar tek ekran**: solda alt bölüm listesi, sağda tek konu; her akış için her zaman görünen **4 seçenekli yön seçici** | Bugün Bağlantılar (Excel) ve entegrasyon grupları alt alta duruyor; kullanıcı neyin nereden geldiğini tek bakışta seçemiyor. | Sol alt bölüm listesi **M · UI** (ortak ayar bileşeni yok, önce kalıba eklenir) · 4 seçenekli yön seçici **S · UI** ("Yalnız Etkin WMS" = akış kapalı) · Bağlantı + Excel tek bölüm **S · UI** · Bekleyenler/hatalar sayıları **S · UI** · Pasif ve arşiv sayıları **S · UI+R** · kayıt bazlı hata listesi **M · DATA** · pasif/arşiv politika ayarı **M · DATA** · alan sahipliği **M–L · DATA** · satış faturasından iş başlatma **L · DATA**. Depolar için "iki yönlü" seçenek tuvalde gizli, katalog destekliyor → **ürün kararı** | B-196, B-199, B-200, B-171, B-170, B-169 | **Kısmen** — T-1112: sol alt bölümler (`kalip/ayar.tsx`), her zaman görünen yön seçimi, bekleyen/hata sayıları ve rozet; Depolar "iki yönlü" gösteriliyor (kullanıcı kararı 28 Ekim). Kalan: Excel toplu işlemin Bağlantı bölümüne alınması (S · UI), pasif/arşiv sayıları (S · UI+R), DATA parçaları |
+| G-80 | **Ayarlar › Entegrasyonlar tek ekran**: solda alt bölüm listesi, sağda tek konu; her akış için her zaman görünen **4 seçenekli yön seçici** | Bugün Bağlantılar (Excel) ve entegrasyon grupları alt alta duruyor; kullanıcı neyin nereden geldiğini tek bakışta seçemiyor. | Sol alt bölüm listesi **M · UI** (ortak ayar bileşeni yok, önce kalıba eklenir) · 4 seçenekli yön seçici **S · UI** ("Yalnız Etkin WMS" = akış kapalı) · Bağlantı + Excel tek bölüm **S · UI** · Bekleyenler/hatalar sayıları **S · UI** · Pasif ve arşiv sayıları **S · UI+R** · kayıt bazlı hata listesi **M · DATA** · pasif/arşiv politika ayarı **M · DATA** · alan sahipliği **M–L · DATA** · satış faturasından iş başlatma **L · DATA**. Depolar için "iki yönlü" seçenek tuvalde gizli, katalog destekliyor → **ürün kararı** | B-196, B-199, B-200, B-171, B-170, B-169 | **Kısmen** — T-1112: sol alt bölümler (`kalip/ayar.tsx`), her zaman görünen yön seçimi, bekleyen/hata sayıları ve rozet; Depolar "iki yönlü" gösteriliyor (kullanıcı kararı 28 Ekim). 1 Kasım: yön sonucu cümlesi + onay (T-1136), kayıt bazlı hata listesi + çözüm düğmeleri (T-1137), Excel kaynak kartı (T-1137), sağlık bandı (T-1137), iki yönlü kural (T-1140). Kalan: Excel toplu işlemin Bağlantı bölümünde çalışması (S · UI), pasif/arşiv sayıları (S · UI+R), alan sahipliği (alan bazlı, M–L · DATA; B-238), satış faturasından iş (L · DATA, ertelendi) |
 | G-81 | **Ayarlar › İş akışı sekmesi** | Kabul kalite onayı, yarım sayım süresi, vardiya ve görev ayrılığı ayarları dağınık ya da hiç yok. | Mevcut ayarları bu sekmeye taşımak **S · UI** (G-07, G-28'i de kapatır) · teslimat yolu, iş adımları, teslim teyidi **L · DATA** | B-168, B-150 | Açık |
 | G-82 | **Ayarlar › Etiket ve yazıcı sekmesi** | Etiket tasarımı ve yazıcı seçimi yapılamıyor; bugün tek sabit şablon. | **M · DATA** (ölçü, alanlar, varsayılan tasarım) | B-166 | Açık |
 | G-83 | **Yönetici ana ekranı**: 3 bekleyen iş kutusu + 8'li İşler ızgarası + sürükle-bırak düzen | Yönetici açılışta "bugün ne bekliyor?" sorusunun cevabını göremiyor; canlıda eski Pano panosu. | **M · UI** (veri var) | B-173, B-201, B-205 | **Kapandı** (T-1115, T-1128; canlı UNKNOWN). Kalan veri: siparişte sevk tarihi, sayım kutusunda raf/koridor, İşler seçimi sunucuda (B-205) |
@@ -73,7 +83,7 @@ Sunucuda komutu yazılmış ama hiçbir düğme çağırmıyor. Bu işler genell
 
 Kolonu ya da tablosu var; kullanıcı göremiyor veya giremiyor.
 
-| # | Veri | Sonuç | Ayrıntı | BACKLOG | Boyut | 29 Ekim |
+| # | Veri | Sonuç | Ayrıntı | BACKLOG | Boyut | 1 Kasım |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | G-20 | **Min/maks stok** (`item_stock_policies`) | Pano ve ürün kartı okuyor ama **girilecek ekran yok**. Minimum altı uyarısı ve satın alma önerisi bu yüzden çalışamaz. | 03a, 02b §2B.6 | B-150, B-83 | S · UI | Açık |
 | G-21 | **Stok uyarıları** (`stock_alerts`) | Tablo var, şema dışında hiçbir kod okumuyor ya da yazmıyor. | 03a | B-150, B-81 | M · kural + UI | Açık |
@@ -91,7 +101,7 @@ Kolonu ya da tablosu var; kullanıcı göremiyor veya giremiyor.
 
 ## 4.3 Veri bağlantısı eksikleri
 
-| # | Eksik | Sonuç | BACKLOG | Boyut | 29 Ekim |
+| # | Eksik | Sonuç | BACKLOG | Boyut | 1 Kasım |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | G-40 | **Cariler hiçbir belgeye bağlı değil.** Teslimde tedarikçi (`supplier_ref`), siparişte müşteri (`customer_ref`) serbest metin. | "Bu tedarikçiden ne geldi?" ya da "Bu müşteriye ne gitti?" raporu güvenilir alınamaz. ERP eşlemesi zorlaşır. Cari kartı (T-1090) ve otomatik cari kodu (T-1093) geldi; belgeye bağ hâlâ yok. | B-151 | L · DATA | Açık |
 | G-41 | Siparişte **teslim tarihi** ve **depo** kolonu yok | Geciken sipariş uyarısı (B-81) yapılamaz. | B-151 | M · DATA | Açık |
@@ -100,7 +110,7 @@ Kolonu ya da tablosu var; kullanıcı göremiyor veya giremiyor.
 
 ## 4.4 Eksik iş kuralları ve doğrulamalar
 
-| # | Eksik | Sonuç | BACKLOG | Boyut | 29 Ekim |
+| # | Eksik | Sonuç | BACKLOG | Boyut | 1 Kasım |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | G-50 | **Lot / seri takipli ürün** normal saha kabulü, toplama, sevk ve sayımda reddediliyor; seri takipli ürünün hiç kabul yolu yok | Lotlu çalışan müşteri (gıda, kimya, ilaç) bugün saha akışlarını kullanamaz. Yalnız paketli kabul (kapalı) lotu destekliyor. | B-152, B-165 | L | Açık |
 | G-51 | Toplamada **"ürün rafta hiç yok"** barkodsuz bildirilemiyor; eksikten doğan sayım görevi sahada açılamıyor | Saha personeli takılır. | B-96 | M | Açık |
@@ -114,15 +124,28 @@ Kolonu ya da tablosu var; kullanıcı göremiyor veya giremiyor.
 
 ### Açık ürün işleri (Yeni, 28 Ekim)
 
-| # | Eksik | Sonuç | BACKLOG | Boyut | 29 Ekim |
+| # | Eksik | Sonuç | BACKLOG | Boyut | 1 Kasım |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | G-90 | **Etkin'e doğal dille konuşma** (serbest cümleden işi anlamak) | Bugün Etkin belirli kalıp cümleleri anlıyor; çoğu sesli komut yalnız ilgili ekranı açıyor (B-195). Kural tabanlı doğal komutlar ("bekleyen işim var mı", "ürünleri aç", "kullanıcı ayarlarına git") **T-1110** ile 28 Ekim'de main'e birleşti (PR 245; canlı: UNKNOWN); "entegrasyon" komutu yeni Entegrasyonlar ekranını açıyor (T-1118). Daha serbest anlama için **sunucuda çalışan yerel küçük dil modeli** seçeneği var: veri sunucudan çıkmaz (gizlilik), ama VPS **2 çekirdek / 8 GB**; model hem belleği hem cevap süresini zorlar. **Karar sizde bekliyor.** | T-1110, B-195, B-198, B-204, B-131, B-132 | T-1110: S–M · migration yok; yerel model: M–L · migration yok, sunucu kaynağı gerekir | Kısmen (T-1110 birleşti) |
 | G-91 | **Belge formlarının içi eski bileşenlerle** (mal kabul, sevk, üretim, stok belgeleri, sayım) | T-1119 ile kalıba geçti; satır/seçim değişikliği çıkış korumasını tetikliyor. Pencere/uyarı (T-1121) ve saha ekranları (T-1122) da temizlendi. Küçük kalanlar B-207. | B-123, B-162, B-207 | M · UI | **Kapandı** (T-1119) |
 | G-95 | **Kiracı dışı ekranlar eski bileşenlerle** (Yeni, 29 Ekim): giriş, iki adımlı doğrulama, parola sıfırlama, deneme aktivasyonu, çalışma alanı seçimi, saha katılımı | Uygulamaya girmeden önceki ekranlar diğerlerinden farklı görünür; ortak bildirim/ses/odak davranışı yok. Tuval `Giris.dc.html` var. | B-214 (B-159 ile) | M · UI | Açık |
 | G-96 | **Belge ve mal kabul satırında birim/katsayı veritabanında doğrulanmıyor** (Yeni, 29 Ekim; T-1129 bağımsız incelemesi) | Ürünün temel birimi artık ilk kullanıma kadar değişebildiği için, eski birimle açık kalmış bir formdan gelen satır reddedilmeli. Etki tek ürün, ters kayıtla düzeltilir. | B-209 | S–M · DATA | Açık |
-| G-92 | **Pasif durum ve arşiv kalanı**: pasif kart yeni işlemde seçilemesin, arşivden çıkarma, arşiv engel listesi, kalıcı silme | Bugün yalnız "arşivli" var (T-1040); kullanılmayan kart pasife alınamıyor. | B-163, B-172 | M · DATA | Açık |
+| G-92 | **Pasif durum ve arşiv kalanı**: pasif kart yeni işlemde seçilemesin, arşivden çıkarma, arşiv engel listesi, kalıcı silme | Bugün yalnız "arşivli" var (T-1040); kullanılmayan kart pasife alınamıyor. T-1140: Paraşüt'e bağlı cari ve depo da kaynakta silinince/arşivlenince arşive alınır, kullanımdaysa bekler (engel listesi cari/depo için domain'de). | B-163, B-172 | M · DATA | **Kısmen** (kaynak arşivi T-1140) |
 | G-93 | **Raf adresi ve tekil QR**: Koridor-Sütun-Kat-Göz adresleme, toplu göz oluşturucu, tek tek adet/kutu/palet QR | Büyük depoda raf kurulumu ve QR'lı izleme yavaş/eksik. | B-164, B-165 | L · DATA | Açık |
 | G-94 | **İş emirleri ve sipariş kaynakları**: siparişten iş emri, kişi/ekip ataması, Excel/ERP'den sipariş, dış belge no | Sipariş sonrası iş takibi elle; sipariş yalnız elle açılıyor. | B-167, B-169 | L · DATA | Açık |
+
+### Entegrasyon ve yetki işlerinden doğanlar (Yeni, 1 Kasım)
+
+| # | Eksik | Sonuç | BACKLOG | Boyut | 1 Kasım |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| G-100 | **Paraşüt gerçek hesap denemesi** (Yeni, 1 Kasım): ortak uygulama kaydı, anlık bildirim anahtarı ve imza biçimi, iki yönlü `PUT` alanları, `updated_at`, cari `archived`, irsaliye deposu/cari türü, kesirli miktar, 429 | Kod sahte Paraşüt'le sınandı; gerçek hesapta bir alan farklıysa iki yönlü çakışmalar hep "Paraşüt kazanır"a düşer ya da anlık bildirim kurulamaz (30 sn tarama sürer, veri kaybı yok). **Sahibin yapacağı:** Paraşüt'te uygulama kaydı + sunucuya iki değer + web yeniden başlatma (OPERATIONS). | B-219, B-229, B-235, B-110 | S (deneme) · sizden | Açık |
+| G-101 | **Entegrasyon kuyruğunda eşleme düzeltme** (Yeni): "Gönderildi say" denen irsaliyeye Paraşüt irsaliye numarasını bağlama; "dış kayıt başka karta bağlı" kartın eşlemesini ekrandan taşıma | Bugün yalnız "bir daha gönderme" ve "yeniden dene" var; yanlış eşleme ekrandan düzeltilemez. | B-227, B-228, B-224 | M · UI+R (dış kimlik girişi) | Açık |
+| G-102 | **Yetki kalanları** (Yeni): depo/raf Excel içe aktarımı hâlâ `settings.manage`; kişiye özel istisna yok (rol + en çok bir grup); Yetkiler ekranı tuvalde ve ilk kullanım rehberinde yok | Depo sorumlusuna raf aktarımı ayrı veremezsiniz; tek kişiye istisna için ayrı grup açmak gerekir. | B-243 (B-244 aynı), B-245, B-246 | S (Excel) · M–L · DATA (kişiye özel) · S (tuval) | Açık |
+| G-103 | **Bağlantısı kesilen müşteriye ekran dışı haber** (Yeni): 0068 eski yöntem bağlantılarını kesti; haber yalnız Entegrasyonlar bandı ve sol rozette | Müşteri ekranı açmazsa eşitlemenin durduğunu fark etmez. Sağlık bandının zil / e-posta karşılığı da yok. | B-232 | S–M | Açık |
+| G-104 | **İki yönlü eşitlemenin kenar durumları** (Yeni): Etkin'de boşaltılan cari alanı Paraşüt'te silinmez; etkin raf yeri olan depo Paraşüt'te silinse de bekler; cari formu ve cari Excel'i "Paraşüt'e de gider" demiyor; yerel değişiklik anı denetim kaydından dizinsiz okunur | Kullanıcı neyin Paraşüt'e gittiğini formda görmez; büyük firmada çakışma kararı yavaşlayabilir. | B-236, B-237, B-240, B-241 (B-216 ile) | S her biri (B-241: S · migration) | Açık |
+| G-105 | **Ortak uygulama ve webhook sağlamlaştırması** (Yeni): ortak sırrın bağlantı kutusuna kopyalanmaması, yaşam döngüsü bağının açık deneme kimliğiyle kurulması, webhook kaydı sürerken yeniden bağlanma durumu | Sır döndürmede eski değer kutularda kalır; kenar durumda anlık bildirim saatlik denemeye düşebilir. | B-221, B-222, B-234 | S–M | Açık |
+
+**Not (BACKLOG temizliği):** B-226 ("iki yönlü gerçek iki yönlü değil") T-1140 ile karşılandı; kalan alan bazlı kural B-238'dedir. B-242 BİTTİ (#279).
 
 ## 4.5 Transaction (hep-ya-da-hiç) durumu
 
@@ -132,13 +155,15 @@ Deneme aktivasyonu bilinçli olarak iki aşamalıdır: kullanıcı hesabı önce
 
 Bilinçli tek istisna: toplamada eksik çıkınca **yeniden ayırma** ayrı işlemde çalışıyor. Arada hata olursa satır "ayrımsız açık" kalır ve ekranda görünür. Veri bozulmaz, yalnız elle tekrar gerekir.
 
+1 Kasım notu: T-1133…T-1142 stok yazan işlemlere dokunmadı. Entegrasyon tarafında ağ çağrıları veritabanı işleminin dışında, yazımlar kısa işlemde yapılır (I-14); iki yönlü eşitleme ve cari/depo yaşam döngüsü stok tablosuna yazmaz, kilit almaz (I-04, I-15); kart akışında yön her işlem başında ve her dış yazımdan önce yeniden doğrulanır. Kuyruk çözüm eylemleri ve yetki ekranı satır kilidi altında, audit'i aynı işlemde atar ve idempotenttir (I-07, I-12). Webhook işi geçici veritabanı hatasında işlemi ve `processed_events` kaydını geri alır, kuyruk yeniden dener. 0068 tek işlemde bağlantıyı keser ve audit yazar.
+
 29 Ekim notu: T-1111…T-1131 stok yazan işlemlere dokunmadı (yalnız sunum ve iki veri genişletmesi). 0065 ürün sabit alanı değişikliği tek işlemde, ürün satırı kilitliyken karar verir ve denetim kaydını aynı işlemde atar; yarış güvencesi değişiklik tarafındadır, kalan sınır G-96'dadır. 28 Ekim notu: o güncellemede stok yazan işlemler yeniden incelenmedi. 23 Ekim'den bu yana eklenen Paraşüt ürün yaşam döngüsü (T-1067/T-1068, migration 0062) kendi kaydında "mevcut stok ve açık işler korunur" kuralıyla canlıya çıktı; ayrıntısı 02d ERP bölümündedir.
 
 Açık konu: G-54 (taslak düzenleme). Ölçek riski: defter-bakiye denetimi her yazımda tüm geçmişi toplar (B-68).
 
 ## 4.6 Yetki ve güvenlik (yalnız genel başlık)
 
-Ayrıntılar gizli danışma taslağındadır. 28 Ekim itibarıyla BACKLOG'da hâlâ açık görünen başlıklar:
+Ayrıntılar gizli danışma taslağındadır. 1 Kasım itibarıyla BACKLOG'da hâlâ açık görünen başlıklar:
 
 - 🔒 **B-10**: global kimlik tablolarında okuma yetkisini daraltma (kalan kısım)
 - 🔒 **B-12**: saha girişi migration'larının geri alınmasına veri bekçisi
@@ -148,22 +173,24 @@ Ayrıntılar gizli danışma taslağındadır. 28 Ekim itibarıyla BACKLOG'da h�
 - 🔒 **B-21**: depo kapsamının RLS'e taşınması (bugün uygulama katmanında)
 - 🔒 **B-23**, **B-24**, **B-26**: görev ayrılığı, tenant bağlamı güven sınırı, tablo yetkileri (DB ikinci savunma)
 - 🔒 **B-30**, **B-32**, **B-37**, **B-38**: ağ ayrımı, proxy sıkılaştırma, satış sitesi formu, panel kimlik uçları (altyapı)
-- 🔒 **B-67**: cari kişisel alanlarının görünürlüğü, `settings.manage` iznini bölme
+- 🔒 **B-67**: cari kişisel alanlarının görünürlüğü, `settings.manage` iznini bölme (kısmen: T-1141 kart yazmalarını ayrı anahtarlara ayırdı; başlığın kalanı açık)
+- 🔒 **B-231**: Paraşüt anlık bildirim alıcısında doğrulama maliyeti ve yanıt süresi (T-1138 inceleme notu)
+- 🔒 **B-239**: Paraşüt'e düzeltme gönderiminde ön koşul / eşzamanlılık (T-1140 inceleme notu)
 
-23 Ekim'den bu yana güvenlik tarafında yapılanlar: haftalık otomatik güvenlik taraması (T-1030), bağımlılık güvenlik güncellemeleri (T-1029, T-1031); 29 Ekim'e kadar korunan dosyaya dokunan işler (0064, 0065) bağımsız güvenlik incelemesinden geçti (raporlar PR'larda). Yukarıdaki başlıkların hiçbiri bu dönemde kapanmadı.
+23 Ekim'den bu yana güvenlik tarafında yapılanlar: haftalık otomatik güvenlik taraması (T-1030), bağımlılık güvenlik güncellemeleri (T-1029, T-1031); korunan dosyaya ya da yetki/entegrasyon sırlarına dokunan bütün işler (0064…0070, T-1133…T-1142) bağımsız güvenlik incelemesinden BLOCKER/MAJOR 0 ile geçti (raporlar PR'larda; kalan MINOR'lar BACKLOG'da). 31 Ekim – 1 Kasım'da güvenliği artıran ürün değişiklikleri: e-posta + parola ile ERP bağlantısı kalktı (kimlik kutuları silindi, T-1139); kart yazmaları bölüm × işlem anahtarına bağlandı ve ürün/cari/depo anahtarları iki adımlı doğrulama ister (T-1141, T-1142); paylaşılan birim adı yalnız Yönetici. Yukarıdaki eski başlıklardan tam kapanan yok.
 
-Ürün kararı bekleyen (güvenlik açığı değil): **Yetki gruplarındaki "ekranlar" listesi** bugün yalnız menüyü gizliyor; işlemi rol ve izinler belirliyor. Ekran kısıtının sunucuda da uygulanması isteniyorsa ayrı iş açılmalı (G-60, Yeni). Etkin için ayrı yetki anahtarı da aynı kapsamdadır (B-131).
+Ürün kararı bekleyen (güvenlik açığı değil): **kişiye özel yetki istisnası** (bugün rol + en çok bir grup; B-245). **Yetki gruplarındaki "ekranlar" listesi** bugün yalnız menüyü gizliyor; işlemi rol ve izinler belirliyor. Ekran kısıtının sunucuda da uygulanması isteniyorsa ayrı iş açılmalı (G-60, Yeni). Etkin için ayrı yetki anahtarı da aynı kapsamdadır (B-131).
 
 ## 4.7 Altyapı ve süreklilik
 
-| # | Eksik | Sonuç | BACKLOG | Boyut | 29 Ekim |
+| # | Eksik | Sonuç | BACKLOG | Boyut | 1 Kasım |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | G-70 | **Sunucu dışı şifreli yedek, PITR, dış izleme/alarm, hata izleme** | Tek VPS'te disk/sunucu kaybı = veri kaybı riski. **En büyük risk hâlâ budur.** Her yayında sunucu içi yedek alınıyor, sunucu dışı kopya yok. | B-01…B-04 (P0) | M · migration yok; depolama hesabı sizden | Açık |
 | G-71 | **Canlıda PgBouncer yok**; süreç başına 10 bağlantı, DB sınırı 100 | Kullanıcı sayısı artınca ilk tıkanacak yer. | B-154 | M | Açık |
 | G-72 | **Yük testi yok** | Kapasite rakamları (01 §1.8.4) tahmin. VPS 2 çekirdek / 8 GB; ses servisi ve olası yerel dil modeli (G-90) aynı makineyi paylaşır. | B-154 | M | Açık |
 | G-73 | Ses servisi canlıda mı, VPS donanımı ne, Google/Microsoft girişi açık mı | VPS donanımı artık biliniyor: **2 çekirdek / 8 GB** (kullanıcı bilgisi, 28 Ekim). Doğal Türkçe ses (T-1106, T-1109, migration 0063) main'de; ses servisinin VPS kurulumu (B-130) BACKLOG'da hâlâ açık ve canlıda çalıştığı bu belge için doğrulanmadı (UNKNOWN). Google/Microsoft girişi UNKNOWN. | B-130 | — | **Kısmen** |
 | G-97 | **Ses servisi belleği canlıda izlenmiyor** (Yeni, 29 Ekim) | CI'da bellek makineye göre değişiyordu (çekirdek sayısı, büyük sayfalar, Intel/AMD); T-1114/T-1125/T-1126 sabitledi ve 1100 MiB sınırı korundu. Canlı sunucuda bellek ölçümü ve Intel işlemcili makinede gerçek ölçüm yok; tavan 1.280 MB aşılırsa servis yeniden başlar. | B-215 (B-130 ile) | S | Açık |
-| G-98 | **Açık PR 250 (T-1071) migration numarası çakışıyor** (Yeni, 29 Ekim) | PR 250 `0064_product_recreate` kullanıyor; 0064 (T-1117) ve 0065 (T-1129) main'de. Numaralar boşluksuz olmalı → birleşmeden önce **0066**'ya kaydırılmalı. | B-218 (T-1071) | S | Açık |
+| G-98 | **Açık PR 250 (T-1071) migration numarası çakışıyor** (Yeni, 29 Ekim) | PR 250 (1 Kasım'da hâlâ açık) `0064_product_recreate` kullanıyor; main'de artık 0064…0070 var. Numaralar boşluksuz olmalı → birleşmeden önce **0071**'e kaydırılmalı; T-1140'ın ürün yaşam döngüsü değişiklikleriyle de yeniden karşılaştırılmalı. | B-218 (T-1071) | S | Açık |
 | G-99 | **Denetim kaydında kayıt türü/kimliği dizini yok** (Yeni, 29 Ekim) | Ürün kartının "Değişiklik geçmişi" sekmesi denetim kaydını firma + zaman dizini ve süre sınırıyla tarar; kayıt arttıkça yavaşlar. | B-216 | S · migration | Açık |
 | G-74 | **Online tahsilat** (iyzico), otomatik aylık tahakkuk, e-Fatura | Bugün ödeme elle işaretleniyor. | B-40, B-45 | L · DATA | Açık |
 | G-75 | **Hız sınırı okumaları da sayıyor** (28 Ekim) | Arka plan okumaları (son işlemler, rehber durumu, kaydırmayla yükleme) kullanıcının dakikalık işlem hakkını tüketir; yoğun kullanımda "Çok fazla işlem" uyarısı çıkabilir. | B-180 | S–M | Açık |
@@ -174,12 +201,12 @@ Ayrıntılar gizli danışma taslağındadır. 28 Ekim itibarıyla BACKLOG'da h�
 
 ## 4.8 Önerilen geliştirme sırası
 
-Kullanıcının 20 Ekim'de onayladığı sıra (BACKLOG başı) ve 26 Ekim masaüstü standardı kararı korunur. Aşağıdaki yol haritası **29 Ekim** durumuna göre **Şimdi / Sonra / Daha sonra** diye ayrılmıştır. 28 Ekim "Şimdi" listesinden kodda kapananlar çıkarıldı: açık PR'lar (T-1111, T-1070), Entegrasyonlar tek ekran (T-1112, arayüz kısmı), yönetici ana ekranı (T-1115, T-1128), ürün listesi/kartı ve yeni cari (T-1116, T-1117), eski belge formları (T-1119), stok ve yer pivotu (T-1116). Her işin yanında **boyutu** (S/M/L) ve **migration gerekip gerekmediği** yazılıdır: migration'sız işler daha az risklidir ve hızlı canlıya çıkar; migration'lı işler yayında yedek + veritabanı değişikliği ister. Sıra sizin kararınızdır; bu yalnız öneridir.
+Kullanıcının 20 Ekim'de onayladığı sıra (BACKLOG başı) ve 26 Ekim masaüstü standardı kararı korunur. Aşağıdaki yol haritası **1 Kasım** durumuna göre **Şimdi / Sonra / Daha sonra** diye ayrılmıştır. 29 Ekim "Şimdi" listesinden çıkanlar: 0064/0065 canlı doğrulaması (STATE: şema 0070 canlı), Entegrasyonlar kayıt bazlı hata listesi ve CHECK kararı (T-1137), iki yönlü eşitleme (T-1140), kart yetkileri ve yetki ekranı (T-1141, T-1142). STATE'teki sıradaki iş: **Paraşüt gerçek hesap denemesi**; satış akışı kullanıcı kararıyla ertelendi (30 Ekim). Her işin yanında **boyutu** (S/M/L) ve **migration gerekip gerekmediği** yazılıdır: migration'sız işler daha az risklidir ve hızlı canlıya çıkar; migration'lı işler yayında yedek + veritabanı değişikliği ister. Sıra sizin kararınızdır; bu yalnız öneridir.
 
 ```mermaid
 flowchart LR
-  A["ŞİMDİ<br/>yedek/izleme (G-70)<br/>0064/0065 canlı doğrulaması, PR 250 numarası (G-98)<br/>iPhone kontrolü<br/>İş akışı sekmesi (G-81 UI)<br/>hazır komutlara düğme (G-01…G-12, G-20, G-22)<br/>birim/katsayı bekçisi (G-96)<br/>giriş ekranları kalıba (G-95)"] --> B["SONRA<br/>🔒 güvenlik paketi<br/>iade, sipariş düzenleme (G-04, G-09)<br/>cari bağı + sevk tarihi (G-40, G-41)<br/>kişi tercihleri sunucuda (G-89)<br/>pasif durum (G-92), lot/seri (G-50)<br/>Entegrasyonlar veri parçaları (G-80)<br/>Etkin yerel model kararı (G-90)"]
-  B --> C["DAHA SONRA<br/>paket/QR, raf adresi (B-50, G-93)<br/>iş akışı verisi, iş emirleri (G-81, G-94)<br/>etiket/yazıcı (G-82), görsel (G-87)<br/>tahsilat ve satış (B-40, B-41, G-30, G-15)<br/>ölçek (G-71, G-72, G-99, B-68)"]
+  A["ŞİMDİ<br/>yedek/izleme (G-70)<br/>Paraşüt gerçek hesap denemesi (G-100)<br/>iPhone kontrolü<br/>PR 250 → 0071 (G-98)<br/>İş akışı sekmesi (G-81 UI)<br/>hazır komutlara düğme (G-01…G-12, G-20, G-22)<br/>birim/katsayı bekçisi (G-96)<br/>Entegrasyonlar küçük kalanlar (G-80, G-103, G-104)"] --> B["SONRA<br/>🔒 güvenlik paketi<br/>iade, sipariş düzenleme (G-04, G-09)<br/>cari bağı + sevk tarihi (G-40, G-41)<br/>kişi tercihleri sunucuda (G-89)<br/>pasif durum (G-92), lot/seri (G-50)<br/>eşleme düzeltme (G-101), alan sahipliği<br/>yetki kalanları (G-102), giriş ekranları (G-95)<br/>Etkin yerel model kararı (G-90)"]
+  B --> C["DAHA SONRA<br/>satış faturasından iş (ertelendi)<br/>paket/QR, raf adresi (B-50, G-93)<br/>iş akışı verisi, iş emirleri (G-81, G-94)<br/>etiket/yazıcı (G-82), görsel (G-87)<br/>tahsilat ve satış (B-40, B-41, G-30, G-15)<br/>ölçek (G-71, G-72, G-99, B-68)"]
 ```
 
 ### Şimdi (önümüzdeki 1–2 hafta)
@@ -187,34 +214,36 @@ flowchart LR
 | Sıra | İş | Gap / BACKLOG | Boyut | Migration? | Neden şimdi? |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | **Sunucu dışı yedek, izleme ve alarm** | G-70 · B-01…B-04 | M | Hayır | Veri kaybolursa geri dönüş yok. **Sizden bekleyen:** yedek için depolama hesabı. |
-| 2 | **29 Ekim yayınını canlıda doğrulamak** (0064 cari ayrıntıları, 0065 ürün sabit alanları: DB defteri, sağlık, ekran) + **PR 250'nin migration numarasını 0066'ya kaydırmak** | G-98 · B-218 | S | Doğrulama | İki migration birleşti; canlı durumu bu belge için UNKNOWN. Numara çakışması yayını durdurur. |
-| 3 | **Gerçek iPhone Safari kontrolü**: kısa ekran (~660 pt), klavye açıkken rehber kartı, şimşek halkası, ana ekran Düzenle, bas-konuş | B-197, B-210 | — (sizden) | Hayır | T-1123/T-1124/T-1128/T-1130/T-1131 yalnız Chromium'da sınandı. |
-| 4 | **Ayarlar › İş akışı sekmesi (mevcut ayarlarla)**: kalite onayı, yarım sayım süresi, vardiya, görev ayrılığı | G-81 UI, G-07, G-28 · B-150, B-171 | S | Hayır | Ayarlar hazır, yalnız yerini bulur; G-07 ve G-28 birlikte kapanır. Ürün kartındaki İş akışı bağlantısının da önkoşulu. |
-| 5 | **Hazır komutlara düğme**: ters kayıt, teslim iptal/kapat, taslak düzenle, ACİL, sorun çöz, yeniden yerleştirme "Başla", firmadan ayrıl, min/maks girişi, raf toplamaya kapat | G-01, G-02, G-03, G-06, G-08, G-11, G-12, G-20, G-22 · B-149, B-150 | Her biri S (G-03 S–M) | Hayır | Sunucu tarafı hazır; az emekle çok değer. Kayıt kartlarına düğme olarak eklenir. |
-| 6 | **Belge/kabul satırı birim–katsayı veritabanı bekçisi** + 0065 kullanım dallarının davranış testi | G-96 · B-209, B-217 | S–M | **Evet** | Temel birim artık ilk kullanıma kadar değişebiliyor; eski birimle satır yazılmasın. |
-| 7 | **Giriş ailesini kalıba almak** (giriş, iki adımlı doğrulama, parola sıfırlama, aktivasyon) | G-95 · B-214, B-159 | M | Hayır | Müşterinin ilk gördüğü ekranlar; tuval (`Giris.dc.html`) hazır. |
-| 8 | **Entegrasyonlar arayüz kalanı**: Excel toplu işlemi Bağlantı bölümüne almak, Pasif ve arşiv sayıları | G-80 · B-196, B-200 | S | Hayır | Tuvalin kalan arayüz farkı; okuma işleviyle sayılar gösterilir. |
+| 2 | **Paraşüt gerçek hesap denemesi**: ortak uygulama ile bağlan, anlık bildirim kuruldu mu, İki yönlü seçip Etkin'de cari adını değiştir → Paraşüt'te görünüyor mu, Paraşüt'te ürün adı değişince birkaç saniyede geliyor mu, irsaliye/stok | G-100 · B-219, B-229, B-235, B-110 | S (deneme) + düzeltme | Hayır (beklenmez) | Son iki günün bütün kodu sahte Paraşüt'le sınandı; STATE'te sıradaki iş. **Sizden bekleyen:** Paraşüt'te uygulama kaydı + `PARASUT_OAUTH_CLIENT_ID/SECRET` (web.env) + web yeniden başlatma. |
+| 3 | **Gerçek iPhone Safari kontrolü**: kısa ekran (~660 pt), klavye açıkken rehber kartı, şimşek halkası, ana ekran Düzenle, bas-konuş; Entegrasyonlar ve Yetkiler ekranının telefon düzeni | B-197, B-210 | — (sizden) | Hayır | T-1123…T-1142 yalnız Chromium'da sınandı. |
+| 4 | **PR 250'nin migration numarasını 0071'e kaydırmak** | G-98 · B-218 | S | Numara | Açık PR; main'de 0064…0070 var, aynı numara yayını durdurur. |
+| 5 | **Ayarlar › İş akışı sekmesi (mevcut ayarlarla)**: kalite onayı, yarım sayım süresi, vardiya, görev ayrılığı | G-81 UI, G-07, G-28 · B-150, B-171 | S | Hayır | Ayarlar hazır, yalnız yerini bulur; G-07 ve G-28 birlikte kapanır. |
+| 6 | **Hazır komutlara düğme**: ters kayıt, teslim iptal/kapat, taslak düzenle, ACİL, sorun çöz, yeniden yerleştirme "Başla", firmadan ayrıl, min/maks girişi, raf toplamaya kapat | G-01, G-02, G-03, G-06, G-08, G-11, G-12, G-20, G-22 · B-149, B-150 | Her biri S (G-03 S–M) | Hayır | Sunucu tarafı hazır; az emekle çok değer. |
+| 7 | **Belge/kabul satırı birim–katsayı veritabanı bekçisi** + 0065 kullanım dallarının davranış testi | G-96 · B-209, B-217 | S–M | **Evet** | Temel birim ilk kullanıma kadar değişebiliyor; eski birimle satır yazılmasın. |
+| 8 | **Entegrasyonlar küçük kalanları**: cari formu ve Excel'de "Paraşüt'e de gider" satırı, kesilen bağlantıya zil/e-posta haberi, ana ekran Excel kutusu gerçek bağlantıdan, depo/raf Excel yetkisi kart anahtarına, Pasif ve arşiv sayıları | G-104, G-103, G-102, G-80 · B-240, B-232, B-223, B-243, B-200 | S her biri | Hayır | Kullanıcı neyin Paraşüt'e gittiğini ve bağlantının durduğunu ekranı açmadan da bilsin. |
 
 ### Sonra (yaklaşık 2–6 hafta)
 
 | Sıra | İş | Gap / BACKLOG | Boyut | Migration? | Not |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 9 | **🔒 P1 güvenlik paketi** | B-10…B-26, B-30…B-38, B-67 | L | **Evet** (bir kısmı) | 20 Ekim onaylı sırada 6. adım; bağımsız güvenlik incelemesi zorunlu. |
+| 9 | **🔒 P1 güvenlik paketi** | B-10…B-26, B-30…B-38, B-67, B-231, B-239 | L | **Evet** (bir kısmı) | 20 Ekim onaylı sırada 6. adım; bağımsız güvenlik incelemesi zorunlu. |
 | 10 | **Müşteri iadesi**, **sipariş düzenleme / satır iptali**, görev ilerleme kaydı | G-04, G-09, G-05 | M + M + S–M | Hayır (tablolar var) | Günlük depo işinin eksik halkaları. |
-| 11 | **Carileri belgelere bağlamak** + siparişte **sevk tarihi** ve depo | G-40, G-41, G-42 · B-151, B-205 | L | **Evet** | Ana ekranda "bugün çıkacak" gerçek tarihten gelir; "bu tedarikçiden ne geldi?" raporu ve geciken sipariş uyarısının önkoşulu. |
-| 12 | **Kişi tercihleri sunucuda** (ana ekran İşler seçimi, kart/liste, sütunlar, kısayollar) | G-89 · B-205, B-175, B-174 | S–M | **Evet** | Bugün hepsi yalnız o cihazda; her cihazda aynı görünmeli. |
+| 11 | **Carileri belgelere bağlamak** + siparişte **sevk tarihi** ve depo | G-40, G-41, G-42 · B-151, B-205 | L | **Evet** | "Bu tedarikçiden ne geldi?" raporu, geciken sipariş uyarısı ve ileride satış faturasından işin önkoşulu. |
+| 12 | **Kişi tercihleri sunucuda** (ana ekran İşler seçimi, kart/liste, sütunlar, kısayollar) | G-89 · B-205, B-175, B-174 | S–M | **Evet** | Bugün hepsi yalnız o cihazda. |
 | 13 | **Pasif durum + arşiv kalanı** | G-92 · B-172 | M | **Evet** | Ürün listesindeki Pasif çipi (G-84) buna bağlı. |
 | 14 | **Lot/seri takipli ürün saha akışları** | G-50 · B-152 | L | Muhtemelen hayır | Gıda/kimya/ilaç müşterisi için şart. |
-| 15 | **Entegrasyonlar veri parçaları**: kayıt bazlı eşitleme hata listesi + CHECK kararı, pasif/arşiv politika seçimi | G-80 DATA, G-13 · B-113, B-170, B-200 | M her biri | **Evet** | Bölümler ekranda hazır; veri gelince dolar. |
-| 16 | **Etkin yerel dil modeli** (kararınıza bağlı) | G-90 · B-204 | M–L | Hayır | Önce 2 çekirdek / 8 GB VPS'te bellek ve cevap süresi ölçülür; yetmezse kural tabanlı yol (T-1110) genişletilir. |
-| 17 | **Ses servisi belleğini canlıda izlemek**, denetim kaydına kayıt dizini | G-97, G-99 · B-215, B-216 | S her biri | Kısmen (dizin: evet) | Küçük işler; birlikte paketlenebilir. |
+| 15 | **Entegrasyon veri parçaları**: eşleme düzeltme + irsaliye no bağlama, alan bazlı sahiplik, ürün kartı Paraşüt sekmesinde son eşitleme + Tekrar dene, ortak uygulama/webhook sağlamlaştırması | G-101, G-80 DATA, G-105 · B-227, B-228, B-238, B-170, B-221, B-222, B-234 | M her biri | Kısmen | Ekran bölümleri hazır; gerçek hesap denemesi (sıra 2) sonrası yapılmalı. |
+| 16 | **Giriş ailesini kalıba almak** (giriş, iki adımlı doğrulama, parola sıfırlama, aktivasyon) | G-95 · B-214, B-159 | M | Hayır | Müşterinin ilk gördüğü ekranlar; tuval (`Giris.dc.html`) hazır. |
+| 17 | **Yetki kalanları**: Yetkiler ekranını tuvale ve rehbere eklemek; kişiye özel istisna (kararınıza bağlı) | G-102 · B-246, B-245 | S + M–L | Kişiye özel: **Evet** | Ekran kodda; tuval ve rehber eksik. |
+| 18 | **Etkin yerel dil modeli** (kararınıza bağlı), ses servisi belleğini canlıda izlemek, denetim kaydına kayıt dizini | G-90, G-97, G-99 · B-204, B-215, B-216, B-241 | M–L / S / S | Dizin: evet | Küçük işler birlikte paketlenebilir; dizin iki yönlü çakışma okumasını da hızlandırır. |
 
 ### Daha sonra (ilk ücretli müşteri öncesi ve ölçek)
 
 | İş | Gap / BACKLOG | Boyut | Migration? |
 | :--- | :--- | :--- | :--- |
+| **Satış faturasından iş** + Paraşüt satış faturası/irsaliye anlık bildirimi (kullanıcı 30 Ekim: ertelendi) | G-80 DATA · B-200, B-169, B-116, B-230 | L | **Evet** |
 | Paketli/QR akışını açmak + raf adresi + tekil QR (G-10, G-25, G-54 dahil) | B-50, G-93 · B-164, B-165 | L | **Evet** |
-| İş akışı verisi (teslimat yolu, teslim teyidi), iş emirleri, sipariş kaynakları, Paraşüt alan sahipliği, **satış faturasından iş** | G-81 DATA, G-94, G-80 DATA · B-167…B-170, B-200 | L | **Evet** |
+| İş akışı verisi (teslimat yolu, teslim teyidi), iş emirleri, sipariş kaynakları | G-81 DATA, G-94 · B-167…B-169 | L | **Evet** |
 | Etiket tasarımı ve yazıcılar + gerçek yazıcı kabulü | G-82, G-58 · B-166, B-56 | M–L | **Evet** |
 | Dosya deposu → ürün görseli, destek ekran görüntüsü, destek akışının kalanı | G-43, G-87, G-16 · B-88…B-90, B-206 | L | **Evet** + altyapı |
 | Satılabilir SaaS: online tahsilat, deneme bitişi, paket bayrakları, fatura no, müşteri kapatma, sözleşmeler | G-74, G-55, G-30, G-29, G-15 · B-40…B-45, B-153 | L | **Evet** |
@@ -223,9 +252,10 @@ flowchart LR
 
 ### Sizden bekleyenler
 
+- **Paraşüt uygulama kaydı ve sunucu değerleri** (G-100, B-219): Paraşüt'te Etkin'in ortak uygulamasını kaydedip `PARASUT_OAUTH_CLIENT_ID/SECRET` değerlerini sunucuya (`web.env`) girmek ve web'i yeniden başlatmak; ardından gerçek hesap denemesi. Değerler sohbete/belgeye yazılmaz.
 - **Yedek için depolama hesabı** (G-70, B-01/B-02).
-- **Gerçek iPhone Safari kontrolü** (B-197, B-210): kısa ekranda ve klavye açıkken rehber kartı, şimşek halkası (Rehber + Düzenle görünüyor mu), ana ekran Düzenle, bas-konuş, doğal sesle okuma.
-- **Kararlar** (ayrıntı 4.10): Etkin yerel dil modeli (B-204); cari tür etiketi "İkisi de" mi "Müşteri ve tedarikçi" mi (B-213); depo yetkisi sınırlı kullanıcının başka depodaki lot/seri kodlarını görmesi (B-212); deneme bitince ne olsun (G-55, B-41); paket bayrakları neyi kapatsın (G-30); emanet stok gerekli mi (G-24).
+- **Gerçek iPhone Safari kontrolü** (B-197, B-210): kısa ekranda ve klavye açıkken rehber kartı, şimşek halkası, ana ekran Düzenle, bas-konuş, doğal sesle okuma; Entegrasyonlar ve Yetkiler ekranı.
+- **Kararlar** (ayrıntı 4.10): kişiye özel yetki istisnası gerekli mi (B-245); Paraşüt'te silinen depoda boş raf yerleri de arşivlensin mi (B-237); Etkin yerel dil modeli (B-204); cari tür etiketi (B-213); başka depodaki lot/seri kodlarının görünürlüğü (B-212); deneme bitince ne olsun (G-55, B-41); paket bayrakları neyi kapatsın (G-30); emanet stok gerekli mi (G-24).
 - **Sunucuda bir kez yapılacak root adımları:** ses servisi kurulumu (B-130), müşteri sıfırlama (B-137).
 
 ## 4.9 Yeni bir modül ya da değişiklik nasıl istenir?
@@ -243,50 +273,54 @@ Masaüstü ekranlar 26 Ekim kararıyla `docs/design/STANDART.md` kalıplarından
 
 ## 4.10 Geliştirme önerileri ve yeni fikirler
 
-> **Bu bölüm neyi anlatır?** Yukarıdaki eksiklerin dışında, kullanıcının dile getirdiği ya da işler sırasında ortaya çıkan **geliştirme önerileri ve yeni fikirler**. Öncelik sırasıyla yazıldı; **karar gerekli** yazanlar sizin cevabınızı bekler, diğerleri hazır olunca sıraya girer. Yapılmış olanlar listeden çıkarıldı (ör. ortak bildirim bandı `KalipBildirim` birleşmesi T-1119 ile, yönetici ana ekranı T-1115/T-1128 ile, ürün kartı sekmeleri ve pivot T-1116 ile, yeni cari formu T-1117 ile, Entegrasyonlar alt bölümleri T-1112 ile bitti). Son güncelleme: 29 Ekim 2026, main `2022915`.
+> **Bu bölüm neyi anlatır?** Yukarıdaki eksiklerin dışında, kullanıcının dile getirdiği ya da işler sırasında ortaya çıkan **geliştirme önerileri ve yeni fikirler**. Öncelik sırasıyla yazıldı; **karar gerekli** yazanlar sizin cevabınızı bekler, diğerleri hazır olunca sıraya girer. Yapılmış olanlar listeden çıkarıldı: 29 Ekim listesinden Entegrasyonlar kayıt bazlı hata listesi (T-1137) ve "Paraşüt'te arşivlenen kart Etkin'de ne olsun" sorusu (kullanıcı kararı 31 Ekim: ürün gibi cari ve depo da arşive alınır, T-1140) kapandı; önceki listelerden ortak bildirim bandı (T-1119), yönetici ana ekranı (T-1115/T-1128), ürün kartı sekmeleri ve pivot (T-1116), yeni cari formu (T-1117), Entegrasyonlar alt bölümleri (T-1112). Son güncelleme: 1 Kasım 2026, main `008070a`.
 
 ### Öncelik 1 — hemen yapılabilir, küçük ve güvenli
 
 | # | Öneri | Neden / fayda | Boyut · migration | Durum | BACKLOG |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | **PR 250'nin (T-1071, başka oturum) migration numarasını 0066'ya kaydırmak** | 0064 ve 0065 main'de; aynı numara yayını durdurur. | S · numara değişikliği | Açık | B-218 |
-| 2 | **Gerçek iPhone Safari kontrolü**: kısa ekran (Safari çubukları açık, ~660 pt) ve klavye açıkken rehber kartı; şimşek halkası; ana ekran Düzenle | Son rehber/kısayol düzeltmeleri yalnız masaüstü tarayıcı motorunda sınandı. | — · sizden | Bekliyor (sizde) | B-197, B-210 |
-| 3 | **Belge / mal kabul satırında birim–katsayı veritabanı bekçisi** | Ürünün temel birimi artık ilk kullanıma kadar değişebiliyor (T-1129); eski birimle açık kalmış formdan satır gelmesin. | S–M · **evet** | Açık | B-209 |
-| 4 | **0065 "kullanılmış ürün" tanımındaki yedi kullanım dalı için davranış testi** | Bugün yalnız tanımda oldukları denetleniyor; her dalın gerçekten kilitlediği sınanmalı. | S · hayır | Açık | B-217 |
-| 5 | **Giriş, iki adımlı doğrulama, parola sıfırlama ve aktivasyon ekranlarını kalıba almak** (tuval `Giris.dc.html`) | Uygulamaya girmeden önceki ekranlar hâlâ eski bileşenlerle; görünüm, ses ve odak davranışı diğer ekranlardan farklı. | M · hayır | Açık | B-214, B-159 |
-| 6 | **Ana ekran "farkları incele" (sayım onayı) kutusunda raf/koridor bilgisi** | Yönetici hangi rafta fark olduğunu kutuya bakarak görsün. | S · okuma işlevi | Açık | B-205 |
-| 7 | **Ses servisi belleğinin canlıda izlenmesi; Intel işlemcide doğrulama** | Bellek CI'da makineye göre değişiyordu; düzeltmeler yalnız CI'da doğrulandı. Tavan aşılırsa servis yeniden başlar. | S · hayır | Açık | B-215, B-130 |
+| 1 | **Paraşüt gerçek hesap denemesi** (ortak uygulama, anlık bildirim, iki yönlü, irsaliye/stok) | Son on PR'ın gerçek dünyadaki karşılığı; bir alan farklıysa küçük düzeltme yeter. | S · hayır | Bekliyor (uygulama kaydı sizde) | B-219, B-229, B-235, B-110 |
+| 2 | **Gerçek iPhone Safari kontrolü** (rehber kartı, şimşek halkası, Düzenle; Entegrasyonlar ve Yetkiler telefon düzeni) | Son düzeltmeler yalnız masaüstü tarayıcı motorunda sınandı. | — · sizden | Bekliyor (sizde) | B-197, B-210 |
+| 3 | **PR 250'nin migration numarasını 0071'e kaydırmak** | Main'de 0064…0070 var; aynı numara yayını durdurur. | S · numara | Açık | B-218 |
+| 4 | **Cari formu ve cari Excel'inde "Paraşüt'e de gider" satırı** | Cari akışı "Etkin'den gönder" / "İki yönlü" iken değişiklik Paraşüt'teki kaydı da değiştirir; kullanıcı bunu formda görsün. | S · hayır | Açık | B-240 |
+| 5 | **Bağlantı koptuğunda zil ve e-posta** (sağlık bandının ekran dışı karşılığı; 0068 ile kesilenler dahil) | Ekranı açmayan yönetici eşitlemenin durduğunu bilmez. | S–M · hayır | Açık | B-232 |
+| 6 | **Belge / mal kabul satırında birim–katsayı veritabanı bekçisi** + 0065 kullanım dallarının davranış testi | Temel birim ilk kullanıma kadar değişebiliyor; eski birimle açık kalmış formdan satır gelmesin. | S–M · **evet** | Açık | B-209, B-217 |
+| 7 | **Depo / raf Excel içe aktarımını kart anahtarına bağlamak** | Yetkiler ekranında "Raf yeri ekle" verilen kişi Excel'le de ekleyebilsin. | S · hayır | Açık | B-243 |
+| 8 | **Ana ekran "Excel'den aktar" kutusu gerçek Paraşüt bağlantısından** | Bugün kurulum yolculuğundaki seçimi gösteriyor. | S · okuma işlevi | Açık | B-223 |
 
 ### Öncelik 2 — orta boy, iş değeri yüksek
 
 | # | Öneri | Neden / fayda | Boyut · migration | Durum | BACKLOG |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 8 | **Siparişe "sevk tarihi"** | Ana ekranda "bugün çıkacak" gerçek tarihten gelir (bugün en eski siparişin günü gösteriliyor); geciken sipariş uyarısının da önkoşulu. | M · **evet** | Açık | B-205, B-151 |
-| 9 | **Kişi tercihleri sunucuda**: ana ekran İşler seçimi, kart/liste görünümü, sütunlar, kısayollar | Kişi hangi cihazdan girerse girsin aynı düzeni görür (bugün yalnız o cihazda). | S–M · **evet** | Açık | B-205, B-175, B-174 |
-| 10 | **Entegrasyonlar — kayıt bazlı eşitleme hata listesi** | "Hangi ürün neden gönderilemedi?" sorusu tek tek cevaplanır, belirsiz (CHECK) irsaliye ekrandan çözülür. | M · **evet** | Açık (bölüm ekranda hazır) | B-113, B-170 |
-| 11 | **Entegrasyonlar — pasif/arşiv politika seçimi** (Paraşüt'te arşivlenen kart Etkin'de ne olsun; varsayılan "hiçbir şey yapma") + sayılar | Kullanıcı yansıma kuralını kendisi seçer. | M · **evet** | Açık (bölüm ekranda hazır) | B-170, B-172, B-200 |
-| 12 | **Entegrasyonlar — alan sahipliği** (alan başına Paraşüt mü depo mu değiştirir; Paraşüt alanı kartta kilitli) | Bugün eşitleme ürün adını sessizce geri yazabiliyor. | M–L · **evet** | Açık ("Yakında" bölümü) | B-170, B-200 |
-| 13 | **Ayarlar › İş akışı sekmesi** (önce mevcut ayarlar: kalite onayı, yarım sayım süresi, vardiya, görev ayrılığı; sonra teslimat yolu, teslim teyidi) | Dağınık ayarlar tek yerde; ürün kartındaki İş akışı bağlantısı da buraya gider. | S (mevcut) + L (veri) | Açık | B-168, B-171, B-150 |
-| 14 | **Stok ve yer pivotunda sürükleyerek gruplama, "+ Seri", tam ekran** | Tuvaldeki esnek görünüm; büyük depoda ürünün dağılımı istenen sırayla incelenir. | M · hayır | Açık | B-211 |
-| 15 | **Denetim kaydına kayıt türü / kimliği dizini** | Ürün kartı "Değişiklik geçmişi" kayıt arttıkça yavaşlamasın. | S · **evet** | Açık | B-216 |
-| 16 | **Standart* tuval kaynaklarının CSS üretecine (`port.mjs`) bağlanması** | Masaüstü CSS'i bugün elle aktarılıyor; birebirlik (I-18) mekanik olarak korunur. | M · hayır | Açık | B-177 |
+| 9 | **Entegrasyon eşleme düzeltme**: irsaliyeye Paraşüt numarası bağlama, "başka karta bağlı" eşlemeyi taşıma | "Gönderildi say" ve bekletilen kart bugün yalnız işaretlenir; doğru eşleme ekrandan kurulsun. | M · okuma + yazma işlevi | Açık | B-227, B-228, B-224 |
+| 10 | **Alan bazlı sahiplik** ("Alan sahipliği" bölümü): örn. ad Paraşüt'ten, kısa ad Etkin'den | Bugün kart başına "son değişen kazanır"; bazı alanların hep tek taraftan gelmesi istenebilir. | M–L · **evet** | Açık ("YAKINDA" bölümü) | B-238, B-200, B-170 |
+| 11 | **Ürün kartı Paraşüt sekmesi**: son eşitleme anı, son kazanan taraf, Tekrar dene | Kart başına eşitleme durumu (`integration_card_states`) artık veritabanında; yalnız gösterim gerekir. | S–M · okuma işlevi | Açık | B-170 |
+| 12 | **Siparişe "sevk tarihi"** + kişi tercihleri sunucuda (tek migration paketi) | Ana ekranda "bugün çıkacak" gerçek tarihten gelir; kişi her cihazda aynı düzeni görür. | M · **evet** | Açık | B-205, B-151, B-175, B-174 |
+| 13 | **Ayarlar › İş akışı sekmesi** (önce mevcut ayarlar; sonra teslimat yolu, teslim teyidi) | Dağınık ayarlar tek yerde. | S (mevcut) + L (veri) | Açık | B-168, B-171, B-150 |
+| 14 | **Yetkiler ekranını tuvale ve ilk kullanım rehberine eklemek** | Ekran kalıptan türetildi; tasarım kaynağı ve "nasıl kullanırım?" adımları eksik. | S · hayır | Açık | B-246 |
+| 15 | **Denetim kaydına kayıt türü / kimliği dizini** | Ürün kartı "Değişiklik geçmişi" ve iki yönlü çakışmadaki "Etkin'de son değişiklik anı" okuması büyük firmada yavaşlamasın. | S · **evet** | Açık | B-216, B-241 |
+| 16 | **Giriş ailesini kalıba almak** + Standart* tuvallerin CSS üretecine bağlanması | İlk görülen ekranlar diğerleriyle aynı görünsün; birebirlik (I-18) mekanik korunsun. | M + M · hayır | Açık | B-214, B-159, B-177 |
+| 17 | **Pivotta sürükleyerek gruplama, "+ Seri", tam ekran** | Tuvaldeki esnek stok görünümü. | M · hayır | Açık | B-211 |
 
 ### Öncelik 3 — büyük işler ve yeni fikirler
 
 | # | Öneri | Neden / fayda | Boyut · migration | Durum | BACKLOG |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 17 | **Satış faturasından iş**: Paraşüt satış faturası → sevk görevi | Paraşüt'te sipariş yok; satış faturası depoda işi kendiliğinden başlatır. | L · **evet** | Açık (Paraşüt API doğrulaması gerekir) | B-200, B-169 |
-| 18 | **Ürün kartında İş akışı sekmesi ve Etiket/yazıcı sekmesi** | Ürün başına montaj/paketleme gibi adımlar ve varsayılan etiket tasarımı. | M–L · **evet** | Açık | B-168, B-166 |
-| 19 | **Ürün görseli** (kartta büyük, listede küçük resim) | Depocu ürünü resminden tanır. Dosya deposu (S3) altyapısı gerekir. | L · **evet** + altyapı | Açık | B-176, B-206, B-88 |
-| 20 | **Etkin: sunucuda yerel küçük dil modeli** (veri dışarı çıkmaz) | Serbest cümleden işi anlamak; gizlilik korunur. VPS 2 çekirdek / 8 GB — bellek ve cevap süresi önce ölçülmeli. Kullanıcı: "ileride". | M–L · hayır | **İleride** (kullanıcı kararı) | B-204 |
+| 18 | **Satış faturasından iş**: Paraşüt satış faturası → sevk görevi (anlık bildirimle) | Paraşüt'te sipariş yok; satış faturası depoda işi kendiliğinden başlatır. Webhook altyapısı artık hazır. | L · **evet** | **Ertelendi** (kullanıcı 30 Ekim) | B-200, B-169, B-230 |
+| 19 | **Entegrasyon olay günlüğü ekranı** (yeni fikir): "Paraşüt'ten ne geldi, Etkin'den ne gitti, hangi çakışmada kim kazandı" tek zaman çizgisinde | `integration.conflict_resolved`, `outbox_*`, kart arşiv audit'leri zaten yazılıyor; yönetici güveni için tek bakış. | M · okuma işlevi | Yeni | — |
+| 20 | **Yetki değişikliği özeti** (yeni fikir): Yetkiler ekranında "bu hafta kim, kime, ne verdi" listesi ve geri al | Anında kayıtla hızlandı; geri dönüş ve iz tek dokunuşta görünsün. `group.updated` audit'i önceki/yeni listeyi taşıyor. | S–M · okuma işlevi | Yeni | — |
+| 21 | **Ürün kartında İş akışı ve Etiket/yazıcı sekmeleri**, **ürün görseli** | Ürün başına adımlar ve etiket; depocu ürünü resminden tanır. | M–L · **evet** + altyapı | Açık | B-168, B-166, B-176, B-206, B-88 |
+| 22 | **Etkin: sunucuda yerel küçük dil modeli** (veri dışarı çıkmaz) | Serbest cümleden işi anlamak. VPS 2 çekirdek / 8 GB — önce ölçüm. Kullanıcı: "ileride". | M–L · hayır | **İleride** (kullanıcı kararı) | B-204 |
 
 ### Karar gerekli (sizden)
 
 | # | Konu | Seçenekler | BACKLOG |
 | :--- | :--- | :--- | :--- |
-| 21 | **Depo yetkisi sınırlı kullanıcının başka depodaki lot/seri kodlarını görmesi** (ürün kartı Takip sekmesi) | (a) yalnız kendi depolarındaki lot/seri; (b) bütün depolarınki | B-212 |
-| 22 | **Cari tür etiketi**: "İkisi de" mi, "Müşteri ve tedarikçi" mi? | Tuval "İkisi de", uygulama "Müşteri ve tedarikçi" | B-213 |
-| 23 | **Etkin yerel dil modeli** ne zaman denensin? | Şimdi ölçüm / ileride (bugünkü cevap: ileride) | B-204 |
-| 24 | **Entegrasyonlar pasif/arşiv varsayılanı** | "Hiçbir şey yapma" (tuval önerisi) / Etkin'de de arşivle / Etkin'de pasife al | B-170 |
+| 23 | **Kişiye özel yetki istisnası** gerekli mi? | (a) bugünkü gibi rol + en çok bir grup (istisna için ayrı grup); (b) kişiye özel aç/kapa (yeni tablo, güvenlik incelemesi) | B-245 |
+| 24 | **Paraşüt'te silinen depoda boş raf yerleri** de otomatik arşivlensin mi? | (a) hayır, depo bekler (bugün); (b) stoksuz/işsiz raf yerleri arşivlenir, depo da arşive geçer | B-237 |
+| 25 | **Etkin'de boşaltılan cari alanı** Paraşüt'te de silinsin mi? | (a) hayır, boş alan gönderilmez (bugün); (b) "alan temizle" kuralı (Paraşüt'ün boş değer kabulü önce denenmeli) | B-236 |
+| 26 | **Depo yetkisi sınırlı kullanıcının başka depodaki lot/seri kodlarını görmesi** (ürün kartı Takip sekmesi) | (a) yalnız kendi depolarındaki; (b) bütün depolarınki | B-212 |
+| 27 | **Cari tür etiketi**: "İkisi de" mi, "Müşteri ve tedarikçi" mi? | Tuval "İkisi de", uygulama "Müşteri ve tedarikçi" | B-213 |
+| 28 | **Etkin yerel dil modeli** ne zaman denensin? | Şimdi ölçüm / ileride (bugünkü cevap: ileride) | B-204 |
 
-**Kısaca sıra önerisi:** 1 → 2 → 3–4 → 5 → 8–9 (birlikte, tek migration paketi) → 10–12 (Entegrasyonlar verisi) → 13 → 14–16 → büyük işler (17–19) → 20 (kararınıza göre).
+**Kısaca sıra önerisi:** 1 → 2 → 3 → 4–5 (birlikte) → 6–8 → 9–11 (gerçek hesap denemesinden sonra) → 12–13 (tek migration paketi) → 14–17 → büyük işler (18–21, satış akışı kararınıza göre) → 22 (kararınıza göre).

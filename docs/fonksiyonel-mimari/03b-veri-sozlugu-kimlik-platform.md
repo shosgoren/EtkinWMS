@@ -1,7 +1,7 @@
 # 3b. Veri Sözlüğü — Kimlik, Kiracı, Denetim ve Platform Tabloları
 
-> Durum: main 2022915 · 29 Ekim 2026 (önceki sürüm main 8e2710d, 28 Ekim). 0064 ve 0065 bu dosyanın tablolarına dokunmaz (ikisi de 3a'dadır: `parties`, `items`). Bu dosyada **47 tablo** anlatılır (`public` 34, `wms_platform` 11, `wms_health` 1, `wms_meta` 1).
-> Kaynak: `packages/db/migrations/0001…0065_*.up.sql` (her tablonun **son** hali; sonradan eklenen sütunlar dahil), migration defteri için `packages/db/src/migrate.ts`, kuyruk şeması için `packages/queue-adapter/src/index.ts`. Tahmin yoktur; burada olmayan bir alan veritabanında da yoktur.
+> Durum: main 008070a · 1 Kasım 2026 (önceki sürümler main 2022915, 29 Ekim; main 8e2710d, 28 Ekim). 0064 ve 0065 bu dosyanın tablolarına dokunmaz (ikisi de 3a'dadır: `parties`, `items`). **1 Kasım eki:** 0066 (entegrasyon kilitleri: `integration_flows.first_enabled_at`, `integration_stock_push_ready` işlevi, stok ⟂ irsaliye tetikleyicisi, `integration_stock_marks` red ve görüntü sütunları, `integration_outbox` kart akışları, `integration_runs` budama; T-1135), 0067 (`integration_webhooks` + `integrations.webhook_*` + `wms_probe.integration_webhook_lookup`; T-1138), 0068 (yalnız veri: eski parola bağlantıları kesildi; T-1139), 0070 (`permission_groups.grants` 12 kart anahtarı, en çok 18; T-1142). 0069 `integration_card_states` 3a §10'dadır. Bu dosyada **48 tablo** anlatılır (`public` 35, `wms_platform` 11, `wms_health` 1, `wms_meta` 1). STATE'e göre şema 0070 canlıdadır.
+> Kaynak: `packages/db/migrations/0001…0070_*.up.sql` (her tablonun **son** hali; sonradan eklenen sütunlar dahil), migration defteri için `packages/db/src/migrate.ts`, kuyruk şeması için `packages/queue-adapter/src/index.ts`. Tahmin yoktur; burada olmayan bir alan veritabanında da yoktur.
 > Stok, depo, katalog, belge, görev, sayım, üretim ve paket tabloları **3a** dosyasındadır. `0014` güvenilirlik tabloları (`processed_events`, `stock_consistency_*`) ve `0037` iş sinyalleri (`work_priorities`, `problem_reports`) de oradadır.
 
 ## Bu bölümü okumak için kısa sözlük
@@ -25,7 +25,7 @@
 | :--- | :--- |
 | `public` | Kimlik (kullanıcı, oturum) + bütün müşteri (tenant) verisi. Müşteri tablolarında RLS açıktır. |
 | `wms_platform` | Etkin Yazılım'ın kendi işletme verisi: demo talepleri, abonelikler, paketler, tahakkuklar, satış sitesi içeriği. **Müşteri verisi değildir**; uygulama rolleri doğrudan erişemez, yalnız denetimli `wms_probe.platform_*` işlevleriyle (çağıranın platform operatörü olduğu her seferinde denetlenir). |
-| `wms_probe` | Yalnız işlevler (tablo yok). Kimlik/platform tarafında dar, denetimli kapılar: davet önizleme, saha cihazı kaydı, panel işlemleri, plan sınırı okuma. |
+| `wms_probe` | Yalnız işlevler (tablo yok). Kimlik/platform tarafında dar, denetimli kapılar: davet önizleme, saha cihazı kaydı, panel işlemleri, plan sınırı okuma, Paraşüt anlık bildiriminde firma bulma (`integration_webhook_lookup`, 0067). |
 | `wms_health` | Arka plan işçisinin (worker) "hayattayım" sinyali. |
 | `wms_meta` | Migration defteri: hangi şema sürümü ne zaman, kim tarafından uygulandı. |
 | `pgboss` | Kuyruk kütüphanesinin (pg-boss) kendi tabloları. Bizim migration'larımız değil, kütüphane kurar (`QUEUE_SCHEMA = "pgboss"`); iş kuyruğu stok kaynağı değildir. |
@@ -129,6 +129,7 @@ erDiagram
     integrations ||--o{ integration_runs : "koşular"
     integrations ||--o{ integration_outbox : "gönderim kuyruğu"
     integrations ||--o{ integration_stock_marks : "son gönderilen stok"
+    integrations ||--o{ integration_webhooks : "anlık bildirim kaydı (0067)"
     tenants ||--o| integration_oauth_apps : "OAuth uygulama bilgisi"
     tenants ||--o{ integration_oauth_attempts : "OAuth bağlanma denemesi"
     tenant_memberships ||--o{ integration_oauth_attempts : "başlatan üye"
@@ -514,14 +515,14 @@ Firma yöneticisinin tanımladığı yetki grupları ("Kabulcüler", "Sevkiyat e
 | `name` | text | NOT NULL, 1–60 karakter; arşivlenmemiş gruplarda ad tekil (büyük/küçük harf farksız) | Grup adı | — |
 | `color` | text | NOT NULL, varsayılan `#2F7D5B`, CHECK `#RRGGBB` | Grup rengi | — |
 | `screens` | text[] | NOT NULL, CHECK izinli liste, en çok 8 | Açık saha ekranları (aşağıda) | — |
-| `grants` | text[] | NOT NULL, CHECK izinli liste, en çok 6 | Ek yetkiler (aşağıda) | — |
+| `grants` | text[] | NOT NULL, CHECK izinli liste, en çok 18 (0070; önce 6) | Ek yetkiler (aşağıda) | — |
 | `archived_at` | timestamptz | NULL olabilir | Arşivlendiyse anı (silinmez) | — |
 | `created_by` | uuid | NOT NULL, FK | Oluşturan üye | `tenant_memberships.id` |
 | `created_at` / `updated_at` | timestamptz | NOT NULL, tetikleyici yönetir | — | — |
 | `version` | integer | NOT NULL, ≥ 1, her güncellemede +1 | Eşzamanlı düzenleme denetimi | — |
 
 - **Ekran kodları (`screens`):** `receive` Mal kabul · `pick` Toplama · `transfer` Transfer · `prod` Üretim · `count` Sayım · `labels` Etiket · `reports` Raporlar · `problem` Sorun bildir.
-- **Yetki kodları (`grants`):** `stock.post` Stok hareketini işle · `document.create` Belge oluştur · `document.approve` Belge onayla · `count_diff.approve` Sayım farkını onayla · `reversal.create` Ters kayıt (iptal) yap · `data.import` Excel ile veri aktar.
+- **Yetki kodları (`grants`):** `stock.post` Stok hareketini işle · `document.create` Belge oluştur · `document.approve` Belge onayla · `count_diff.approve` Sayım farkını onayla · `reversal.create` Ters kayıt (iptal) yap · `data.import` Excel ile veri aktar · **0070 (T-1142):** `items.create|edit|archive` Ürün ekle / değiştir / arşivle · `parties.create|edit|archive` Cari · `warehouses.create|edit|archive` Depo · `locations.create|edit|archive` Raf yeri. Uygulamadaki tek kaynak `GRANTABLE` (`identity/permissions.ts`) ile aynı liste; `users.manage`, `settings.manage`, `audit.view`, `takeout.request` gruba verilemez. Geri alma (down): kart anahtarlı grup varsa izinsiz ortamda reddeder, izinli ortamda yalnız kart anahtarlarını siler.
 - **RLS / koruma:** ENABLE + FORCE. Tetikleyici kimlik alanlarının değişmesini reddeder, sürümü artırır.
 
 ### public.member_groups
@@ -627,7 +628,7 @@ Talep içindeki yazışma satırları. **Yalnız ekleme** (düzeltme/silme yok).
 
 ---
 
-## 3b.7 ERP entegrasyonu (Paraşüt) — `0055`, `0056`, `0058`, `0059`, `0061`
+## 3b.7 ERP entegrasyonu (Paraşüt) — `0055`, `0056`, `0058`, `0059`, `0061`, `0066`, `0067`, `0068`
 
 ### public.integrations
 Firma başına, sağlayıcı başına tek ERP bağlantısı.
@@ -648,8 +649,12 @@ Firma başına, sağlayıcı başına tek ERP bağlantısı.
 | `pull_product_barcodes` | boolean | NOT NULL, varsayılan false (0059) | Ürün çekerken ERP'deki barkodu da al ayarı (Bağlantılar ekranından; kapalıyken eski davranış sürer). Değişince denetim kaydı yazılır. | — |
 | `opening_stock_enabled` | boolean | NOT NULL, varsayılan false (0056) | "ERP'den açılış stoku al" ayarı | — |
 | `opening_stock_taken_at` / `opening_stock_document_id` | timestamptz / uuid | Birlikte dolar, **bir kez**; FK; firma başına tekil | Açılış stoku alındı mı, hangi stok giriş belgesiyle | `documents.id` |
+| `webhook_status` | text | NOT NULL, varsayılan `OFF`, CHECK (0067) | Anlık bildirim: `OFF` Kapalı · `ACTIVE` Açık · `FAILED` Kurulamadı (30 sn tarama sürer) | — |
+| `webhook_checked_at` / `webhook_last_event_at` | timestamptz | NULL olabilir (0067) | Son kayıt denetimi / son gelen geçerli bildirim (ekranda "son bildirim SS:DD") | — |
+| `webhook_last_error_code` | text | NULL olabilir, CHECK biçim (0067) | Kayıt kurulamadıysa nedeni (ör. `WEBHOOK_KEY_UNKNOWN`) | — |
 
 - **RLS / koruma:** ENABLE + FORCE. Açılış stoku alanları bir kez yazılır, sonra değişmez; ayar kapalıyken ve işlenmiş (POSTED) bir stok giriş belgesi olmadan yazılamaz.
+- **0068 (T-1139, yalnız veri):** tamamlanmış OAuth denemesi olmadan kurulmuş (eski e-posta + parola yöntemi) bağlantılar `DISCONNECTED` + `credentials = NULL` + `LEGACY_METHOD_REMOVED` + `webhook_status = OFF` yapıldı, webhook satırları `DELETED`; bağlantı başına `integration.disconnected` audit (`via: migration_0068`). `connected_at`, `account_ref` ve akış tercihleri korunur; down belgeli no-op (silinen kimlik geri getirilemez).
 
 ### public.integration_flows
 Bağlantı içindeki veri akışları ve aç/kapa düğmeleri.
@@ -661,6 +666,7 @@ Bağlantı içindeki veri akışları ve aç/kapa düğmeleri.
 | `integration_id` | uuid | NOT NULL, FK | Bağlantı | `integrations.id` |
 | `flow` | text | NOT NULL, CHECK | Akış türü (aşağıda) | — |
 | `enabled` / `enabled_at` | boolean / timestamptz | `enabled` varsayılan false; anı tetikleyici yazar | Akış açık mı, ne zaman açıldı | — |
+| `first_enabled_at` | timestamptz | NULL olabilir; tetikleyici yazar, kapat/aç sıfırlamaz (0066) | Akışın **ilk** açıldığı an: irsaliye keşfi bu andan sonra işlenen belgeleri alır (kapatıp açınca belge kaçmaz) | — |
 | `direction` | text | NOT NULL, CHECK + akışa göre kural | `PULL` ERP'den al · `PUSH` ERP'ye gönder · `BOTH` iki yönlü | — |
 | `cursor` | text | NULL olabilir, rakam | Sayfalı çekmede kalınan yer | — |
 | `last_run_at` / `last_success_at` | timestamptz | NULL olabilir | Son koşu / son başarılı koşu | — |
@@ -668,7 +674,8 @@ Bağlantı içindeki veri akışları ve aç/kapa düğmeleri.
 | `error_count` / `last_error_code` | integer / text | — | Hata sayısı ve son hata | — |
 | `updated_at` / `version` | — | — | — | — |
 
-- **Akış kodları ve izinli yön:** `PRODUCTS` Ürünler · `CONTACTS` Cariler · `WAREHOUSES` Depolar (her yön) · `SALES_ORDERS` Satış siparişleri (**yalnız ERP'den al**) · `SHIPMENTS` Sevk irsaliyeleri (**yalnız ERP'ye gönder**) · `STOCK` Stok miktarları (**yalnız ERP'ye gönder**). Kural: stok miktarı ERP'den WMS'e yazılamaz; WMS'in stok defteri tek otoritedir.
+- **Akış kodları ve izinli yön:** `PRODUCTS` Ürünler · `CONTACTS` Cariler · `WAREHOUSES` Depolar (her yön; `BOTH` T-1140'tan beri gerçek iki yönlü, işaret 3a `integration_card_states`) · `SALES_ORDERS` Satış siparişleri (**yalnız ERP'den al**) · `SHIPMENTS` Sevk irsaliyeleri (**yalnız ERP'ye gönder**) · `STOCK` Stok miktarları (**yalnız ERP'ye gönder**). Kural: stok miktarı ERP'den WMS'e yazılamaz; WMS'in stok defteri tek otoritedir.
+- **0066 kilitleri (T-1135):** `STOCK` ile `SHIPMENTS` aynı bağlantıda birlikte açılamaz (tetikleyici `integration_flows_exclusive_guard`, bağlantı satırını kilitleyerek; hata `INTEGRATION_FLOW_EXCLUSIVE`); `STOCK` yalnız Devir tamamlanınca açılır (`integration_stock_push_ready`: Paraşüt açılış stoku alındı ya da işlenmiş `import.opening_stock` / `integration.opening_stock` stok girişi var; hata `OPENING_STOCK_INCOMPLETE`). 0066 ikisi açık bağlantılarda `STOCK`'u kapattı ve audit yazdı (`via: migration_0066`).
 
 ### public.integration_runs
 Her senkronizasyon koşusunun kaydı. Biten koşu değiştirilemez.
@@ -678,20 +685,22 @@ Her senkronizasyon koşusunun kaydı. Biten koşu değiştirilemez.
 | `tenant_id` / `id` / `integration_id` | uuid | PK `id`; FK'ler | — | `integrations.id` |
 | `flow` | text | CHECK (akış kodları) | Hangi akış | — |
 | `trigger` | text | CHECK | `SCHEDULE` Zamanlanmış · `MANUAL` Elle başlatıldı | — |
-| `status` | text | varsayılan `RUNNING`, CHECK | `RUNNING` Sürüyor · `SUCCESS` · `PARTIAL` · `FAILED` | — |
+| `status` | text | varsayılan `RUNNING`, CHECK | `RUNNING` Sürüyor · `SUCCESS` · `PARTIAL` · `FAILED` (40 dk'yı aşan RUNNING → `FAILED` + `error_code = TIMEOUT`, T-1135) | — |
 | `requested_by` | uuid | NULL olabilir | Elle başlatan | — |
 | `started_at` / `finished_at` | timestamptz | — | Başlangıç / bitiş | — |
 | `created_count`, `updated_count`, `linked_count`, `skipped_count`, `failed_count` | integer | ≥ 0 | Oluşturulan / güncellenen / eşleştirilen / atlanan / hatalı kayıt sayıları | — |
 | `error_code` | text | NULL olabilir | Hata kodu | — |
 
+- **0066 budama:** `wms_app` yalnız bu tabloda silebilir ve silme bekçisi (`integration_runs_delete_guard`) yalnız 7 günden eski biten koşuya ya da taze (40 dk), sayaçsız, hatasız zamanlı RUNNING satırına izin verir; koşu başında en çok 500 eski satır budanır, değişiklik getirmeyen başarılı zamanlı koşu kendi satırını siler (son kontrol anı `integration_flows.last_run_at`).
+
 ### public.integration_outbox
-ERP'ye gönderilecek sevk irsaliyeleri kuyruğu (belge başına tek kayıt).
+ERP'ye gönderilecek sevk irsaliyeleri kuyruğu (belge başına tek kayıt) ve 0066'dan beri bekletilen kart satırları (kart başına tek kayıt).
 
 | Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
 | :--- | :--- | :--- | :--- | :--- |
 | `tenant_id` / `id` / `integration_id` | uuid | PK `id`; FK'ler | — | `integrations.id` |
-| `flow` | text | CHECK yalnız `SHIPMENTS` | — | — |
-| `entity_type` / `entity_id` | text / uuid | `DOCUMENT`; (firma, bağlantı, akış, belge) UNIQUE | Gönderilecek sevk belgesi | `documents.id` |
+| `flow` | text | CHECK `SHIPMENTS` · `PRODUCTS` · `CONTACTS` · `WAREHOUSES` (0066) | İrsaliye ya da kart akışı | — |
+| `entity_type` / `entity_id` | text / uuid | Akışa göre: `SHIPMENTS` → `DOCUMENT`, `PRODUCTS` → `ITEM`, `CONTACTS` → `PARTY`, `WAREHOUSES` → `WAREHOUSE` (CHECK); (firma, bağlantı, akış, kayıt) UNIQUE | Gönderilecek sevk belgesi ya da bekletilen kart | `documents.id`, `items.id`, `parties.id`, `warehouses.id` |
 | `status` | text | varsayılan `PENDING`, CHECK | Durum (aşağıda) | — |
 | `attempts` | integer | 0–100 | Deneme sayısı | — |
 | `next_attempt_at` | timestamptz | NOT NULL | Bir sonraki deneme zamanı | — |
@@ -700,6 +709,7 @@ ERP'ye gönderilecek sevk irsaliyeleri kuyruğu (belge başına tek kayıt).
 | `created_at` / `updated_at` / `sent_at` | timestamptz | `sent_at` yalnız `SENT`'te | — | — |
 
 - **Durum kodları:** `PENDING` Gönderilmeyi bekliyor · `SENDING` Gönderiliyor · `SENT` Gönderildi (artık değişmez) · `FAILED` Gönderilemedi · `CHECK` Sonuç belirsiz, elle kontrol gerekli (kör yeniden gönderim yapılmaz; çift irsaliye önlenir).
+- **Hata kodları (seçme):** `MANUAL_SENT` (elle "Gönderildi say") · `MANUAL_SKIPPED` (elle "Gönderme") — ikisi sorun sayılmaz, belge bir daha kuyruğa girmez (T-1137); `ALREADY_IN_STOCK_TOTAL` belge stok toplamına girmişti, gönderilmez (T-1137); kart satırında `EXTERNAL_ALREADY_LINKED` (dış kayıt başka karta bağlı, T-1135) ve `UPDATE_REJECTED` (Paraşüt düzeltmeyi kesin reddetti, T-1140), `REMOTE_NOT_FOUND`. Ekrandan "Yeniden gönder / Yeniden dene" satırı `PENDING`'e alır (audit `integration.outbox_retried`); elle çözüm audit `integration.outbox_resolved`.
 
 ### public.integration_stock_marks
 ERP'ye en son gönderilen stok toplamı (ürün + depo başına). Stok kaynağı **değildir**; yalnız "değişti mi, tekrar göndereyim mi" karşılaştırması için.
@@ -707,13 +717,37 @@ ERP'ye en son gönderilen stok toplamı (ürün + depo başına). Stok kaynağı
 | Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
 | :--- | :--- | :--- | :--- | :--- |
 | `tenant_id`, `integration_id`, `item_id`, `warehouse_id` | uuid | Dördü birlikte PK; FK'ler | Firma, bağlantı, ürün, depo | `integrations.id`, `items.id`, `warehouses.id` |
-| `quantity` | numeric(20,6) | NOT NULL | Son gönderilen miktar | — |
-| `sent_at` | timestamptz | NOT NULL | Gönderim anı | — |
+| `quantity` | numeric(20,6) | NULL olabilir (0066); `sent_at` ile birlikte | Son **kabul edilen** gönderilen miktar | — |
+| `sent_at` | timestamptz | NULL olabilir (0066); `quantity` ile birlikte | Gönderim anı | — |
+| `failed_quantity` / `failed_at` / `last_error_code` | numeric(20,6) / timestamptz / text | Üçü birlikte dolu ya da boş (0066) | Paraşüt'ün kesin reddettiği toplam: aynı toplam yeniden denenmez | — |
+| `as_of_snapshot` | pg_snapshot | NULL olabilir (0066) | Toplamın okunduğu veritabanı görüntüsü: hangi sevk belgesinin bu toplama girdiği buradan anlaşılır (girmişse irsaliyesi gönderilmez) | — |
+
+- **CHECK (0066):** satırda en az kabul edilen ya da reddedilen bir miktar bulunur. Toplam yalnız `AVAILABLE` stok ve `RECEIVING`/`STORAGE` raflardan, arşivli raf hariç (T-1140); ondalık metinden float aritmetiği olmadan gönderilir (I-09).
 
 - **RLS / koruma (0055 tabloları):** Hepsi ENABLE + FORCE RLS; uygulama sütun bazlı ekler/günceller, silme yok. ERP tarafındaki kayıt eşlemesi `external_refs` (`system = PARASUT`) tablosundadır (3a). Ürün kartındaki ERP kaynak bilgisi ve kaynak yaşam döngüsü alanları (`items.source_*`, 0060/0062) da 3a'dadır.
 
+### public.integration_webhooks
+Paraşüt'te kurulan anlık bildirim (webhook) kayıtları (0067, T-1138): bağlantı başına model × eylem için tek satır. İmza anahtarı yalnız
+şifreli kutudadır; düz anahtar veritabanına yazılamaz.
+
+| Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
+| :--- | :--- | :--- | :--- | :--- |
+| `tenant_id` / `id` / `integration_id` | uuid | PK `id`; FK'ler | Firma, kayıt, bağlantı | `integrations.id` |
+| `model` | text | NOT NULL, CHECK | `product` Ürün · `contact` Cari (Paraşüt webhook modelinde depo yok) | — |
+| `action` | text | NOT NULL, CHECK | `create` · `update` · `delete` | — |
+| `external_id` | text | NOT NULL, 1–64 harf/rakam/`_-` | Paraşüt'teki webhook kaydının kimliği | — |
+| `key_box` | jsonb | `ACTIVE` iken dolu, `DELETED` iken boş (CHECK); şifreli kutu biçimi (`v`, `kid`, `iv`, `tag`, `ct`) | İmza anahtarı, **şifreli** | — |
+| `status` | text | NOT NULL, varsayılan `ACTIVE`, CHECK | `ACTIVE` Kurulu · `DELETED` Silindi (anahtar silinir; satır kalır) | — |
+| `created_at` / `updated_at` | timestamptz | NOT NULL | — | — |
+
+- **RLS / koruma:** ENABLE + FORCE; `wms_app` okur, ekler, günceller; **silme yok**. Gelen bildirimde firma, oturum olmadan bulunmak
+  zorunda olduğu için tek dar kapı vardır: `wms_probe.integration_webhook_lookup(sağlayıcı, şirket no)` (SECURITY DEFINER, sahibi
+  `wms_identity_probe`, yalnız `wms_app` çağırır). Yalnız bağlı (`CONNECTED`) ve anlık bildirimi açık (`webhook_status = ACTIVE`)
+  bağlantıların firma/bağlantı kimliğini ve şifreli kutularını döndürür, en çok 5 satır. Bağlantı kesilince (ya da 0068'de) satırlar
+  `DELETED` olur; Paraşüt'teki kayıt kesmede ya da yeniden bağlanınca silinir.
+
 ### public.integration_oauth_apps
-Firmanın kendi Paraşüt OAuth uygulama bilgisi (istemci kimliği ve gizli değeri), firma başına tek satır (0061). Yönetici Bağlantılar ekranından girer; ekrana **geri okunmaz**.
+Firmanın kendi Paraşüt OAuth uygulama bilgisi (istemci kimliği ve gizli değeri), firma başına tek satır (0061). Yönetici Entegrasyonlar › Gelişmiş satırından girer; ekrana **geri okunmaz**. Satır yoksa Etkin'in ortak uygulaması kullanılır (T-1133): onun bilgisi veritabanında değil, sunucu ortam değişkenlerindedir (`PARASUT_OAUTH_CLIENT_ID` / `PARASUT_OAUTH_CLIENT_SECRET`); deneme satırında sabit ortak sürümle anılır.
 
 | Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
 | :--- | :--- | :--- | :--- | :--- |
@@ -949,17 +983,19 @@ Taslak içeriğin yayından önce görülmesi için kısa ömürlü önizleme ba
 | `field_devices.revoke_reason` | `MANUAL` elle iptal · `LOCK_SPREE` çok kilitlenme, otomatik iptal |
 | `team_join_requests.status` | `PENDING` · `APPROVED` · `REJECTED` · `CANCELLED` · `CLAIMED` |
 | `permission_groups.screens` | `receive` · `pick` · `transfer` · `prod` · `count` · `labels` · `reports` · `problem` |
-| `permission_groups.grants` | `stock.post` · `document.create` · `document.approve` · `count_diff.approve` · `reversal.create` · `data.import` |
+| `permission_groups.grants` | `stock.post` · `document.create` · `document.approve` · `count_diff.approve` · `reversal.create` · `data.import` · `items.*` · `parties.*` · `warehouses.*` · `locations.*` (`create`/`edit`/`archive`; 0070) |
 | `support_tickets.subject_kind` | `BUG` hata · `HOWTO` nasıl yapılır · `IDEA` öneri · `OTHER` diğer |
 | `support_tickets.status` | `OPEN` açık · `ANSWERED` yanıtlandı · `CLOSED` kapandı |
 | `support_ticket_messages.author_kind` | `CUSTOMER` müşteri · `OPERATOR` Etkin ekibi |
 | `integrations.provider` | `PARASUT` Paraşüt · `LOGO` Logo (kod ayrılmış) |
-| `integrations.status` | `CONNECTED` bağlı · `ERROR` hatalı · `DISCONNECTED` kesik |
+| `integrations.status` | `CONNECTED` bağlı · `ERROR` hatalı · `DISCONNECTED` kesik (0068 eski yöntem: `last_error_code = LEGACY_METHOD_REMOVED`) |
+| `integrations.webhook_status` | `OFF` kapalı · `ACTIVE` açık · `FAILED` kurulamadı (0067) |
+| `integration_webhooks.status` | `ACTIVE` kurulu · `DELETED` silindi (0067) |
 | `integration_flows.flow` | `PRODUCTS` · `CONTACTS` · `WAREHOUSES` · `SALES_ORDERS` (yalnız al) · `SHIPMENTS` (yalnız gönder) · `STOCK` (yalnız gönder) |
 | `integration_flows.direction` | `PULL` al · `PUSH` gönder · `BOTH` iki yönlü |
 | `integration_flows.last_status`, `integration_runs.status` | `RUNNING` sürüyor (yalnız koşu) · `SUCCESS` başarılı · `PARTIAL` kısmen · `FAILED` başarısız |
 | `integration_runs.trigger` | `SCHEDULE` zamanlanmış · `MANUAL` elle |
-| `integration_outbox.status` | `PENDING` bekliyor · `SENDING` gönderiliyor · `SENT` gönderildi · `FAILED` başarısız · `CHECK` elle kontrol gerekli |
+| `integration_outbox.status` | `PENDING` bekliyor · `SENDING` gönderiliyor · `SENT` gönderildi · `FAILED` başarısız (elle çözüm: `MANUAL_SENT` / `MANUAL_SKIPPED`) · `CHECK` elle kontrol gerekli |
 | `integration_oauth_attempts.phase` | `PENDING` izin bekleniyor · `EXCHANGING` belirteç alınıyor · `SELECT` firma seçimi · `CONNECTING` bağlanıyor · `COMPLETE` bağlandı · `FAILED` başarısız/iptal |
 | `setup_journeys.card_source` | `EXCEL` · `PARASUT` |
 | `setup_journeys.skipped` | `cards` · `shelves` · `parties` · `stock` · `labels` · `bom` · `order` · `people` · `task` |

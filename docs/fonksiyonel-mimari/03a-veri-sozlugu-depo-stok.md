@@ -1,9 +1,10 @@
 # 3A. Veri Sözlüğü — Depo, Katalog, Stok ve Operasyon Tabloları
 
-> Kaynak: `packages/db/migrations/*.up.sql` (0010–0065) · main 2022915 · 29 Ekim 2026 (önceki sürüm: main 8e2710d, 28 Ekim). Her tablo **son hâliyle** yazıldı; sonradan gelen `ALTER TABLE` eklemeleri tabloya işlendi ve hangi migration'dan geldiği parantezle belirtildi.
+> Kaynak: `packages/db/migrations/*.up.sql` (0010–0070) · main 008070a · 1 Kasım 2026 (önceki sürümler: main 2022915, 29 Ekim; main 8e2710d, 28 Ekim). Her tablo **son hâliyle** yazıldı; sonradan gelen `ALTER TABLE` eklemeleri tabloya işlendi ve hangi migration'dan geldiği parantezle belirtildi.
 > Bu dosya yalnız SQL'de olanı anlatır; tahmin yoktur. Kimlik, ekip, platform (yönetim paneli), destek ve entegrasyon tabloları ayrı dosyadadır (`03b-veri-sozlugu-kimlik-platform.md`).
 > 0058–0063 arasında bu dosyanın kapsamına giren tek değişiklik `items` tablosudur (0060 kaynak kart bilgisi, 0062 kaynak yaşam döngüsü); yeni depo/stok tablosu eklenmedi. 0058 (`setup_journeys`), 0059 (`integrations.pull_product_barcodes`), 0061 (`integration_oauth_apps`, `integration_oauth_attempts`) ve 0063 (`tenant_settings.voice_reply`) 3b'dedir.
 > 29 Ekim eki: **0064** (`parties`: kısa ad, ilçe, varsayılan teslimat yöntemi; T-1117) ve **0065** (`items` sabit alanları — temel birim, miktar hassasiyeti, takip modu — ürün hiç kullanılmadıysa değişebilir; tek "kullanılmış" tanımı `item_fixed_usage` işlevi + `items_guard_unused_fixed` tetikleyicisi; T-1129) bu dosyadadır. Yeni tablo eklenmedi.
+> 1 Kasım eki: **0069** `integration_card_states` (bağlı ürün/cari/depo kartının son eşitleme işareti + cari/depo kaynak yaşam döngüsü; T-1140) bu dosyanın §10'una eklendi. 0066 (`integration_flows.first_enabled_at`, `integration_stock_marks` red/görüntü sütunları, `integration_outbox` kart akışları, `integration_runs` budama), 0067 (`integration_webhooks`, `integrations.webhook_*`), 0068 (yalnız veri: eski parola bağlantılarının kesilmesi) ve 0070 (`permission_groups.grants` 18 anahtar) 3b'dedir. Depo/stok tablolarının şeması değişmedi; davranış farkları: arşivli (`locations.status = ARCHIVED`) raftaki stok Paraşüt'e giden toplama girmez, Paraşüt'e bağlı cari ve depo da Paraşüt'te silinince/arşivlenince arşive alınır (T-1140).
 
 ## Okumadan önce: ortak kavramlar
 
@@ -42,6 +43,9 @@ erDiagram
   lots ||--o{ serials : "lot içi seri"
   handling_units ||--o{ handling_units : "palet içi koli"
   locations ||--o{ handling_units : "bulunduğu yer"
+  items ||--o| integration_card_states : "Paraşüt eşitleme işareti (0069)"
+  warehouses ||--o| integration_card_states : "işaret + kaynak durumu"
+  parties ||--o| integration_card_states : "işaret + kaynak durumu"
   items {
     uuid id PK
     text code
@@ -145,7 +149,7 @@ Firmanın depoları (ör. Hammadde Deposu, Mamul Deposu). Her şey bir depoya ba
 | is_sample | boolean | Varsayılan false (0040) | Deneme hesabındaki örnek veri mi | — |
 
 - **Durum kodları:** `ACTIVE` = Kullanımda · `ARCHIVED` = Arşivlendi (yeni işlemde seçilemez, geçmiş korunur).
-- **Koruma:** RLS ENABLE + FORCE.
+- **Koruma:** RLS ENABLE + FORCE. Paraşüt'e bağlı deponun kaynak durumu (silindi / arşivlendi, bekliyor) `integration_card_states`'tedir (0069, §10).
 
 ### locations
 Depo içindeki adresler: raf, göz, kabul alanı vb. Ağaç yapısındadır (bölge → raf → göz).
@@ -166,7 +170,7 @@ Depo içindeki adresler: raf, göz, kabul alanı vb. Ağaç yapısındadır (bö
 | is_sample | boolean | Varsayılan false (0040) | Örnek veri mi | — |
 
 - **Durum kodları (`kind`):** `RECEIVING` = Mal kabul alanı (gelen mal önce buraya girer) · `STORAGE` = Saklama rafı · `STAGING` = Sevkiyat hazırlık alanı · `TRANSIT` = Yolda/aktarmada.
-- `status`: `ACTIVE` / `ARCHIVED`.
+- `status`: `ACTIVE` / `ARCHIVED`. Arşivli raftaki stok Paraşüt'e gönderilen stok toplamına girmez (T-1140); toplam ayrıca yalnız `RECEIVING` / `STORAGE` raflardaki `AVAILABLE` stoktur (T-1135).
 - **Koruma:** RLS ENABLE + FORCE.
 
 ### location_count_locks
@@ -387,7 +391,7 @@ Cari kartlar: müşteri ve tedarikçiler (0050).
 | version | integer | ≥1 | Eşzamanlı düzenleme sayacı | — |
 
 - **Durum kodları:** `CUSTOMER` = Müşteri · `SUPPLIER` = Tedarikçi · `BOTH` = Müşteri ve tedarikçi (tuvalde "İkisi de"; hangi etiketin kalacağı karar bekliyor). `delivery_mode` (0064): `OWN` = Kendi personelim · `CARRIER` = Kargo firması.
-- **Koruma:** RLS ENABLE + FORCE. 0064 sütunlarına INSERT/UPDATE yalnız uygulama rolüne verildi (0050 kalıbı). Kısa ad, ilçe ve teslimat Excel içe/dışa aktarımı ve Paraşüt eşitlemesinde de taşınır (boş hücre mevcut değeri silmez); denetim özetine kısa ad ve teslimat yazılır.
+- **Koruma:** RLS ENABLE + FORCE. 0064 sütunlarına INSERT/UPDATE yalnız uygulama rolüne verildi (0050 kalıbı). Kısa ad, ilçe ve teslimat Excel içe/dışa aktarımı ve Paraşüt eşitlemesinde de taşınır (boş hücre mevcut değeri silmez); denetim özetine kısa ad ve teslimat yazılır. Paraşüt'e bağlı carinin son eşitleme işareti ve kaynak durumu `integration_card_states`'tedir (0069, §10); `archived_at` Paraşüt'te silinen/arşivlenen cari için sistem tarafından da yazılabilir (T-1140).
 
 ---
 
@@ -1044,6 +1048,40 @@ Etkin WMS kaydının dış sistemdeki (ör. Paraşüt) karşılığı.
 - **Durum kodları (`entity_type`):** `ITEM` = Ürün · `UNIT` = Birim · `WAREHOUSE` = Depo · `LOCATION` = Lokasyon · `PARTY` = Cari · `DOCUMENT` = Fiş · `LEDGER_ENTRY` = Defter hareketi.
 - **Koruma:** RLS ENABLE + FORCE; güncelleme tetikleyiciyle denetlenir.
 
+### integration_card_states
+Bağlı kartın (ürün, cari, depo) dış sistemle **son eşitleme işareti** ve cari/depo için **kaynak yaşam döngüsü** (0069, T-1140). Kart
+başına tek satır. Stok kaynağı değildir, kart verisinin kendisi de burada tutulmaz; yalnız "son eşitlemeden beri hangi taraf değişti?"
+sorusunun cevabı için iki tarafın özetini saklar. Ayrı tablodur, çünkü `parties` her güncellemede sürüm artırır (işaret yazımı kartın
+sürümünü bozmasın).
+
+| Alan Adı | Veri Tipi | Kısıtlar | İş Anlamı | Bağlı Olduğu Tablo/Alan |
+|---|---|---|---|---|
+| tenant_id | uuid | PK parçası, FK | Firma | tenants.id |
+| system | text | PK parçası, büyük harf kod (ör. PARASUT) | Dış sistem | — |
+| entity_type | text | PK parçası, CHECK | Kart türü | — |
+| entity_id | uuid | PK parçası | Bizim kartın kimliği | items.id / parties.id / warehouses.id (çok biçimli) |
+| local_hash | text | NULL olabilir, 64 haneli özet; `synced_at` ile birlikte dolu | Son eşitlemede Etkin tarafının kanonik özeti | — |
+| remote_hash | text | NULL olabilir, 64 haneli özet | Son eşitlemede Paraşüt tarafının kanonik özeti | — |
+| local_sig | text | NULL olabilir, 32 haneli özet | Yerel sütun imzası: düzeltme gönderimi için aday seçimi (değiştiyse gönderilecek) | — |
+| synced_at | timestamptz | NULL olabilir | Son eşitleme anı (taban) | — |
+| remote_updated_at | timestamptz | NULL olabilir | Paraşüt'ün bildirdiği son değişiklik anı (`updated_at`; gerçek hesapta UNKNOWN) | — |
+| last_pulled_at / last_pushed_at | timestamptz | NULL olabilir | Son alma / son gönderme | — |
+| source_state | text | Varsayılan `ACTIVE`, CHECK | Kaynaktaki durum (yalnız cari/depo) | — |
+| source_disposition | text | Varsayılan `NONE`, CHECK | Etkin'de ne yapıldı (yalnız cari/depo) | — |
+| source_managed_archive | boolean | Varsayılan false | Arşivi sistem mi yaptı (yalnız sistemin arşivlediği geri açılır) | — |
+| source_changed_at / source_checked_at | timestamptz | NULL olabilir; PENDING iken `source_changed_at` dolu | Kaynak durumunun değiştiği / son denetlendiği an | — |
+| source_missing_since / source_missing_context | timestamptz / text | İkisi birlikte dolu ya da boş; bağlam 64 haneli özet | İlk yokluk gözlemi ve bağlamı (≥30 sn sonra ikinci yokluk silinme sayılır) | — |
+| created_at / updated_at | timestamptz | Varsayılan şimdi | Oluşma / son değişiklik | — |
+
+- **Durum kodları:** `entity_type`: `ITEM` = Ürün · `PARTY` = Cari · `WAREHOUSE` = Depo. `source_state`: `ACTIVE` · `ARCHIVED` · `DELETED`.
+  `source_disposition`: `NONE` · `PENDING` (kullanımda, iş bitince arşiv) · `ARCHIVED`. Ürünün `REMOVED` durumu burada yoktur (cari/depo
+  Paraşüt'te silinince arşive alınır).
+- **Kurallar (CHECK):** ürün (`ITEM`) satırında yaşam döngüsü sütunları varsayılanda kalır — ürünün yaşam döngüsü `items.source_*`
+  sütunlarındadır (0062); `ACTIVE` kaynakta disposition `NONE` ve sistem arşivi yok; sistem arşivi yalnız `ARCHIVED` disposition ile.
+  Kimlik alanları (firma, sistem, tür, kart, oluşma anı) tetikleyiciyle değiştirilemez.
+- **Koruma:** RLS ENABLE + FORCE. `wms_app` okur, belirli sütunlara ekler/günceller; **silme yok**. Geri alma (down) tabloda satır varken
+  reddedilir.
+
 ### sync_cursors
 Dış sisteme gönderimde "en son nereye kadar gönderildi" işareti.
 
@@ -1102,4 +1140,4 @@ Sahadan bildirilen sorun (hasarlı, eksik, yanlış ürün…).
 
 ## Özet: bu dosyadaki tablo sayısı
 
-51 tablo (0058–0063 bu kapsamda yeni tablo eklemedi; 0061'in iki OAuth tablosu 3b'dedir): depo 4 · katalog/cari 10 · belge 7 · stok motoru 4 · güvenilirlik 3 · saha belgeleri 6 · görev/sayım/uyarı 6 · üretim 5 · paket 2 · dış eşleme 2 · iş sinyalleri 2.
+52 tablo (0058–0068 ve 0070 bu kapsamda yeni tablo eklemedi; 0061'in iki OAuth tablosu ve 0067 `integration_webhooks` 3b'dedir; 0069 `integration_card_states` burada): depo 4 · katalog/cari 10 · belge 7 · stok motoru 4 · güvenilirlik 3 · saha belgeleri 6 · görev/sayım/uyarı 6 · üretim 5 · paket 2 · dış eşleme 3 · iş sinyalleri 2.
