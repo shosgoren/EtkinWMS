@@ -164,3 +164,9 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Genel profil ve her etikette ayrı profil; firma/genelcihaz seçenekleri gerçek CAS action ile kaydedilir. Yeni şablon önce kaydedilmeden şablon tercihi yapılamaz; yanlışlıkla genel tercihe yazılmaz. Profiller adı/DPI/kalibrasyon/aktiflik ile ortak form kalıbındadır, URL veya ağ hedefi yoktur.
 - Tarayıcı tercihinin fiziksel yazıcı seçmediği kısa notla görünür. Kapalı profil başka yazıcıya sessiz düşmez; Genel tercihi kullan açık seçenektir. Değişiklik yalnız labels.printers/MFA.
 - Webtypegen/tsc/ESLint ve tercih/UI/action426birim geçti. UI uçtan uca ve baskı kaynağı/CI/yayın bekler; OS/fiziksel yazıcı kabulü yapılmadı.
+
+### T-1163 gerçek kaynak okuma (yerel)
+- Kaynak, mevcut baskı hazırlama tenant transaction'ında okunur; stock.view/depo kapsamı, POSTED/CLOSED, gerçek mevcut paket kimliği ve mevcut paket bayrağı korunur. Sabit/benzersiz kaynak listesi ve100lük keyset; etiket kaynakları deftere yazmaz.
+- Miktarlar Number'a çevrilmez (2^53üstü ve6ondalık korunur); yalnız sunumda dil biçimi. Lot/varsa tarih gerçek zorunlu bağdır. Standart ürün barkodu mevcut temel birimden ve belirsiz olmayan kayıttan alınır, üretilmez.
+- Genel sevk hazır tasarımında QR belge numarasına bağlıdır; fiziksel paketli kaynakta ayrıca gerçek packageQr makine alanı zorunludur. Editörde yalnız bu iki izinli bağ seçilebilir; belge numarası packageQr değerine kopyalanmaz. Eski saklı tasarım değişmez.
+- Kaynak/model/motor31birim ve domain/webtsc/ESLint geçti; henüz gerçek DB kaynak/izolasyon int testi veya baskı işi/API/CI/canlı yok. Bunlar aynı dikey baskı paketi bitmeden teslim sayılmaz.
