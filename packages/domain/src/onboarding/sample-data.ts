@@ -130,18 +130,13 @@ export interface SampleDataStatus {
   readonly active: SampleCounts;
 }
 
-/**
- * T-1201 (güvenlik incelemesi): Paraşüt'e (ya da başka sağlayıcıya) bağlanmış örnek kart — eşleme `external_refs`'te — temizliğe girmez:
- * silinmez, pasife alınmaz, "kalan örnek" sayılmaz. Kartın sahibi artık sağlayıcıdır (kaynak kilidi + yaşam döngüsü).
- */
-const unlinked = (type: "ITEM" | "WAREHOUSE", alias: string) =>
-  sql`NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = ${sql.raw(alias)}.tenant_id AND r.entity_type = ${type} AND r.entity_id = ${sql.raw(alias)}.id)`;
-
+// T-1201 (güvenlik incelemesi): Paraşüt'e (ya da başka sağlayıcıya) bağlanmış örnek kart — eşleme `external_refs`'te — temizliğe girmez:
+// silinmez, pasife alınmaz, "kalan örnek" sayılmaz (aşağıdaki `NOT EXISTS (… external_refs …)` koşulları). Kartın sahibi artık sağlayıcıdır.
 async function activeCounts(tx: AccessTx, tenantId: string): Promise<SampleCounts> {
   const r = await tx.execute<{ w: number; l: number; i: number }>(
-    sql`SELECT (SELECT count(*)::int FROM public.warehouses w WHERE w.tenant_id = ${tenantId}::uuid AND w.is_sample AND w.status = 'ACTIVE' AND ${unlinked("WAREHOUSE", "w")}) AS w,
+    sql`SELECT (SELECT count(*)::int FROM public.warehouses w WHERE w.tenant_id = ${tenantId}::uuid AND w.is_sample AND w.status = 'ACTIVE' AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = w.tenant_id AND r.entity_type = 'WAREHOUSE' AND r.entity_id = w.id)) AS w,
                (SELECT count(*)::int FROM public.locations WHERE tenant_id = ${tenantId}::uuid AND is_sample AND status = 'ACTIVE') AS l,
-               (SELECT count(*)::int FROM public.items i WHERE i.tenant_id = ${tenantId}::uuid AND i.is_sample AND i.status = 'ACTIVE' AND ${unlinked("ITEM", "i")}) AS i`,
+               (SELECT count(*)::int FROM public.items i WHERE i.tenant_id = ${tenantId}::uuid AND i.is_sample AND i.status = 'ACTIVE' AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.entity_type = 'ITEM' AND r.entity_id = i.id)) AS i`,
   );
   const row = r[0];
   return { warehouses: Number(row?.w ?? 0), locations: Number(row?.l ?? 0), items: Number(row?.i ?? 0) };
@@ -174,11 +169,11 @@ class SampleInUse extends Error {
 /** Tüm örnek kayıtları silmeyi dener; bir satır bile kalırsa (FK ya da DB tetikleyicisi atladı) fırlatır → savepoint geri alınır. */
 async function deleteAll(sp: AccessTx, tenantId: string): Promise<SampleCounts> {
   const pre = await sp.execute<{ w: number; l: number; i: number; u: number }>(
-    sql`SELECT (SELECT count(*)::int FROM public.warehouses w WHERE w.tenant_id = ${tenantId}::uuid AND w.is_sample AND ${unlinked("WAREHOUSE", "w")}) AS w,
+    sql`SELECT (SELECT count(*)::int FROM public.warehouses w WHERE w.tenant_id = ${tenantId}::uuid AND w.is_sample AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = w.tenant_id AND r.entity_type = 'WAREHOUSE' AND r.entity_id = w.id)) AS w,
                (SELECT count(*)::int FROM public.locations WHERE tenant_id = ${tenantId}::uuid AND is_sample) AS l,
-               (SELECT count(*)::int FROM public.items i WHERE i.tenant_id = ${tenantId}::uuid AND i.is_sample AND ${unlinked("ITEM", "i")}) AS i,
+               (SELECT count(*)::int FROM public.items i WHERE i.tenant_id = ${tenantId}::uuid AND i.is_sample AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.entity_type = 'ITEM' AND r.entity_id = i.id)) AS i,
                (SELECT count(*)::int FROM public.unit_conversions c JOIN public.items it ON it.tenant_id = c.tenant_id AND it.id = c.item_id
-                 WHERE c.tenant_id = ${tenantId}::uuid AND it.is_sample AND ${unlinked("ITEM", "it")}) AS u`,
+                 WHERE c.tenant_id = ${tenantId}::uuid AND it.is_sample AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = it.tenant_id AND r.entity_type = 'ITEM' AND r.entity_id = it.id)) AS u`,
   );
   const p = pre[0];
   if (p === undefined) throw new AppError("INTERNAL");
@@ -188,14 +183,14 @@ async function deleteAll(sp: AccessTx, tenantId: string): Promise<SampleCounts> 
   };
   await del(
     sql`DELETE FROM public.unit_conversions c USING public.items it
-         WHERE c.tenant_id = ${tenantId}::uuid AND it.tenant_id = c.tenant_id AND it.id = c.item_id AND it.is_sample AND ${unlinked("ITEM", "it")} RETURNING 1 AS x`,
+         WHERE c.tenant_id = ${tenantId}::uuid AND it.tenant_id = c.tenant_id AND it.id = c.item_id AND it.is_sample AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = it.tenant_id AND r.entity_type = 'ITEM' AND r.entity_id = it.id) RETURNING 1 AS x`,
     p.u,
   );
   // Tek ifade: öz-FK (ebeveyn) denetimi ifade sonunda yapılır; örnek olmayan çocuk varsa 23503. Sayım kilidini 0040 tetikleyicisi siler
   // (sayımdaki kilit kalır → FK 23503 → pasife alma).
   await del(sql`DELETE FROM public.locations WHERE tenant_id = ${tenantId}::uuid AND is_sample RETURNING 1 AS x`, p.l);
-  await del(sql`DELETE FROM public.items i WHERE i.tenant_id = ${tenantId}::uuid AND i.is_sample AND ${unlinked("ITEM", "i")} RETURNING 1 AS x`, p.i);
-  await del(sql`DELETE FROM public.warehouses w WHERE w.tenant_id = ${tenantId}::uuid AND w.is_sample AND ${unlinked("WAREHOUSE", "w")} RETURNING 1 AS x`, p.w);
+  await del(sql`DELETE FROM public.items i WHERE i.tenant_id = ${tenantId}::uuid AND i.is_sample AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.entity_type = 'ITEM' AND r.entity_id = i.id) RETURNING 1 AS x`, p.i);
+  await del(sql`DELETE FROM public.warehouses w WHERE w.tenant_id = ${tenantId}::uuid AND w.is_sample AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = w.tenant_id AND r.entity_type = 'WAREHOUSE' AND r.entity_id = w.id) RETURNING 1 AS x`, p.w);
   return { warehouses: Number(p.w), locations: Number(p.l), items: Number(p.i) };
 }
 
@@ -215,7 +210,7 @@ async function archiveAll(tx: AccessTx, tenantId: string): Promise<SampleCounts>
   if (busy[0] !== undefined) throw new AppError("VALIDATION_FAILED", { detail: "IN_USE" });
   const items = await tx.execute<{ x: number }>(
     sql`UPDATE public.items i SET status = 'ARCHIVED', archived_at = now()
-         WHERE i.tenant_id = ${tenantId}::uuid AND i.is_sample AND i.status = 'ACTIVE' AND ${unlinked("ITEM", "i")} RETURNING 1 AS x`,
+         WHERE i.tenant_id = ${tenantId}::uuid AND i.is_sample AND i.status = 'ACTIVE' AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = i.tenant_id AND r.entity_type = 'ITEM' AND r.entity_id = i.id) RETURNING 1 AS x`,
   );
   // Kullanıcının örnek bir rafın/gözün altına açtığı etkin lokasyon varsa o örnek atalar açık kalır: ağaçta gerçek lokasyon (ve stoğu)
   // arşivli ebeveyn altında görünmez olmaz (archiveLocation kuralı "aktif alt lokasyon").
@@ -235,7 +230,7 @@ async function archiveAll(tx: AccessTx, tenantId: string): Promise<SampleCounts>
   // Örnek depoda kullanıcının kendi açtığı etkin lokasyon varsa depo açık kalır (gerçek kayıt gizlenmez).
   const whs = await tx.execute<{ x: number }>(
     sql`UPDATE public.warehouses w SET status = 'ARCHIVED', archived_at = now()
-         WHERE w.tenant_id = ${tenantId}::uuid AND w.is_sample AND w.status = 'ACTIVE' AND ${unlinked("WAREHOUSE", "w")}
+         WHERE w.tenant_id = ${tenantId}::uuid AND w.is_sample AND w.status = 'ACTIVE' AND NOT EXISTS (SELECT 1 FROM public.external_refs r WHERE r.tenant_id = w.tenant_id AND r.entity_type = 'WAREHOUSE' AND r.entity_id = w.id)
            AND NOT EXISTS (SELECT 1 FROM public.locations l
                             WHERE l.tenant_id = w.tenant_id AND l.warehouse_id = w.id AND l.status = 'ACTIVE')
          RETURNING 1 AS x`,
