@@ -136,3 +136,5 @@ export async function prepareCustomLabels(p:LabelParams,raw:LabelPrepareInput,pa
  });
 }
 export async function readPreparedLabels(p:LabelParams,id:string,packagesEnabled=false):Promise<LabelPrepared>{labelId(id);return runTenantQuery({...p,permission:'labels.print'},async(tx,m)=>savedResult(tx,m,await readJob(tx,m.tenantId,id),packagesEnabled,false,false));}
+
+export{parseLabelSourceRequest}from'./print-source.ts';
