@@ -180,3 +180,9 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 ### T-1166 çalışma alanı yetki eşliği (yerel)
 - Arşiv UI'si de yayın yetkisini kullanır; izni olmayan dokunuş sarı balon verir. Varsayılan tasarımı arşivlemeye çalışınca önce alternatif etiketi varsayılan yapma yönlendirmesi gelir. Sunucu yetkisi/aktif varsayılan denetimi korunur.
 - T1165 bağımsız düzeltmesi normal merge ile bu dala taşındı; eski rapor1/2 bulgulu olarak saklanır, güncel0/0/0 @6de09b0. UI e2e/yayın hâlâ bekler.
+
+### T-1164 sürümlü baskı hazırlama (yerel)
+- Önizleme salt okunur; hazırlamada değişmez şablon sürümü + gerçek kaynak snapshot'ı + kopya/yazıcı/aktör/audit kaydı. İşUUID metadata kimliğidir, fiziksel paket oluşturmaz. Aynı anahtar/içerik aynı sonucu döndürür; farklı içerik ret. PNG/kod/metin/kalibrasyon kontrolünden önce iş yazılmaz.
+- Varsayılanın atandığı eski sürüm, aynı şablonun daha yeni yayınıyla sessiz değişmez. Tarihsel yeniden basım aynı değer/QR/sürümü kullanır; kaynak ve güncel depo yetkisi yeniden doğrulanır. Kaldırılmış/yanlış eşlenen ürün barkodu veya değişmiş raf kodu fiziksel yeniden basılamaz. Genel/profile sessiz geçiş yok.
+- Tarihsel verinin salt okunur erişimi baskı profili/özellik bayrağıyla kapatılmaz; fiziksel yeni hazırlama ayrı yeniden doğrulanır. Hazırlandı fiziksel basıldı değildir. Wire DTO shared/type-only; istemci DB kodu almaz.
+- Safsnapshot/kaynak/hazırmodel13birim; domain/sharedtsc ve ESLint kontrol edilir. GerçekDB stokdeğişmezliği/izolasyon/int/yenidenbasım, UI/PDF/e2e, güvenlik, prepush/CI/canlı henüz bekler; paket bunlar bitmeden teslim sayılmaz.

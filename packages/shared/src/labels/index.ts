@@ -15,3 +15,5 @@ export * from "./code128.ts";
 export * from "./render.ts";
 
 export * from "./ready.ts";
+
+export type {LabelSourceRequest,LabelPrintPreview,LabelPrepared} from "./print-contract.ts";
