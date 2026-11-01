@@ -1044,6 +1044,16 @@
     "setup_journey": {
       "updated": "Setup journey choice changed",
       "labels_printed": "First label printed"
+    },
+    "label": {
+      "template_saved": "Label draft saved",
+      "template_published": "Label design published",
+      "template_archived": "Label archive changed",
+      "default_changed": "Operation label assigned",
+      "printer_saved": "Printer profile saved",
+      "preference_changed": "Label printer selected",
+      "asset_added": "Label logo added",
+      "print_prepared": "Label print prepared"
     }
   },
   "auditLog": {
@@ -4662,7 +4672,13 @@
     "stripEdit": "Party card",
     "stripEmpty": "The name appears here as you type",
     "autoCode": "automatic code",
-    "ph": { "shortName": "Name shown in lists", "name": "Company name", "phone": "05xx xxx xx xx", "email": "name@company.com", "address": "Street, number, district" },
+    "ph": {
+      "shortName": "Name shown in lists",
+      "name": "Company name",
+      "phone": "05xx xxx xx xx",
+      "email": "name@company.com",
+      "address": "Street, number, district"
+    },
     "gContactSub": "Optional",
     "searchLabel": "Search accounts",
     "filter": "Filter",
