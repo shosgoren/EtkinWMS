@@ -17,7 +17,7 @@ Sevk `trackingCode` kapalı sunucu alanıdır; gerçek packageQr varsa onunla bi
 
 ## Ekran ve ilk kullanım
 
-- Ortak `kalip/` + EtiketEditor kaynak uzantısı. 390×670/844,1180×820,1440×900; açık/koyu, büyük araçlar, sabit Geri/Ana ekran/işlem/Modüller. Telefonda ortak `ksecp` özellik sayfası, odak/Esc/perde ve kaydırılabilir alanlar.
+- Ortak `kalip/` + EtiketEditor kaynak uzantısı. 390×670/844,1180×820,1440×900; açık/koyu, büyük araçlar, sabit Geri/Ana ekran/işlem/Modüller. Dokunmatik tablette araç sütunu140px ile kelimeler bölünmez. Telefonda ortak `ksecp` özellik sayfası, odak/Esc/perde ve kaydırılabilir alanlar.
 - Logo / metin / bağlı alan / QR / Code128 / EAN13 / çizgi / çerçeve; sürükle, köşeden boyutlandır, döndür, kopyala, sil, geri al, ok tuşları, alan seçici, ortala, yakınlaştır/sığdır ve iki parmak pan/zoom. Serbest yer varsa yeni nesne/kopya oraya konur; yoksa uyarı ve mevcut tasarım korunur.
 - Ölçüler tam µm saklanır, mm gösterilir; ara sayı yazımı bitince doğrulanır. Hazır satırlar uzun ürün kodunu kesmeden iki satıra sığdırır; yazı/kod taşması sessiz kesilmez. QR/barkod çevresi ve fiziksel geometri yayında/baskıda yeniden denetlenir.
 - Taslak ayrı, yayın sürümleri değişmez. Kirli/yüklenen taslakta çıkış korunur; hata sahte başarıya dönüşmez. Varsayılan atanan sürümü kullanır; daha yeni yayın sessizce onu değiştirmez. Geçmiş sürüm taslağa kopyalanabilir, aktif varsayılan alternatif olmadan arşivlenemez.
@@ -65,6 +65,6 @@ Mevcut ürün/raf/toplu ürün/kabul/üretim düğmeleri yetkili özel varsayıl
 
 1Kasım yerel kanıt:158 hedef birim;26 gerçek DB (store9/printer4/print13); ayrı A/B/oturum yükleyici AC04 392. QR/Code128/EAN13×203/300/600×4dönüş Chromium→ZXing36/36. Gerçek PDF6etiket A4→2sayfa,100×50mm rulo→6sayfa görüntülendi. Fiziksel yazıcı/GS1 kalite sertifikası kanıtı yok.
 
-Tarayıcı aday app commit1b3b2db: desktop/mobile tasarım/logo/sürükleme/klavye/tema,5 gerçek paketQR decode, tercihler, değişmez yeniden baskı ve>50 keyset; ayrı ölçü yarışı/unmount/busy/legacyyetki kabulü. Test seçici düzeltmesi uygulama kodunu değiştirmedi; mevcut derleme kimliği ayrıca yerel kanıtla doğrulandı. Exact-head final CI ve receiver/imaj/DB doğrulaması her yayında ayrıca gerekir; geçmiş yeşil log güncel yayın sayılmaz.
+Tarayıcı aday app commit6d62903: desktop/mobile tasarım/logo/sürükleme/klavye/tema,5 gerçek paketQR, tercihler, değişmez yeniden baskı ve>50 keyset; ölçü yarışı/unmount/busy/legacyyetki kabulü tek tam koşuda4/4 geçti.100×150mm ürün etiketi seçimi, gerçek standart barkodun QR/Code128/EAN13 olarak hazırlanması ve kayıtlı203DPI'da gerçek jobSVG'sinin Chromium→ZXing çözümü de bu koşuda.96DPI ekran küçük resmi fiziksel barkod kalite kanıtı sayılmaz. Mevcut derleme kimliği/uygulama değişmezliği yerel kanıtla doğrulandı. Exact-head final CI ve receiver/imaj/DB doğrulaması her yayında ayrıca gerekir; geçmiş yeşil log güncel yayın sayılmaz.
 
-Yayın/geri alma/yedek ve sır referansları: OPERATIONS.md. Sır/DB adresi/anahtar burada veya görev kartlarında tutulmaz. Son görev kaydı: T1170; seri kartlar T1145–1181. Eski geliştirme günlüklerinin ayrıntısı Git geçmişindedir.
+Yayın/geri alma/yedek ve sır referansları: OPERATIONS.md. Sır/DB adresi/anahtar burada veya görev kartlarında tutulmaz. Son görev kaydı: T1170; seri kartlar T1145–1182. Eski geliştirme günlüklerinin ayrıntısı Git geçmişindedir.

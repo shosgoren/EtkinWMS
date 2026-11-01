@@ -140,6 +140,10 @@ async function snapshot(t: Fx): Promise<unknown> {
     packageSteps: await q("SELECT document_line_id, handling_unit_id, sequence_no FROM public.package_movement_steps WHERE tenant_id = $1 ORDER BY document_line_id"),
     packageOrigins: await q("SELECT id, document_id, lot_code, produced_on::text, expires_on::text FROM public.receipt_packages WHERE tenant_id = $1 ORDER BY id"),
     balances: await q("SELECT count(*)::int AS n, COALESCE(sum(quantity), 0)::text AS q, COALESCE(sum(reserved_quantity), 0)::text AS r FROM public.stock_balances WHERE tenant_id = $1"),
+    // T-1200: min / maks, dönüşüm ve görsel eylemleri B'de iz bırakmamalı.
+    policies: await q("SELECT warehouse_id, item_id, min_quantity::text, max_quantity::text FROM public.item_stock_policies WHERE tenant_id = $1 ORDER BY warehouse_id, item_id"),
+    conversions: await q("SELECT item_id, unit_id, to_base_factor::text FROM public.unit_conversions WHERE tenant_id = $1 ORDER BY item_id, unit_id"),
+    images: await q("SELECT id, is_main, removed_at FROM public.item_images WHERE tenant_id = $1 ORDER BY id"),
   };
 }
 
@@ -301,6 +305,8 @@ function files(dir: string, re: RegExp): string[] {
 // ---------------------------------------------------------------------------------------------
 
 const LOADERS = [
+  // T-1166: label workspace resolves membership itself; shared A/B/anonymous/MFA assertions apply.
+  "label-designs/page.tsx",
   // T-903c: every pilot loader must enforce its own tenant boundary.
   "stock/page.tsx",
   "stock/documents/page.tsx",
@@ -353,6 +359,7 @@ const LOADERS = [
 const SHELL_LOADERS = ["field/layout.tsx", "field/page.tsx"] as const;
 /** T-312: etiket sayfası kaynak (depo) ister; kaynaksız çağrı tenant'a hiç dokunmaz, bu yüzden özel blokta `?warehouse=` ile sınanır. */
 const LABELS = "labels/page.tsx" as const;
+const CUSTOM_LABELS = "custom-labels/page.tsx" as const;
 /** T-216: ürün ayrıntısı ek bir dinamik segment (`itemId`) ister; ortak döngüde değil, aşağıdaki özel bloktadır. */
 const ITEM_DETAIL = "items/[itemId]/page.tsx" as const;
 /** T-1090: cari kartı (`partyId` parametresi `itemId` argümanıyla verilir). */
@@ -369,7 +376,7 @@ type Loader = (props: {
 
 /** `[warehouseId]` yükleyicisi için kimlik: verilmezse slug A'nınsa A'nın, değilse B'nin deposu (çapraz tenant denemesi). */
 async function runLoader(
-  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | typeof PARTY_CARD | (typeof SHELL_LOADERS)[number] | typeof LABELS | (typeof PACKAGE_LOADERS)[number] | typeof PACKAGE_MOVEMENT_LOADER,
+  rel: (typeof LOADERS)[number] | typeof ITEM_DETAIL | typeof PARTY_CARD | (typeof SHELL_LOADERS)[number] | typeof LABELS | typeof CUSTOM_LABELS | (typeof PACKAGE_LOADERS)[number] | typeof PACKAGE_MOVEMENT_LOADER,
   slug: string,
   warehouseId?: string,
   itemId?: string,
@@ -390,6 +397,31 @@ async function runLoader(
 }
 
 describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
+  it("@AC-04 custom label source: cross-tenant, missing slug, outsider and anonymous remain closed; own empty workspace renders without stock mutation", async () => {
+    const beforeA = await snapshot(A), beforeB = await snapshot(B);
+    const source = JSON.stringify({kind:"PRODUCT",ids:[fx.B.item]});
+    as(A.admin);
+    const cross = await runLoader(CUSTOM_LABELS,B.slug,undefined,undefined,{source});
+    as(A.admin);
+    expect(await runLoader(CUSTOM_LABELS,`yok-${rnd()}`,undefined,undefined,{source})).toEqual(cross);
+    as(outsider.id);
+    expect(await runLoader(CUSTOM_LABELS,B.slug,undefined,undefined,{source})).toEqual(cross);
+    expect(cross).toEqual({outcome:"notFound"});
+    expect(JSON.stringify(cross)).not.toContain(B.name);
+    as(null);
+    expect((await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source})).to).toMatch(/^\/login\?next=/);
+    as(A.admin);
+    const own = await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source:JSON.stringify({kind:"PRODUCT",ids:[fx.A.item]})});
+    expect(own.outcome).toBe("render");
+    expect(JSON.stringify(own.value)).toContain("noTemplate");
+    expect(await runLoader(CUSTOM_LABELS,A.slug)).toEqual({outcome:"notFound"});
+    const invalid = await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source:"{}"});
+    expect(invalid.outcome).toBe("render");
+    expect(JSON.stringify(invalid.value)).toContain("errors.DESIGN_INVALID");
+    expect(await snapshot(A)).toEqual(beforeA);
+    expect(await snapshot(B)).toEqual(beforeB);
+  });
+
   for (const rel of SHELL_LOADERS) {
     it(`@AC-04 sayfa ${rel}: B'nin slug'ıyla da var olmayan slug'la da aynı yapı (yalnızca istenen slug yankılanır); B'ye ait ad/kimlik çizilmez (404 kararı üst layout.tsx'te)`, async () => {
       as(A.admin);
@@ -439,7 +471,7 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
 
 describe("sayfa yükleyicileri (/t/<slug>)", () => {
   it("@AC-04 kapsam: apps/web/app/t/[slug] altındaki her page/layout bu tabloda (yeni yükleyici testsiz kalamaz)", () => {
-    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, ITEM_DETAIL, PARTY_CARD, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER, LOCATION_CARD].sort());
+    expect(files(SLUG_DIR, /^(page|layout)\.[cm]?[jt]sx?$/)).toEqual([...LOADERS, ...SHELL_LOADERS, LABELS, CUSTOM_LABELS, ITEM_DETAIL, PARTY_CARD, ...PACKAGE_LOADERS, PACKAGE_MOVEMENT_LOADER, LOCATION_CARD].sort());
   });
 
   for (const rel of LOADERS) {
@@ -927,6 +959,12 @@ const ITEM_ACTIONS: Record<string, Call> = {
   setConversionAction: (slug) => itemActions.setConversionAction!({ slug, itemId: fx.B.item, unitId: fx.B.unit, factor: "12" }),
   addBarcodeAction: (slug) => itemActions.addBarcodeAction!({ slug, itemId: fx.B.item, unitId: null, barcode: `9${rnd()}`, quantity: null }),
   removeBarcodeAction: (slug) => itemActions.removeBarcodeAction!({ slug, barcodeId: fx.B.barcode }),
+  // T-1200: dönüşüm kaldırma, görsel sil / geri al / kapak yap (görsel kimliği rastgele: A bağlamında etkisiz), min / maks stok.
+  removeConversionAction: (slug) => itemActions.removeConversionAction!({ slug, itemId: fx.B.item, unitId: fx.B.unit }),
+  removeItemImageAction: (slug) => itemActions.removeItemImageAction!({ slug, itemId: fx.B.item, imageId: randomUUID() }),
+  restoreItemImageAction: (slug) => itemActions.restoreItemImageAction!({ slug, itemId: fx.B.item, imageId: randomUUID(), main: true }),
+  setItemImageMainAction: (slug) => itemActions.setItemImageMainAction!({ slug, itemId: fx.B.item, imageId: randomUUID() }),
+  setStockPolicyAction: (slug) => itemActions.setStockPolicyAction!({ slug, itemId: fx.B.item, warehouseId: B.warehouse, min: "1", max: "5" }),
   createUnitAction: (slug) => itemActions.createUnitAction!({ slug, code: `U${rnd()}`, name: "Ele geçirme birimi" }),
   suggestItemCodeAction: (slug) => itemActions.suggestItemCodeAction!({ slug }),
   searchItemsAction: (slug) => itemActions.searchItemsAction!({ slug, q: "a" }),
@@ -1024,6 +1062,9 @@ describe("Server Action'lar", () => {
 
   for (const [name, call] of Object.entries({ ...ACTIONS, ...ITEM_ACTIONS, ...TASK_ACTIONS, ...RECEIPT_ACTIONS })) {
     it(`@AC-04 ${name}: A yöneticisi B'nin slug'ıyla -> NOT_FOUND (var olmayan slug ile aynı yanıt); B'de hiçbir değişiklik yok`, async () => {
+      // T-1200: eylem sayısı arttıkça bu döngü A yöneticisinin dakikalık kullanıcı kotasını (120) sonraki testler için tüketiyordu; bu
+      // testler kotayı değil kimlik reddini sınar → yalnız kullanıcı kapsamlı sayaçlar sıfırlanır (T-1116 deseni; kota ayrı testte).
+      await adm.query("DELETE FROM public.request_rate_limits WHERE scope = 'web.user'");
       const victim = { membership: B.managerMembership, invitation: bInvite.invitationId };
       const beforeB = await snapshot(B);
       const beforeA = await snapshot(A);

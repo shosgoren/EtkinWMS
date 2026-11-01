@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
-import { getItem, getItemFixedState, listItemBarcodes, listItemConversions } from "@wms/domain/catalog";
+import { addDecimal, compareDecimal, getItem, getItemFixedState, listItemBarcodes, listItemConversions, listItemImages, listItemStockPolicies } from "@wms/domain/catalog";
 import { listUnits } from "@wms/domain/catalog/units";
 import { getProductSourceInfo } from "@wms/domain/integrations";
 import { getItemStockCard, getItemStockPivot, listItemMoves, listItemTracking } from "@wms/domain/stock";
@@ -68,6 +68,14 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
     // T-968: stok özeti (Nerede? + son hareketler) — okunamazsa bölümler çizilmez, kart yine açılır.
     const sourceInfo = await getProductSourceInfo(call, item.id);
     const stockCard = await getItemStockCard(call, item.id).catch(() => null);
+    // T-1200: görseller ve kapsamdaki depoların min / maks kayıtları (okunamazsa boş; kart yine açılır).
+    const images = await listItemImages(call, item.id).catch(() => []);
+    const policies = await listItemStockPolicies(call, item.id).catch(() => []);
+    const sum = (vals: readonly (string | null)[]): string | null => {
+      const xs = vals.filter((x): x is string => x !== null && compareDecimal(x, "0") > 0);
+      return xs.length === 0 ? null : xs.reduce((a, b) => addDecimal(a, b), "0");
+    };
+    const policySum = { min: sum(policies.map((p) => p.min)), max: sum(policies.map((p) => p.max)) };
     const dark = temaKoyu(await cookies());
     const can = (p: Parameters<typeof hasPermission>[1]): boolean => hasPermission(current.roles, p, current.grants);
     // Değişiklik geçmişi sekmesi işlem kaydı ekranıyla aynı yetkiyi ister (`audit.view`; karar yine `listAudit` içinde sunucuda).
@@ -110,6 +118,9 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
           }}
           conversions={conversions}
           barcodes={barcodes}
+          images={images}
+          policies={policies}
+          policySum={policySum}
         />
       </main>
     );

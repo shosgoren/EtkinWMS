@@ -13,6 +13,8 @@ import { createSealer } from "@wms/shared/seal";
 import { JOB_TYPES, PLATFORM_NO_USER_ID, type JobHandler, type JobType } from "@wms/shared/queue";
 import { createDeliverInvitationHandler } from "./jobs/deliver-invitation.js";
 import { startCountAbandonSchedule } from "./jobs/count-abandon.js";
+import { startImagePurgeSchedule } from "./jobs/image-purge.js";
+import { purgeRemovedItemImages } from "@wms/domain/catalog/item-images";
 import { startDemoLeadsSchedule } from "./jobs/demo-leads.js";
 import { DEMO_RESEED_SINGLETON_KEY, registerDemoReseed } from "./jobs/demo-reseed.js";
 import { createPostStockDocumentHandler } from "./jobs/post-stock-document.js";
@@ -216,6 +218,14 @@ const countAbandonSchedule = startCountAbandonSchedule({
   logger,
 });
 
+// Silinen ürün görsellerinin baytları (T-1200, KVKK): açılışta bir kez + 15 dakikada bir; yalnız 10 dk'dan eski silinmiş satırlar, tenant başına
+// `withSystemTenant` (aynı RLS).
+const imagePurgeSchedule = startImagePurgeSchedule({
+  listActiveTenantIds: (after, limit) => queue.listActiveTenantIds(after, limit),
+  purgeFor: (tenantId) => withSystemTenant(db, tenantId, "item_images.purge", (tx) => purgeRemovedItemImages(tx, tenantId)),
+  logger,
+});
+
 // ERP senkron zamanlayıcısı (T-1066): açılışta bir kez + 30 saniyede bir; bağlantı başına tek iş (singletonKey). T-1138: kademe bağlantı
 // başına (anlık bildirim açıkken kart 15 dk, depo 3 dk uzlaştırma; değilse 30 sn) + webhook kayıt/uzlaştırma işi.
 const integrationSchedule = startIntegrationSchedule({
@@ -263,6 +273,7 @@ lifecycle.register({ name: "worker-heartbeat", run: () => workerHeartbeat.stop()
 lifecycle.register({ name: "queue-maintenance", run: () => queueMaintenance.stop() });
 lifecycle.register({ name: "consistency-schedule", run: () => consistencySchedule.stop() });
 lifecycle.register({ name: "count-abandon-schedule", run: () => countAbandonSchedule.stop() });
+lifecycle.register({ name: "image-purge-schedule", run: () => imagePurgeSchedule.stop() });
 lifecycle.register({ name: "integration-schedule", run: () => integrationSchedule.stop() });
 lifecycle.register({ name: "demo-leads-schedule", run: () => demoLeadsSchedule?.stop() });
 lifecycle.register({ name: "job-queue", run: () => queue.stop() });

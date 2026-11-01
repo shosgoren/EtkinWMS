@@ -40,13 +40,13 @@ describe("eylem listesi", () => {
   it("kayıtlı eylemleri içerir (T-305: inbound_receipt.*, T-306: sales_order.*, T-307: pick_assignment.*/pick.*, T-309: count.* dahil)", () => {
     expect([...AUDIT_ACTIONS].sort()).toEqual(
       [
-        "label.template_saved", "label.template_published", "label.template_archived", "label.default_changed", "label.printer_saved", "label.preference_changed", "label.asset_added", "label.print_prepared",
+        "label.template_saved", "label.template_published", "label.template_archived", "label.default_changed", "label.printer_saved", "label.preference_changed", "label.asset_added", "label.print_prepared", "label.guide_seen",
         "member.invited", "member.removed", "member.role_changed", "member.left", "ownership.transferred",
         "invitation.revoked", "invitation.accepted", "field_user.created", "field_user.code_reset", "field_user.unlocked", "field_device.enrolled", "field_device.revoked", "tenant.created", "tenant.settings_changed",
         "onboarding.step_completed", "password_reset_link.issued", "audit.exported",
         "warehouse.created", "warehouse.updated", "warehouse.archived", "location.created", "location.updated",
         "location.archived", "warehouse_scope.changed", "unit.created", "unit.updated", "item.created",
-        "item.updated", "item.archived", "item_barcode.added", "item_barcode.removed", "unit_conversion.set",
+        "item.updated", "item.archived", "item_barcode.added", "item_barcode.removed", "unit_conversion.set", "unit_conversion.removed", "item_image.added", "item_image.replaced", "item_image.removed", "item_image.restored", "item_image.main_set", "item_stock_policy.set",
         "lot.created", "serial.registered", "handling_unit.created", "handling_unit.changed",
         "stock_document.created", "stock_document.updated", "stock_document.approved", "stock_document.posted", "stock_document.cancelled",
         "stock_document.reversed", "reservation.created", "reservation.released",
