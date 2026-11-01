@@ -1,6 +1,6 @@
 # Etiket tasarım editörü — B-166 uygulama planı
 
-Tarih: 1 Kasım 2026. Durum: GELİŞTİRME BAŞLADI; T-1146 tasarım kaynağı hazırlanıyor. Henüz uygulama/yayın yok.
+Tarih: 1 Kasım 2026. Durum: GELİŞTİRME BAŞLADI; T-1146 tasarım kaynağı GitHub PR282 ile main'de; T-1147 saf sözleşme geliştiriliyor. Henüz uygulama/yayın yok.
 Plan kartı: [T-1145](../tasks/T-1145.md). Başlangıç kaynak main: `9c046c6f015aa2448cbc82bff86fbbbd88ac6c20`.
 Otorite: kullanıcı kararı + ALTIN-KURAL, STANDART, DESIGN-PARITY, INVARIANTS ve ADR-022. Bu belge onların istisnası değildir.
 
@@ -120,3 +120,8 @@ Plan tesliminde yapılan: güncel kaynak ve B-166 karşılaştırması, kapsam/a
 - Etkin tercih sırası: şablonun bu cihazdaki yazıcısı → şablonun firma yazıcısı → cihazın genel yazıcısı → firmanın genel yazıcısı → sistem yazdırma iletişim kutusu. “Genel tercihi kullan” açık seçenektir. Desteklenmeyen/çevrimdışı açık bir şablon tercihi sessizce başka yazıcıya gitmez.
 - Tarayıcıdan fiziksel yazıcıları listeleme ve sessiz yönlendirme garanti edilmez. Köprü yokken kayıtlı tercih baskı profili/önerisidir; sistem iletişim kutusunda seçim gerekir. Gerçek otomatik rota yalnız yetkili ve yeteneği doğrulanmış köprüde açılır; arayüz bu ayrımı söyler.
 - T-1146 ortak kaynak: docs/design/source/EtiketEditor.dc.html; örnek verili işlevsel tasarım, henüz backend yetki/kayıt/baskı değil.
+
+### T-1147 sözleşme dilimi
+- `@wms/domain/labels/editor`: DB/Next/yazıcı ağı içermeyen sürümlü geometri ve alan bağları, logoassetUUID, taslak/yayın ayrıdoğrulama. Integerµm baskıölçüsü; UIyakınlaştırması etiketi değiştirmez. QRkapalıalanı korunur; paketkimliği ürünbarkoduyla değiştirilemez, statiklotmetni zorunlu gerçeklotyerine geçmez.
+- Yazıcı çözümü gerçek yetkili profile listesiyle çağrılır; tarayıcımodu her zaman sistemseçimigerekir der. Açıkça seçilmiş erişilemeyen/kapalı/yetkisiz yazıcı veya hazır olmayan köprüde blocked; genel tercihe sessiz geçiş yok.
+- Yerel64birim/roottsc/hedefESLint geçti. Bağımsız inceleme/prepush/CI henüz bekliyor. Bu saf dilim kalıcı şablon, sunucu yetkisi veya gerçek baskı değildir; sonraki seri kart API/DB/izinleri kurar.
