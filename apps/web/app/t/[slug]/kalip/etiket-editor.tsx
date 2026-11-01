@@ -80,11 +80,11 @@ export function KalipEtiketEditor({dark,design,onChange,canEdit,assets,upload,co
     <div className="lx-image" aria-hidden="true" dangerouslySetInnerHTML={{__html:svg.html}}/>{design.elements.map(e=><button key={e.id} type="button" data-label-element={e.id} className="lx-object" aria-label={label(e)} aria-pressed={selected.includes(e.id)} style={{left:`${e.x/design.width*100}%`,top:`${e.y/design.height*100}%`,width:`${e.width/design.width*100}%`,height:`${e.height/design.height*100}%`}} onPointerDown={event=>start(event,e.id)} onDoubleClick={()=>setPanel(true)} onFocus={()=>{if(!drag.current&&touches.current.size===0)setSelected([e.id]);}} onClick={event=>{if(event.detail===0)setSelected([e.id]);event.stopPropagation();}}>{selected.includes(e.id)&&<span className="lx-handle" role="button" aria-label={t("resize")} onPointerDown={event=>start(event,e.id,true)}/>}</button>)}
    </div></div><div className="lx-foot"><span>{design.width/1000} × {design.height/1000} mm · {t("preview")}</span><span>{t("place")}</span></div>{svg.error&&<div className="lx-note" role="status">{t("previewError")}</div>}</section>
   <aside className="lx-inspector">{properties}</aside>
-  {panel&&<EtiketOzellik title={t("edit")} onClose={()=>setPanel(false)}><div className={`dzed${dark?" dz-dark":""}`}><div className="lx lx-property"><aside className="lx-inspector lx-open">{properties}</aside></div></div></EtiketOzellik>}
+  {panel&&<EtiketOzellik dark={dark} title={t("edit")} onClose={()=>setPanel(false)}><div className={`dzed${dark?" dz-dark":""}`}><div className="lx lx-property"><aside className="lx-inspector lx-open">{properties}</aside></div></div></EtiketOzellik>}
  </div></div>;
 }
 
-function EtiketOzellik({title,onClose,children}:{title:string;onClose:()=>void;children:ReactNode}){
+function EtiketOzellik({dark,title,onClose,children}:{dark:boolean;title:string;onClose:()=>void;children:ReactNode}){
  const ref=useRef<HTMLElement>(null);useModalFocus(true,ref,{onClose,initial:"none"});
- return <div className="dzf"><KalipPerdeKatman onClose={onClose} label={title}/><section className="ksheet" role="dialog" aria-modal="true" aria-label={title} ref={ref}><div className="sxh"><h2>{title}</h2><button type="button" className="xb" aria-label={title} onClick={onClose}><Ico size={22} d={LICON.close}/></button></div>{children}</section></div>;
+ return <div className={`dzf ksecp${dark?" dz-dark":""}`}><KalipPerdeKatman onClose={onClose} label={title}/><section className="ksheet" role="dialog" aria-modal="true" aria-label={title} ref={ref}><div className="sxh"><b>{title}</b><button type="button" className="xb" aria-label={title} onClick={onClose}><Ico size={22} d={LICON.close}/></button></div>{children}</section></div>;
 }
