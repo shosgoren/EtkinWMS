@@ -387,21 +387,29 @@ describe("ürün görseli — route", () => {
     expect(missing.status).toBe(404);
   });
 
-  it("yavaş damlatılan gövde ~20 sn sonra 400 IMAGE_TIMEOUT; beklerken işleme yuvası tutulmaz (başka yükleme yuva alabilir)", async () => {
+  it("takılan gövde (4 bayt gelip durur) ~3 sn sonra 400 IMAGE_TIMEOUT; beklerken işleme yuvası tutulmaz, başka alanın okuması sürer; sonra okuma yuvası boşalır", async () => {
     const { tryAcquireImageSlot, IMAGE_SLOTS } = await import("../../../apps/web/lib/item-image.ts");
+    const { tryAcquireReadSlot } = await import("../../../apps/web/lib/upload-body.ts");
     const body = new ReadableStream<Uint8Array>({ start(c) { c.enqueue(new Uint8Array([0xff, 0xd8, 0xff, 0xe0])); } });
     const headers = new Headers({ "fly-client-ip": `203.0.113.${(ipN++ % 250) + 1}`, "sec-fetch-site": "same-origin", "x-test-user": A.ownerUserId, origin: ORIGIN, "content-length": "4096" });
     const pending = upload(new Request(`${ORIGIN}/api/t/${A.slug}/items/${A.itemTwoId}/images`, { method: "POST", headers, body, duplex: "half" } as RequestInit), { params: Promise.resolve({ slug: A.slug, itemId: A.itemTwoId }) });
-    await new Promise((r) => setTimeout(r, 1500));
-    const held = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
+    const t0 = Date.now();
+    await new Promise((r) => setTimeout(r, 1000));
+    const held = Array.from({ length: IMAGE_SLOTS }, (_, k) => tryAcquireImageSlot(`baska-${k}`, `u-${k}`));
     expect(held.every((x) => x !== null)).toBe(true);
     for (const r of held) r?.();
+    // A'nın sahibi okuma yuvasını tutuyor (kullanıcı payı 1); başka alan okuyabilir.
+    expect(tryAcquireReadSlot(A.slug, A.ownerUserId)).toBeNull();
+    const other = tryAcquireReadSlot(B.slug, B.ownerUserId);
+    expect(other).not.toBeNull();
+    other?.();
     const res = await pending;
+    expect(Date.now() - t0).toBeLessThan(10_000);
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error?: { detail?: string } }).error?.detail).toBe("IMAGE_TIMEOUT");
-    const again = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
-    expect(again.every((x) => x !== null)).toBe(true);
-    for (const r of again) r?.();
+    const freed = tryAcquireReadSlot(A.slug, A.ownerUserId);
+    expect(freed).not.toBeNull();
+    freed?.();
   }, 45_000);
 
   it("MINOR-B: okuma yuvaları doluyken 429 IMAGE_BUSY (gövde okunmaz); Content-Length yoksa 400 IMAGE_LENGTH_REQUIRED; satır yazılmaz", async () => {
@@ -409,7 +417,7 @@ describe("ürün görseli — route", () => {
     const item = A.itemTwoId;
     const before = await imagesOf(A, item);
     const png = new Uint8Array(await sharp({ create: { width: 7, height: 7, channels: 3, background: { r: 66, g: 2, b: 19 } } }).png().toBuffer());
-    const held = Array.from({ length: READ_SLOTS }, () => tryAcquireReadSlot());
+    const held = Array.from({ length: READ_SLOTS }, (_, k) => tryAcquireReadSlot(`dolu-${k}`, `u-${k}`));
     try {
       const res = await post(A, item, A.ownerUserId, png);
       expect(res.status).toBe(429);
@@ -425,12 +433,29 @@ describe("ürün görseli — route", () => {
     expect(await imagesOf(A, item)).toEqual(before);
   });
 
+  it("MINOR-C: bir alan okuma payını (2) doldurunca o alana 429, başka alan yüklemeye devam eder", async () => {
+    const { tryAcquireReadSlot } = await import("../../../apps/web/lib/upload-body.ts");
+    const png = new Uint8Array(await sharp({ create: { width: 6, height: 6, channels: 3, background: { r: 12, g: 99, b: 3 } } }).png().toBuffer());
+    // B'nin iki kullanıcısı (ör. iki sekme / iki kişi) B'nin payını tutuyor.
+    const held = [tryAcquireReadSlot(B.slug, "b-kisi-1"), tryAcquireReadSlot(B.slug, "b-kisi-2")];
+    expect(held.every((x) => x !== null)).toBe(true);
+    try {
+      const blocked = await post(B, B.itemTwoId, B.ownerUserId, png);
+      expect(blocked.status).toBe(429);
+      expect(((await blocked.json()) as { error?: { detail?: string } }).error?.detail).toBe("IMAGE_BUSY");
+      const ok = await post(A, A.itemNoneId, A.ownerUserId, png);
+      expect(ok.status, await ok.clone().text()).toBe(200);
+    } finally {
+      for (const r of held) r?.();
+    }
+  });
+
   it("işleme yuvaları doluyken 429 IMAGE_BUSY (gövde işlenmez, satır yazılmaz); yuva boşalınca yükleme geçer", async () => {
     const { tryAcquireImageSlot, IMAGE_SLOTS } = await import("../../../apps/web/lib/item-image.ts");
     const item = A.itemTwoId;
     const before = await imagesOf(A, item);
     const png = new Uint8Array(await sharp({ create: { width: 9, height: 9, channels: 3, background: { r: 77, g: 1, b: 9 } } }).png().toBuffer());
-    const held = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
+    const held = Array.from({ length: IMAGE_SLOTS }, (_, k) => tryAcquireImageSlot(`dolu-${k}`, `u-${k}`));
     try {
       const res = await post(A, item, A.ownerUserId, png);
       expect(res.status).toBe(429);

@@ -85,14 +85,20 @@ describe("kaynak sınırı (güvenlik incelemesi MAJOR-1)", () => {
   it("en çok IMAGE_SLOTS görsel aynı anda; dolu ise null, bırakınca yeniden alınır; bırakma bir kez sayılır", () => {
     expect(IMAGE_SLOTS).toBeGreaterThanOrEqual(1);
     expect(IMAGE_SLOTS).toBeLessThanOrEqual(2);
-    const held = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
+    // MINOR-C: alan ve kullanıcı başına 1; tek alan iki yuvayı birden tutamaz.
+    const own = tryAcquireImageSlot("t1", "u1");
+    expect(own).not.toBeNull();
+    expect(tryAcquireImageSlot("t1", "u2")).toBeNull();
+    expect(tryAcquireImageSlot("t2", "u1")).toBeNull();
+    own!();
+    const held = Array.from({ length: IMAGE_SLOTS }, (_, k) => tryAcquireImageSlot(`t${k}`, `u${k}`));
     expect(held.every((r) => r !== null)).toBe(true);
-    expect(tryAcquireImageSlot()).toBeNull();
+    expect(tryAcquireImageSlot("tx", "ux")).toBeNull();
     held[0]!();
     held[0]!();
-    const again = tryAcquireImageSlot();
+    const again = tryAcquireImageSlot("tx", "ux");
     expect(again).not.toBeNull();
-    expect(tryAcquireImageSlot()).toBeNull();
+    expect(tryAcquireImageSlot("ty", "uy")).toBeNull();
     again!();
     for (const r of held.slice(1)) r!();
     expect(imageBusy()).toMatchObject({ code: "RATE_LIMITED", detail: "IMAGE_BUSY" });

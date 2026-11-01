@@ -3,7 +3,8 @@
 // görseli çözer ve YENİDEN KODLAR: EXIF yönü uygulanır, bütün meta veri (EXIF / konum) atılır, uzun kenar ≤ 1280 px, WebP; ayrıca ≤ 16 KiB
 // küçük resim. Çözülen biçim imzayla eşleşmezse ret.
 // Kaynak sınırı (güvenlik incelemesi MAJOR-1; web kabı ortak, bellek sınırı 1,5 GiB):
-// - süreç genelinde en çok IMAGE_SLOTS görsel aynı anda işlenir; dolu ise çağıran 429 (`RATE_LIMITED`/`IMAGE_BUSY`) döner, kuyruk yok;
+// - süreç genelinde en çok IMAGE_SLOTS görsel aynı anda işlenir (çalışma alanı ve kullanıcı başına 1); dolu ise çağıran 429
+//   (`RATE_LIMITED`/`IMAGE_BUSY`) döner, kuyruk yok;
 // - `sharp.concurrency(1)`, `sharp.cache(false)`; giriş ≤ 24 MP, `sequentialRead`; satır atlamalı (interlaced) PNG reddedilir
 //   (tamamı bellekte çözülmek zorunda);
 // - asıl görsel YALNIZ BİR KEZ çözülür: ≤ 1280 px ham ara görüntüye indirilir; kalite / boyut basamakları ve küçük resim bu ara
@@ -11,6 +12,7 @@
 // Çıktının imzası ve sınırları domain'de (`addItemImage`) ve DB CHECK'inde yeniden denetlenir.
 import sharp from "sharp";
 import { AppError } from "@wms/shared/errors";
+import { createKeyedSlots } from "./upload-slots.ts";
 import {
   IMAGE_MAX_SIDE,
   IMAGE_STORED_MAX_BYTES,
@@ -29,18 +31,12 @@ export const MAX_INPUT_PIXELS = 24_000_000;
 export const IMAGE_SLOTS = 2;
 const FORMAT_OF = { "image/jpeg": "jpeg", "image/png": "png", "image/webp": "webp" } as const;
 
-let inFlight = 0;
+/** MINOR-C: toplam 2 işleme yuvası; çalışma alanı ve kullanıcı başına 1 (tek alan ikisini birden tutamaz). */
+const processing = createKeyedSlots({ total: IMAGE_SLOTS, perTenant: 1, perUser: 1 });
 
-/** İşleme yuvası al; dolu ise `null` (çağıran 429 döner). Dönen işlev yuvayı bir kez bırakır. */
-export function tryAcquireImageSlot(): (() => void) | null {
-  if (inFlight >= IMAGE_SLOTS) return null;
-  inFlight += 1;
-  let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    inFlight -= 1;
-  };
+/** İşleme yuvası al; toplam ya da çalışma alanı / kullanıcı payı doluysa `null` (çağıran 429 döner). Dönen işlev yuvayı bir kez bırakır. */
+export function tryAcquireImageSlot(tenant: string, user: string): (() => void) | null {
+  return processing.acquire(tenant, user);
 }
 
 /** Yuvalar doluyken verilen hata (HTTP 429). */

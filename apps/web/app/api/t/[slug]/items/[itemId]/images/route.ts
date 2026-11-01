@@ -7,6 +7,7 @@
 // genelindeki işleme yuvası (en çok 2 görsel aynı anda) gövde 20 sn sınırla okunduktan SONRA, yalnız işleme süresince alınır; dolu ise 429
 // `IMAGE_BUSY` ("Görsel işleniyor, birazdan tekrar dene"); süre dolarsa 400 `IMAGE_TIMEOUT` (güvenlik incelemesi MINOR-A). MINOR-B: gövde
 // okumanın da ayrı süreç sayacı var (en çok 6, dolu ise 429 `IMAGE_BUSY`); `Content-Length` zorunlu (yoksa 400 `IMAGE_LENGTH_REQUIRED`).
+// MINOR-C: iki sayaçta da çalışma alanı ve kullanıcı payı (okuma 2 / 1, işleme 1 / 1); süre uzunlukla orantılı (≤ 20 sn), 3 sn takılma kesilir.
 import { getAppDb } from "@wms/db";
 import { addItemImage, IMAGE_UPLOAD_MAX_BYTES } from "@wms/domain/catalog/item-images";
 import { AppError } from "@wms/shared/errors";
@@ -42,7 +43,8 @@ export async function POST(request: Request, nextCtx: { params: Promise<{ slug: 
     await limiter.check("tenant", `item-image:${slug}`);
     // Gövde önce, süre sınırıyla okunur (yavaş istemci yuva tutamaz); yuva yalnız çözme / kodlama süresince.
     // MINOR-B: aynı anda okunan gövde sayısı da sınırlı (bellekte ≤ 6 × 5 MiB); işleme yuvasından ayrı sayaç.
-    const releaseRead = tryAcquireReadSlot();
+    // MINOR-C: paylar çalışma alanı (slug; üyelik yukarıda doğrulandı, slug → tek tenant) ve kullanıcı başınadır.
+    const releaseRead = tryAcquireReadSlot(slug, principal.userId);
     if (releaseRead === null) throw imageBusy();
     let bytes: Uint8Array;
     try {
@@ -50,7 +52,7 @@ export async function POST(request: Request, nextCtx: { params: Promise<{ slug: 
     } finally {
       releaseRead();
     }
-    const release = tryAcquireImageSlot();
+    const release = tryAcquireImageSlot(slug, principal.userId);
     if (release === null) throw imageBusy();
     let image: Awaited<ReturnType<typeof processItemImage>>;
     try {
