@@ -5,14 +5,15 @@
 // `addItemImage` (yetki + RLS + audit aynı transaction'da). Dosya diske/loga yazılmaz; yanıt `no-store`.
 // Güvenlik incelemesi MAJOR-1: kullanıcı sınırına ek olarak çalışma alanı başına dakikada 60 yükleme; gövde okunmadan ÖNCE süreç
 // genelindeki işleme yuvası (en çok 2 görsel aynı anda) gövde 20 sn sınırla okunduktan SONRA, yalnız işleme süresince alınır; dolu ise 429
-// `IMAGE_BUSY` ("Görsel işleniyor, birazdan tekrar dene"); süre dolarsa 400 `IMAGE_TIMEOUT` (güvenlik incelemesi MINOR-A).
+// `IMAGE_BUSY` ("Görsel işleniyor, birazdan tekrar dene"); süre dolarsa 400 `IMAGE_TIMEOUT` (güvenlik incelemesi MINOR-A). MINOR-B: gövde
+// okumanın da ayrı süreç sayacı var (en çok 6, dolu ise 429 `IMAGE_BUSY`); `Content-Length` zorunlu (yoksa 400 `IMAGE_LENGTH_REQUIRED`).
 import { getAppDb } from "@wms/db";
 import { addItemImage, IMAGE_UPLOAD_MAX_BYTES } from "@wms/domain/catalog/item-images";
 import { AppError } from "@wms/shared/errors";
 import { createProductionRouteGuard, limitVerifiedTenant } from "../../../../../../../lib/action-guard.ts";
 import { imageBusy, processItemImage, tryAcquireImageSlot } from "../../../../../../../lib/item-image.ts";
 import { createDbRateLimitStore, createRateLimiter } from "../../../../../../../lib/rate-limit.ts";
-import { readUploadBody } from "../../../../../../../lib/upload-body.ts";
+import { readUploadBody, tryAcquireReadSlot } from "../../../../../../../lib/upload-body.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,15 @@ export async function POST(request: Request, nextCtx: { params: Promise<{ slug: 
     // Üyelik yukarıda doğrulandı (slug → tek tenant); sayaç çalışma alanı başınadır.
     await limiter.check("tenant", `item-image:${slug}`);
     // Gövde önce, süre sınırıyla okunur (yavaş istemci yuva tutamaz); yuva yalnız çözme / kodlama süresince.
-    const bytes = await readUploadBody(req, IMAGE_UPLOAD_MAX_BYTES);
+    // MINOR-B: aynı anda okunan gövde sayısı da sınırlı (bellekte ≤ 6 × 5 MiB); işleme yuvasından ayrı sayaç.
+    const releaseRead = tryAcquireReadSlot();
+    if (releaseRead === null) throw imageBusy();
+    let bytes: Uint8Array;
+    try {
+      bytes = await readUploadBody(req, IMAGE_UPLOAD_MAX_BYTES);
+    } finally {
+      releaseRead();
+    }
     const release = tryAcquireImageSlot();
     if (release === null) throw imageBusy();
     let image: Awaited<ReturnType<typeof processItemImage>>;

@@ -545,7 +545,9 @@
     "validation_failed_image_quota": "This workspace's image storage is full.",
     "validation_failed_image_quotaAction": "Delete images you no longer need or contact Etkin support.",
     "validation_failed_image_timeout": "The image upload took too long.",
-    "validation_failed_image_timeoutAction": "Check your connection and add the image again."
+    "validation_failed_image_timeoutAction": "Check your connection and add the image again.",
+    "validation_failed_image_length_required": "The image upload did not state its size.",
+    "validation_failed_image_length_requiredAction": "Add the image again with the app's Add image button."
   },
   "serverErrors": {
     "code": "Error code: {code}",
@@ -1809,7 +1811,9 @@
       "validation_failed_image_quota": "This workspace's image storage is full.",
       "validation_failed_image_quotaAction": "Delete images you no longer need or contact Etkin support.",
       "validation_failed_image_timeout": "The image upload took too long.",
-      "validation_failed_image_timeoutAction": "Check your connection and add the image again."
+      "validation_failed_image_timeoutAction": "Check your connection and add the image again.",
+      "validation_failed_image_length_required": "The image upload did not state its size.",
+      "validation_failed_image_length_requiredAction": "Add the image again with the app's Add image button."
     },
     "locked": "You do not have permission to view products.",
     "lockedAction": "Ask your workspace manager.",

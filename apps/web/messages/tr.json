@@ -545,7 +545,9 @@
     "validation_failed_image_quota": "Bu çalışma alanının görsel alanı doldu.",
     "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç.",
     "validation_failed_image_timeout": "Görsel yüklemesi çok uzun sürdü.",
-    "validation_failed_image_timeoutAction": "Bağlantını kontrol edip görseli yeniden ekle."
+    "validation_failed_image_timeoutAction": "Bağlantını kontrol edip görseli yeniden ekle.",
+    "validation_failed_image_length_required": "Görsel yüklemesinin boyutu bildirilmedi.",
+    "validation_failed_image_length_requiredAction": "Görseli uygulamadaki Görsel ekle düğmesiyle yeniden ekle."
   },
   "serverErrors": {
     "code": "Hata kodu: {code}",
@@ -1809,7 +1811,9 @@
       "validation_failed_image_quota": "Bu çalışma alanının görsel alanı doldu.",
       "validation_failed_image_quotaAction": "Kullanmadığın görselleri sil ya da Etkin destekle iletişime geç.",
       "validation_failed_image_timeout": "Görsel yüklemesi çok uzun sürdü.",
-      "validation_failed_image_timeoutAction": "Bağlantını kontrol edip görseli yeniden ekle."
+      "validation_failed_image_timeoutAction": "Bağlantını kontrol edip görseli yeniden ekle.",
+      "validation_failed_image_length_required": "Görsel yüklemesinin boyutu bildirilmedi.",
+      "validation_failed_image_length_requiredAction": "Görseli uygulamadaki Görsel ekle düğmesiyle yeniden ekle."
     },
     "locked": "Ürünleri görme yetkin yok.",
     "lockedAction": "Çalışma alanı yöneticine sor.",

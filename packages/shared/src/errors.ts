@@ -76,6 +76,7 @@ export const ERROR_DETAILS = [
   "IMAGE_BUSY",
   "IMAGE_QUOTA",
   "IMAGE_TIMEOUT",
+  "IMAGE_LENGTH_REQUIRED",
 ] as const;
 export type ErrorDetail = (typeof ERROR_DETAILS)[number];
 
@@ -122,6 +123,7 @@ export const ERROR_DETAIL_CODE: Readonly<Record<ErrorDetail, ErrorCode>> = {
   IMAGE_BUSY: "RATE_LIMITED",
   IMAGE_QUOTA: "VALIDATION_FAILED",
   IMAGE_TIMEOUT: "VALIDATION_FAILED",
+  IMAGE_LENGTH_REQUIRED: "VALIDATION_FAILED",
 };
 
 export const HTTP_STATUS: Readonly<Record<ErrorCode, number>> = {

@@ -309,6 +309,8 @@ function req(url: string, init: { method: "GET" | "POST"; user: string | null; b
   if (init.user !== null) headers.set("x-test-user", init.user);
   if (init.mfa === false) headers.set("x-test-mfa", "0");
   if (init.method === "POST") headers.set("origin", ORIGIN);
+  // Tarayıcı Blob gövdesinde uzunluğu kendisi gönderir; sentetik istekte açıkça (rota Content-Length ister, MINOR-B).
+  if (init.body !== undefined) headers.set("content-length", String(init.body.length));
   return new Request(url, { method: init.method, headers, ...(init.body === undefined ? {} : { body: init.body as unknown as NonNullable<RequestInit["body"]> }) });
 }
 
@@ -388,7 +390,7 @@ describe("ürün görseli — route", () => {
   it("yavaş damlatılan gövde ~20 sn sonra 400 IMAGE_TIMEOUT; beklerken işleme yuvası tutulmaz (başka yükleme yuva alabilir)", async () => {
     const { tryAcquireImageSlot, IMAGE_SLOTS } = await import("../../../apps/web/lib/item-image.ts");
     const body = new ReadableStream<Uint8Array>({ start(c) { c.enqueue(new Uint8Array([0xff, 0xd8, 0xff, 0xe0])); } });
-    const headers = new Headers({ "fly-client-ip": `203.0.113.${(ipN++ % 250) + 1}`, "sec-fetch-site": "same-origin", "x-test-user": A.ownerUserId, origin: ORIGIN });
+    const headers = new Headers({ "fly-client-ip": `203.0.113.${(ipN++ % 250) + 1}`, "sec-fetch-site": "same-origin", "x-test-user": A.ownerUserId, origin: ORIGIN, "content-length": "4096" });
     const pending = upload(new Request(`${ORIGIN}/api/t/${A.slug}/items/${A.itemTwoId}/images`, { method: "POST", headers, body, duplex: "half" } as RequestInit), { params: Promise.resolve({ slug: A.slug, itemId: A.itemTwoId }) });
     await new Promise((r) => setTimeout(r, 1500));
     const held = Array.from({ length: IMAGE_SLOTS }, () => tryAcquireImageSlot());
@@ -401,6 +403,27 @@ describe("ürün görseli — route", () => {
     expect(again.every((x) => x !== null)).toBe(true);
     for (const r of again) r?.();
   }, 45_000);
+
+  it("MINOR-B: okuma yuvaları doluyken 429 IMAGE_BUSY (gövde okunmaz); Content-Length yoksa 400 IMAGE_LENGTH_REQUIRED; satır yazılmaz", async () => {
+    const { tryAcquireReadSlot, READ_SLOTS } = await import("../../../apps/web/lib/upload-body.ts");
+    const item = A.itemTwoId;
+    const before = await imagesOf(A, item);
+    const png = new Uint8Array(await sharp({ create: { width: 7, height: 7, channels: 3, background: { r: 66, g: 2, b: 19 } } }).png().toBuffer());
+    const held = Array.from({ length: READ_SLOTS }, () => tryAcquireReadSlot());
+    try {
+      const res = await post(A, item, A.ownerUserId, png);
+      expect(res.status).toBe(429);
+      expect(((await res.json()) as { error?: { detail?: string } }).error?.detail).toBe("IMAGE_BUSY");
+    } finally {
+      for (const r of held) r?.();
+    }
+    const headers = new Headers({ "fly-client-ip": `203.0.113.${(ipN++ % 250) + 1}`, "sec-fetch-site": "same-origin", "x-test-user": A.ownerUserId, origin: ORIGIN });
+    const body = new ReadableStream<Uint8Array>({ start(c) { c.enqueue(png); c.close(); } });
+    const noLen = await upload(new Request(`${ORIGIN}/api/t/${A.slug}/items/${item}/images`, { method: "POST", headers, body, duplex: "half" } as RequestInit), { params: Promise.resolve({ slug: A.slug, itemId: item }) });
+    expect(noLen.status).toBe(400);
+    expect(((await noLen.json()) as { error?: { detail?: string } }).error?.detail).toBe("IMAGE_LENGTH_REQUIRED");
+    expect(await imagesOf(A, item)).toEqual(before);
+  });
 
   it("işleme yuvaları doluyken 429 IMAGE_BUSY (gövde işlenmez, satır yazılmaz); yuva boşalınca yükleme geçer", async () => {
     const { tryAcquireImageSlot, IMAGE_SLOTS } = await import("../../../apps/web/lib/item-image.ts");
