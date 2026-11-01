@@ -1,3 +1,4 @@
+@import "./design/etiket-editor.css";
 @import "tailwindcss";
 @import "./design/bakis.css";
 @import "./design/giris.css";
@@ -2047,3 +2048,34 @@ select.bg-none { background-image:none; }
 .dzj.dz-dark {
 }
 /* design:yolculuk:end */
+
+/* design:etiket-editor:begin — scripts/design/port.mjs üretir; ELLE DÜZENLEMEYİN (I-18) */
+.dzed {
+  --color-dz-a-bhcoec-be: rgba(23, 46, 66, .14);
+  --color-dz-a-cpfnki-ag: rgba(47, 93, 168, .06);
+  --color-dz-x-aaaaaa: #000000;
+  --color-dz-x-aphnia: #0f7d80;
+  --color-dz-x-bfcbco: #15212e;
+  --color-dz-x-bhcoec: #172e42;
+  --color-dz-x-bmckdh: #1c2a37;
+  --color-dz-x-cddmfn: #233c5d;
+  --color-dz-x-cpfnki: #2f5da8;
+  --color-dz-x-dgeifi: #364858;
+  --color-dz-x-dpdfbn: #3f351d;
+  --color-dz-x-fdglho: #536b7e;
+  --color-dz-x-gmelni: #6c4bd8;
+  --color-dz-x-ilflch: #8b5b27;
+  --color-dz-x-ilkkoc: #8baae2;
+  --color-dz-x-lfmgnf: #b5c6d5;
+  --color-dz-x-nikfcl: #d8a52b;
+  --color-dz-x-nmodok: #dce3ea;
+  --color-dz-x-odolph: #e3ebf7;
+  --color-dz-x-ogolop: #e6ebef;
+  --color-dz-x-oionpd: #e8edf3;
+  --color-dz-x-pcnchm: #f2d27c;
+  --color-dz-x-pppemp: #fff4cf;
+  --color-dz-x-pppppp: #ffffff;
+}
+.dzed.dz-dark {
+}
+/* design:etiket-editor:end */

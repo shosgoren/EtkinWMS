@@ -1,0 +1,78 @@
+"use client";
+// I-18: shared extension from EtiketEditor.dc.html; coordinates remain integer µm, never CSS pixels in storage.
+import {useEffect,useMemo,useRef,useState,type ReactNode,type PointerEvent as ReactPointer} from "react";
+import {CONTEXT_FIELDS,parseLabelDesign,renderLabelSvg,type LabelDesign,type LabelElement,type LabelField,type LabelRenderValues} from "@wms/shared/labels";
+import {LICON} from "../../../design/kalip-icons.ts";
+import {Ico,useKalipToast} from "./ekran.tsx";
+import {KalipAlan} from "./form.tsx";
+import {KalipSecim} from "./secim.tsx";
+import {KalipPerdeKatman} from "./perde.tsx";
+import {useModalFocus} from "./odak.ts";
+export interface KalipEtiketEditorProps{
+ readonly dark:boolean;readonly design:LabelDesign;readonly onChange:(d:LabelDesign)=>void;readonly canEdit:boolean;
+ readonly assets:Readonly<Record<string,string>>;readonly upload:(file:File)=>Promise<string|null>;
+ readonly copy:(key:string)=>string;
+}
+const example:Record<LabelField,string>={name:"SBR granül",code:"HM-001",unit:"KG",barcode:"ETK-HM-001",packageQr:"EWMS:PKG:1:11111111-1111-4111-8111-111111111111",quantity:"200",lot:"LOT-2026-01",productionDate:"01.11.2026",expiryDate:"01.11.2027",documentNo:"DVR-2026-001",locationCode:"A-1-2-3",locationName:"A-1-2-3",warehouseName:"Merkez",customerName:"Örnek müşteri"};
+const snapped=(v:number)=>Math.round(v/500)*500;
+const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
+export function KalipEtiketEditor({dark,design,onChange,canEdit,assets,upload,copy:t}:KalipEtiketEditorProps){
+ const {say}=useKalipToast("form"),[selected,setSelected]=useState<readonly string[]>([]),[panel,setPanel]=useState(false),[zoom,setZoom]=useState(1),[pan,setPan]=useState({x:0,y:0}),[space,setSpace]=useState({w:400,h:250}),[history,setHistory]=useState<readonly LabelDesign[]>([]),[uploading,setUploading]=useState(false);
+ const view=useRef<HTMLDivElement>(null),paper=useRef<HTMLDivElement>(null),file=useRef<HTMLInputElement>(null),current=useRef(design);current.current=design;
+ const drag=useRef<{pointer:number;x:number;y:number;design:LabelDesign;ids:readonly string[];resize:boolean}|null>(null),touches=useRef(new Map<number,{x:number;y:number}>()),pinch=useRef<{distance:number;zoom:number;center:{x:number;y:number};pan:{x:number;y:number}}|null>(null);
+ useEffect(()=>{const el=view.current;if(!el)return;const r=new ResizeObserver(([entry])=>{if(entry)setSpace({w:entry.contentRect.width,h:entry.contentRect.height});});r.observe(el);return()=>r.disconnect();},[]);
+ const valid=()=>{if(canEdit)return true;say("warn",t("locked"));return false;};
+ const remember=()=>setHistory(h=>[...h.slice(-39),current.current]);
+ const change=(d:LabelDesign,save=true)=>{if(!valid())return;try{const next=parseLabelDesign(d,"DRAFT");if(save)remember();onChange(next);}catch{say("warn",t("outside"));}};
+ const picked=design.elements.find(e=>selected.includes(e.id)),isCode=picked?.kind==="qr"||picked?.kind==="barcode";
+ const setElement=(patch:Partial<LabelElement>)=>{if(!picked||!valid())return;if(picked.locked&&Object.keys(patch).some(k=>!["x","y","width","height","rotation","locked","format"].includes(k))){say("warn",t("identity"));return;}change({...design,elements:design.elements.map(e=>e.id===picked.id?{...e,...patch} as LabelElement:e)});};
+ const undo=()=>{if(!valid())return;const last=history.at(-1);if(!last)return;say("info",t("undone"));setHistory(h=>h.slice(0,-1));onChange(last);};
+ const svg=useMemo(()=>{try{const values=Object.fromEntries(CONTEXT_FIELDS[design.context].map(k=>[k,example[k]])) as LabelRenderValues;return{html:renderLabelSvg(design,values,{assets,preview:true}),error:false};}catch{return{html:"",error:true};}},[design,assets]);
+ const scale=Math.min(Math.max(40,space.w-28)/design.width,Math.max(40,space.h-28)/design.height),width=design.width*scale,height=design.height*scale;
+ const label=(e:LabelElement)=>e.kind==="text"?(e.field===null?(e.text||t("text")):t(`fields.${e.field}`)):e.kind==="qr"||e.kind==="barcode"?t(e.kind):t(e.kind);
+ const button=(key:string,d:string,run:()=>void,extra?:string)=><button type="button" title={t(key)} aria-label={t(key)} className={extra} onClick={run}><Ico size={22} d={d}/><span className="lx-tool-label">{t(key)}</span></button>;
+ const add=async(kind:LabelElement["kind"]|"field")=>{
+  if(!valid())return;if(kind==="logo"){file.current?.click();return;}
+  const id=crypto.randomUUID(),x=design.margin,y=design.margin,roomW=design.width-2*x,roomH=design.height-2*y;
+  const box={id,x,y,width:Math.min(40000,roomW),height:Math.min(10000,roomH),rotation:0 as const,locked:false};let e:LabelElement;
+  if(kind==="text"||kind==="field")e={...box,kind:"text",field:kind==="field"?CONTEXT_FIELDS[design.context][0]:null,text:kind==="text"?t("text"):null,fontSize:3000,bold:false,align:"start"};
+  else if(kind==="qr"||kind==="barcode"){
+   const field=design.context==="RECEIPT"||design.context==="SHIPMENT"?"packageQr":design.context==="LOCATION"?"locationCode":"barcode";
+   const size=Math.min(28000,roomW,roomH);e=kind==="qr"?{...box,kind,width:size,height:size,field,locked:true}:{...box,kind,field,format:"CODE128",height:Math.min(18000,roomH),locked:true};
+  }else e={...box,kind,stroke:300,height:kind==="line"?1000:Math.min(20000,roomH)};
+  change({...design,elements:[...design.elements,e]});setSelected([id]);setPanel(true);
+ };
+ const uploadFile=async(f:File)=>{if(!valid()||uploading)return;setUploading(true);try{const id=await upload(f);if(id){const elementId=crypto.randomUUID();change({...current.current,elements:[...current.current.elements,{id:elementId,kind:"logo",assetId:id,x:design.margin,y:design.margin,width:Math.min(30000,design.width-2*design.margin),height:Math.min(15000,design.height-2*design.margin),rotation:0,locked:false}]});setSelected([elementId]);}}finally{setUploading(false);}};
+ const move=(dx:number,dy:number)=>{if(!valid()||selected.length===0)return;const els=design.elements.filter(e=>selected.includes(e.id));const x=clamp(dx,Math.max(...els.map(e=>design.margin-e.x)),Math.min(...els.map(e=>design.width-design.margin-e.x-e.width))),y=clamp(dy,Math.max(...els.map(e=>design.margin-e.y)),Math.min(...els.map(e=>design.height-design.margin-e.y-e.height)));change({...design,elements:design.elements.map(e=>selected.includes(e.id)?{...e,x:e.x+x,y:e.y+y}:e)});};
+ const start=(event:ReactPointer,id:string,resize=false)=>{event.stopPropagation();touches.current.set(event.pointerId,{x:event.clientX,y:event.clientY});if(touches.current.size===2){drag.current=null;const[a,b]=[...touches.current.values()];if(a&&b)pinch.current={distance:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),zoom,center:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},pan};return;}const ids=event.shiftKey?[...new Set([...selected,id])]:selected.includes(id)?selected:[id];setSelected(ids);if(!valid()||touches.current.size>1)return;remember();drag.current={pointer:event.pointerId,x:event.clientX,y:event.clientY,design:current.current,ids,resize};event.currentTarget.setPointerCapture(event.pointerId);};
+ const pointerMove=(event:ReactPointer)=>{
+  if(touches.current.has(event.pointerId))touches.current.set(event.pointerId,{x:event.clientX,y:event.clientY});
+  if(touches.current.size===2&&pinch.current){const[a,b]=[...touches.current.values()];if(a&&b){setZoom(clamp(pinch.current.zoom*Math.hypot(a.x-b.x,a.y-b.y)/pinch.current.distance,.5,3));setPan({x:pinch.current.pan.x+(a.x+b.x)/2-pinch.current.center.x,y:pinch.current.pan.y+(a.y+b.y)/2-pinch.current.center.y});}return;}
+  const d=drag.current;if(!d||d.pointer!==event.pointerId)return;const r=paper.current?.getBoundingClientRect();if(!r)return;const dx=snapped((event.clientX-d.x)*design.width/r.width),dy=snapped((event.clientY-d.y)*design.height/r.height);
+  const originals=d.design.elements.filter(e=>d.ids.includes(e.id));let next:LabelElement[];
+  if(d.resize){const first=originals[0];if(!first)return;let w=clamp(first.width+dx,first.kind==="qr"?10000:1000,design.width-design.margin-first.x),h=clamp(first.height+dy,first.kind==="qr"?10000:1000,design.height-design.margin-first.y);if(first.kind==="qr")w=h=Math.min(w,h);next=d.design.elements.map(e=>e.id===first.id?{...e,width:w,height:h}:e);}
+  else{const x=clamp(dx,Math.max(...originals.map(e=>design.margin-e.x)),Math.min(...originals.map(e=>design.width-design.margin-e.x-e.width))),y=clamp(dy,Math.max(...originals.map(e=>design.margin-e.y)),Math.min(...originals.map(e=>design.height-design.margin-e.y-e.height)));next=d.design.elements.map(e=>d.ids.includes(e.id)?{...e,x:e.x+x,y:e.y+y}:e);}
+  try{onChange(parseLabelDesign({...d.design,elements:next},"DRAFT"));}catch{/* An invalid gesture does not replace the last valid design. */}
+ };
+ const properties=picked===undefined?<div className="lx-empty">{t("pick")}</div>:<><h2>{label(picked)}</h2>{picked.kind==="text"&&<>{picked.field===null?<KalipAlan label={t("text")} value={picked.text??""} maxLength={1000} disabled={!canEdit} onChange={e=>setElement({text:e.target.value})}/>:<KalipSecim label={t("field")} value={picked.field} options={CONTEXT_FIELDS[design.context].map(id=>({id,label:t(`fields.${id}`),d:LICON.tag,color:"2F5DA8"}))} color="2F5DA8" disabled={!canEdit} onPick={id=>setElement({field:id as LabelField})}/>}<KalipAlan label={t("font")} type="number" min={1} max={50} step={.5} value={picked.fontSize/1000} disabled={!canEdit} onChange={e=>setElement({fontSize:Math.round(Number(e.target.value)*1000)})}/><div className="lx-row"><button type="button" aria-pressed={picked.bold} onClick={()=>setElement({bold:!picked.bold})}>{t("bold")}</button>{button("align",LICON.grid,()=>setElement({align:picked.align==="start"?"middle":picked.align==="middle"?"end":"start"}))}</div></>}
+  {picked.kind==="barcode"&&<KalipSecim label={t("barcode")} value={picked.format} color="2F5DA8" disabled={!canEdit} options={[{id:"CODE128",label:"Code128",d:LICON.tag,color:"2F5DA8"},...(design.context==="PRODUCT"?[{id:"EAN13",label:"EAN13",d:LICON.tag,color:"2F5DA8"}]:[])]} onPick={format=>setElement({format:format as "CODE128"|"EAN13"})}/>}
+  {isCode&&<div className="lx-note">{t("identity")}</div>}
+  <div className="lx-row">{(["width","height"] as const).map(k=><KalipAlan key={k} label={t(k)+" · mm"} type="number" step={.5} min={1} disabled={!canEdit} value={picked[k]/1000} onChange={e=>{const v=Math.round(Number(e.target.value)*1000);setElement(picked.kind==="qr"?{width:v,height:v}:{[k]:v});}}/>)}</div>
+  <div className="lx-row">{(["x","y"] as const).map(k=><KalipAlan key={k} label={k.toUpperCase()+" · mm"} type="number" step={.5} value={picked[k]/1000} disabled={!canEdit} onChange={e=>setElement({[k]:Math.round(Number(e.target.value)*1000)})}/>)}</div>
+  <div className="lx-nudge"><span/>{button("up",LICON.moveOut,()=>move(0,-500))}<span/>{button("left",LICON.transfer,()=>move(-500,0))}{button("center",LICON.grid,()=>move(snapped((design.width-picked.width)/2)-picked.x,0))}{button("right",LICON.arrow,()=>move(500,0))}<span/>{button("down",LICON.moveIn,()=>move(0,500))}</div></>;
+ return <div className={`dzed${dark?" dz-dark":""}`}><div className="lx" data-testid="label-editor" onKeyDown={e=>{if(e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement)return;if((e.ctrlKey||e.metaKey)&&e.key==="z"){e.preventDefault();undo();}const delta=({ArrowLeft:[-500,0],ArrowRight:[500,0],ArrowUp:[0,-500],ArrowDown:[0,500]} as const)[e.key as "ArrowLeft"];if(delta){e.preventDefault();move(delta[0],delta[1]);}}}>
+  <aside className="lx-tools"><h2>{t("add")}</h2>{(["logo","text","field","qr","barcode","line","frame"] as const).map(k=><button key={k} data-add={k} type="button" aria-label={t(k)} title={t(k)} onClick={()=>void add(k)}><Ico size={22} d={k==="text"?LICON.pencil:k==="qr"?LICON.cam:k==="barcode"?LICON.tag:k==="line"?LICON.transfer:k==="field"?LICON.grid:LICON.box}/><span className="lx-tool-label">{t(k)}</span></button>)}<input ref={file} type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={uploading||!canEdit} onChange={e=>{const f=e.target.files?.[0];e.target.value="";if(f)void uploadFile(f);}}/></aside>
+  <section className="lx-stage"><div className="lx-actions">{button("undo",LICON.transfer,undo)}{button("duplicate",LICON.clip,()=>{if(!picked||!valid())return;const id=crypto.randomUUID();change({...design,elements:[...design.elements,{...picked,id}]});setSelected([id]);})}{button("remove",LICON.trash,()=>{if(!valid()||!picked)return;if(picked.locked){say("warn",t("identity"));return;}change({...design,elements:design.elements.filter(e=>!selected.includes(e.id))});setSelected([]);})}{button("rotate",LICON.gear,()=>picked&&setElement({rotation:((picked.rotation+90)%360) as LabelElement["rotation"]}))}{button("edit",LICON.pencil,()=>setPanel(true),"lx-mobile-edit")}{button("zoomIn",LICON.plus,()=>setZoom(z=>Math.min(3,z+.25)))}{button("fit",LICON.grid,()=>{setZoom(1);setPan({x:0,y:0});})}</div>
+  <div ref={view} className="lx-view" onPointerDown={e=>{touches.current.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touches.current.size===2){drag.current=null;const[a,b]=[...touches.current.values()];if(a&&b)pinch.current={distance:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),zoom,center:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},pan};}}} onPointerMove={pointerMove} onPointerUp={e=>{touches.current.delete(e.pointerId);if(touches.current.size<2)pinch.current=null;drag.current=null;}} onPointerCancel={()=>{touches.current.clear();pinch.current=null;drag.current=null;}}>
+   <div className="lx-paper" ref={paper} style={{width,height,maxWidth:"none",maxHeight:"none",transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`}} onClick={e=>{if(e.target!==e.currentTarget||!picked||!valid())return;const r=e.currentTarget.getBoundingClientRect();move(snapped((e.clientX-r.left)/r.width*design.width-picked.width/2)-picked.x,snapped((e.clientY-r.top)/r.height*design.height-picked.height/2)-picked.y);}}>
+    <div className="lx-image" aria-hidden="true" dangerouslySetInnerHTML={{__html:svg.html}}/>{design.elements.map(e=><button key={e.id} type="button" data-label-element={e.id} className="lx-object" aria-label={label(e)} aria-pressed={selected.includes(e.id)} style={{left:`${e.x/design.width*100}%`,top:`${e.y/design.height*100}%`,width:`${e.width/design.width*100}%`,height:`${e.height/design.height*100}%`}} onPointerDown={event=>start(event,e.id)} onDoubleClick={()=>setPanel(true)} onClick={event=>event.stopPropagation()}>{selected.includes(e.id)&&<span className="lx-handle" role="button" aria-label={t("resize")} onPointerDown={event=>start(event,e.id,true)}/>}</button>)}
+   </div></div><div className="lx-foot"><span>{design.width/1000} × {design.height/1000} mm · {t("preview")}</span><span>{t("place")}</span></div>{svg.error&&<div className="lx-note" role="status">{t("previewError")}</div>}</section>
+  <aside className="lx-inspector">{properties}</aside>
+  {panel&&<EtiketOzellik title={t("edit")} onClose={()=>setPanel(false)}><div className={`dzed${dark?" dz-dark":""}`}><div className="lx lx-property"><aside className="lx-inspector lx-open">{properties}</aside></div></div></EtiketOzellik>}
+ </div></div>;
+}
+
+function EtiketOzellik({title,onClose,children}:{title:string;onClose:()=>void;children:ReactNode}){
+ const ref=useRef<HTMLElement>(null);useModalFocus(true,ref,{onClose,initial:"none"});
+ return <div className="dzf"><KalipPerdeKatman onClose={onClose} label={title}/><section className="ksheet" role="dialog" aria-modal="true" aria-label={title} ref={ref}><div className="sxh"><h2>{title}</h2><button type="button" className="xb" aria-label={title} onClick={onClose}><Ico size={22} d={LICON.close}/></button></div>{children}</section></div>;
+}
