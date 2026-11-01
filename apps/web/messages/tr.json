@@ -6859,6 +6859,7 @@
     "printerSaved": "Yazıcı tercihi kaydedildi",
     "saveForPrinter": "Yazıcı seçmek için önce etiketi kaydet",
     "calibration": "Baskı kaydırma",
-    "calibrationError": "Kaydırma −10 ile +10 mm arasında olmalı"
+    "calibrationError": "Kaydırma −10 ile +10 mm arasında olmalı",
+    "printerName": "Yazıcı adı"
   }
 }
