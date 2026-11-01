@@ -215,3 +215,11 @@ T1164 baskı geometri ekkontrolü: büyükEAN13kutusunda modül0.660mmüstüne �
 
 ### T-1167 — Gerçek DB kabulü (yerel)
 İki tenantlı izole DB, 73 migration ve gerçek wms_app: 11/11 test geçti. Beş mevcut ambalaj QR kimliği/lot/tarih/miktar, stok defteri-bakiye-seri-HU değişmezliği, tek auditli eşzamanlı replay, eski varsayılan sürümü, eski veriyle tekrar baskı, değişen ürün barkodunda yeni fiziksel baskının reddi, genel/şablon/kişisel cihaz yazıcı sırası ve kapalı profilde durma doğrulandı. Etiket yetkisi stok okuma hakkını vermez; depo kapsamı geçmişte de uygulanır. Fiziksel yazıcı, üretim/sevk gerçek kaynak kabulü ve tarayıcı akışı henüz yapılmadı.
+
+### T-1168 — Fiziksel çıktı yüzeyi (yerel)
+Onaylı etiket önizleme kalıbı ve aynı SVG; A4 10mm kenar/3mm aralık veya gerçek özel kağıt. A4'e sığmayan etiket küçültülmez, kullanıcı özel kağıda geçer. Çıktı gövdeye ayrı print-only portal; uygulama kabuğu baskıya girmez. Birim/PDF kabulü ve web bağlantısı henüz bekler.
+
+T1168 yerel kanıt: 4/4 birim + web typecheck/ESLint; gerçek Chromium PDF altı etiket A4te2sayfa, özel100×50mmde6sayfa; pdfinfo ölçüleri ve iki raster görüntü gözle kontrol edildi. Kabuk/yazı taşması yok. İlk hazırlık kalibrasyonu ve yazıcı fiziksel testi ayrıca gerekir.
+
+### T-1172 — Baskı ekranı (yerel geliştirme)
+`/custom-labels` yalnız kapalı kaynak sorgusu veya yetkili geçmiş işUUID alır; GET yazmaz. Baskı eylemi gerçek sunucu kaynaklarını yeniden okur; client değer/endpoint/kalibrasyon veremez. Tarayıcı aynı jobUUID ile tekrar güvenli; SVG DOM'a işlendiğinde sistem diyaloğu açılır ve fiziksel başarı iddia edilmez. Varsayılan atanan sürüm ayrı, açık seçim en yeni yayını kullanır. Tarihsel işte yeniden basım nedeni ve aynı kimlik; yetki/depo ve güncel barkod tekrar kontrol edilir. Test/bağımsız inceleme ve eski düğmelerin bağlantısı bekler.

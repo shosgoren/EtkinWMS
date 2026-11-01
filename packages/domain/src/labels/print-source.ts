@@ -92,6 +92,7 @@ export async function readLabelSourcesInTx(tx:AccessTx,m:Membership,raw:unknown,
   const values:Record<string,string>={name:r.name,code:r.code,unit:r.unit,barcode:barcodes.get(r.item_id)??'',quantity:formatLabelQuantity(r.quantity,locale),lot:r.lot_code??'',expiryDate:formatLabelDate(r.expires_on,locale),documentNo:h.number!};
   if(q.kind!=='SHIPMENT')values.productionDate=formatLabelDate(r.produced_on,locale);
   if(r.package_id!==null)values.packageQr=`EWMS:PKG:1:${r.package_id}`;
+  if(q.kind==='SHIPMENT')values.trackingCode=values.packageQr??h.number!;
   return{source:{kind:q.kind,id:r.id,documentId:q.documentId,warehouseId:h.warehouse_id,version:h.version},values,required,packageCodeRequired:r.package_id!==null};
  });
  return finish(q.kind==='SHIPMENT'?'SHIPMENT':'RECEIPT',result,q);

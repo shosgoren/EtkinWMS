@@ -6852,7 +6852,8 @@
       "locationCode": "Bin code",
       "locationName": "Bin name",
       "warehouseName": "Warehouse",
-      "customerName": "Customer"
+      "customerName": "Customer",
+      "trackingCode": "Tracking QR · automatic"
     },
     "printers": "Printers",
     "newPrinter": "Add printer",
@@ -6883,5 +6884,46 @@
     },
     "printerName": "Printer name",
     "noSpace": "No space · enlarge the label or reduce a field"
+  },
+  "labelPrint": {
+    "title": "Print labels",
+    "back": "Back",
+    "noTemplate": "Publish a label design for this operation first.",
+    "locked": "You cannot print labels.",
+    "askOwner": "Ask your supervisor.",
+    "login": "Sign in to Etkin WMS first.",
+    "changed": "Information changed. Refresh the preview.",
+    "failed": "Could not prepare labels. Try again.",
+    "summary": "{count} labels · {width} × {height} mm",
+    "template": "Label design",
+    "default": "Default design",
+    "paper": "Paper",
+    "roll": "Custom label paper",
+    "copies": "Copies of each label",
+    "copiesError": "Choose no more than 500 labels in total.",
+    "paperError": "This size does not fit A4. Choose custom label paper.",
+    "reason": "Reason for reprint",
+    "reasons": {
+      "damaged": "Damaged label",
+      "extra": "Additional copy needed"
+    },
+    "dialogHint": "Choose the printer in the print dialog · Scale 100%.",
+    "dialogOpened": "Print dialog opened. Check the output at the printer.",
+    "print": "PRINT",
+    "reprint": "REPRINT",
+    "preview": "Label preview",
+    "previous": "Previous",
+    "next": "Next",
+    "nextBatch": "Next labels",
+    "savedJob": "Open this print job again",
+    "errors": {
+      "PRINTER_UNAVAILABLE": "Selected printer is inactive. Check the printer preference.",
+      "REQUIRED_VALUE": "Required product or tracking information is missing.",
+      "REQUIRED_CODE": "The design needs the QR or barcode for this operation.",
+      "PRINTER_CHANGED": "Printer settings changed. Open a new preview.",
+      "SOURCE_CHANGED": "Barcode or rack code changed. Print a current label.",
+      "DESIGN_INVALID": "Label fields or code dimensions are not suitable. Check the design."
+    },
+    "preparing": "Preparing labels. Please wait."
   }
 }
