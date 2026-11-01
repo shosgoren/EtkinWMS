@@ -17,7 +17,7 @@ Sevk `trackingCode` kapalı sunucu alanıdır; gerçek packageQr varsa onunla bi
 
 ## Ekran ve ilk kullanım
 
-- Ortak `kalip/` + EtiketEditor kaynak uzantısı. 390×670/844,1180×820,1440×900; açık/koyu, büyük araçlar, sabit Geri/Ana ekran/işlem/Modüller. Telefonda ortak `ksecp` özellik sayfası, odak/Esc/perde ve kaydırılabilir alanlar.
+- Ortak `kalip/` + EtiketEditor kaynak uzantısı. 390×670/844,1180×820,1440×900; açık/koyu, büyük araçlar, sabit Geri/Ana ekran/işlem/Modüller. Dokunmatik tablette araç sütunu140px ile kelimeler bölünmez. Telefonda ortak `ksecp` özellik sayfası, odak/Esc/perde ve kaydırılabilir alanlar.
 - Logo / metin / bağlı alan / QR / Code128 / EAN13 / çizgi / çerçeve; sürükle, köşeden boyutlandır, döndür, kopyala, sil, geri al, ok tuşları, alan seçici, ortala, yakınlaştır/sığdır ve iki parmak pan/zoom. Serbest yer varsa yeni nesne/kopya oraya konur; yoksa uyarı ve mevcut tasarım korunur.
 - Ölçüler tam µm saklanır, mm gösterilir; ara sayı yazımı bitince doğrulanır. Hazır satırlar uzun ürün kodunu kesmeden iki satıra sığdırır; yazı/kod taşması sessiz kesilmez. QR/barkod çevresi ve fiziksel geometri yayında/baskıda yeniden denetlenir.
 - Taslak ayrı, yayın sürümleri değişmez. Kirli/yüklenen taslakta çıkış korunur; hata sahte başarıya dönüşmez. Varsayılan atanan sürümü kullanır; daha yeni yayın sessizce onu değiştirmez. Geçmiş sürüm taslağa kopyalanabilir, aktif varsayılan alternatif olmadan arşivlenemez.
@@ -67,4 +67,4 @@ Mevcut ürün/raf/toplu ürün/kabul/üretim düğmeleri yetkili özel varsayıl
 
 Tarayıcı aday app commit1b3b2db: desktop/mobile tasarım/logo/sürükleme/klavye/tema,5 gerçek paketQR decode, tercihler, değişmez yeniden baskı ve>50 keyset; ayrı ölçü yarışı/unmount/busy/legacyyetki kabulü. Test seçici düzeltmesi uygulama kodunu değiştirmedi; mevcut derleme kimliği ayrıca yerel kanıtla doğrulandı. Exact-head final CI ve receiver/imaj/DB doğrulaması her yayında ayrıca gerekir; geçmiş yeşil log güncel yayın sayılmaz.
 
-Yayın/geri alma/yedek ve sır referansları: OPERATIONS.md. Sır/DB adresi/anahtar burada veya görev kartlarında tutulmaz. Son görev kaydı: T1170; seri kartlar T1145–1181. Eski geliştirme günlüklerinin ayrıntısı Git geçmişindedir.
+Yayın/geri alma/yedek ve sır referansları: OPERATIONS.md. Sır/DB adresi/anahtar burada veya görev kartlarında tutulmaz. Son görev kaydı: T1170; seri kartlar T1145–1182. Eski geliştirme günlüklerinin ayrıntısı Git geçmişindedir.
