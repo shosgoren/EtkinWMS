@@ -2,11 +2,15 @@
 // I-18 (DESIGN-PARITY): Yonet.dc.html `talepler` BİREBİR (bant, tek seferlik bağlantı kutusu, tablo; telefonda kartlara dönen satırlar).
 // Satırlar gerçek veridir (wms_platform.demo_requests, aktivasyon durumuyla). Kapı ve veri page.tsx'te; eylem actions.ts'te.
 // Ekranda teslimde bağlantı yalnız eylem yanıtıyla gelir ve yalnız bu bileşenin durumunda yaşar (yenilemede kaybolur; "Yeni bağlantı").
-import { useActionState, useState } from "react";
+// T-1144 (kullanıcı kararı 1 Kasım; STANDART pencere kalıbından davranış eki): Onayla, Reddet ve reddedilmiş talepte Geri aç tek soruluk
+// ortak onay penceresinden (`KalipOnay`) geçer; her sonuç ortak balon + ses (`useKalipToast`).
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import { tarih } from "@wms/ui";
 import { C, dz } from "../../design/yonet-tokens.ts";
 import { YICON } from "../../design/yonet-icons.ts";
+import { useKalipToast } from "../../t/[slug]/kalip/ekran.tsx";
+import { KalipOnay } from "../../t/[slug]/kalip/pencere.tsx";
 import type { TaleplerActionState } from "./actions.ts";
 
 /** Talep satırı (sunucudaki `DemoRequestRow` ile aynı biçim; istemci dosyası sunucu paketini içe aktarmaz — T-127b). */
@@ -51,6 +55,38 @@ export interface TaleplerLabels {
   readonly empty: string;
   /** `{code}` yer tutuculu hata metni. */
   readonly error: string;
+  /** T-1144: onay pencereleri (`{name}`, `{email}`, `{company}` yer tutucuları) ve sonuç balonları. */
+  readonly reopen: string;
+  readonly cancel: string;
+  readonly approveAsk: string;
+  readonly approveAskBody: string;
+  readonly approveSend: string;
+  readonly rejectAsk: string;
+  readonly rejectAskBody: string;
+  readonly reopenAsk: string;
+  readonly reopenAskBody: string;
+  readonly doneEmail: string;
+  readonly doneScreen: string;
+  readonly doneRejected: string;
+  readonly doneReopened: string;
+  readonly doneAgain: string;
+  readonly failed: string;
+  readonly emailTaken: string;
+}
+
+type Ask = "APPROVED" | "REJECTED" | "REOPEN";
+
+/** Yer tutucuları doldurur (`{name}` → değer). */
+export function fill(s: string, v: Readonly<Record<string, string>>): string {
+  return s.replace(/\{(\w+)\}/g, (m, k: string) => v[k] ?? m);
+}
+
+/** T-1144: başarılı işlemin balon metni (onayda teslim yoluna göre). */
+export function doneText(done: NonNullable<TaleplerActionState["done"]>, t: TaleplerLabels): string {
+  if (done.intent === "REJECTED") return t.doneRejected;
+  if (done.intent === "REOPEN") return t.doneReopened;
+  if (done.intent === "REISSUE") return done.delivery === "EMAIL" ? t.doneEmail : t.doneAgain;
+  return done.delivery === "EMAIL" ? t.doneEmail : t.doneScreen;
 }
 
 /** Kaynaktaki zaman biçimi: "BUGÜN 14:22", "DÜN 09:10", "12.10 16:45" (İstanbul saati). */
@@ -84,6 +120,11 @@ const CHIP: Readonly<Record<Exclude<RowState, "open">, { bg: string; fg: string;
   rejected: { bg: C.chip, fg: C.fg, again: false },
 };
 
+/** T-1144: reddedilmiş talep geri açılabilir (onaylı/etkinleşmiş talep açılamaz; veritabanı da reddeder). */
+export function canReopen(st: RowState): boolean {
+  return st === "rejected";
+}
+
 export function TaleplerView({
   rows,
   now,
@@ -100,6 +141,33 @@ export function TaleplerView({
   const locale = useLocale(); // T-436 (ALTIN-KURAL 16): kullanıcının dili
   const [state, formAction, pending] = useActionState(action, initialError === undefined ? {} : { error: initialError });
   const [copied, setCopied] = useState<string | null>(null);
+  const [ask, setAsk] = useState<{ readonly kind: Ask; readonly row: DemoRequestRow } | null>(null);
+  const { say } = useKalipToast();
+  const told = useRef(state);
+  const sent = useRef(false);
+  // Her eylem yanıtı yeni bir nesnedir: sonuç bir kez balon + sesle bildirilir (ilk çizimdeki sayfa hatası ve yenilenen etiketler tekrar çalmaz).
+  useEffect(() => {
+    if (state === told.current) return;
+    told.current = state;
+    if (state.done !== undefined) say("ok", doneText(state.done, t));
+    else if (state.error !== undefined) say("err", state.detail === "DEMO_EMAIL_TAKEN" ? t.emailTaken : t.failed);
+  }, [state, say, t]);
+  // Pencere sunucu yanıtı gelene dek açık kalır (düğmede dönen gösterge); yanıt gelince kapanır.
+  useEffect(() => {
+    if (!pending && sent.current) {
+      sent.current = false;
+      setAsk(null);
+    }
+  }, [pending]);
+  function confirm(): void {
+    if (ask === null || pending) return;
+    const fd = new FormData();
+    fd.set("id", ask.row.id);
+    fd.set("intent", ask.kind);
+    sent.current = true;
+    startTransition(() => formAction(fd));
+  }
+  const who: Readonly<Record<string, string>> = ask === null ? {} : { name: ask.row.name, email: ask.row.email, company: ask.row.company };
   const chipText: Readonly<Record<Exclude<RowState, "open">, string>> = {
     email: t.sentEmail,
     screen: t.sentScreen,
@@ -180,20 +248,30 @@ export function TaleplerView({
                     </td>
                     <td>
                       {st === "open" ? (
-                        <form action={formAction} className="acts" style={{ flexWrap: "nowrap" }}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <button type="submit" name="intent" value="REJECTED" className="btn sm" style={{ background: C.chip }} disabled={pending}>
+                        <div className="acts" style={{ flexWrap: "nowrap" }}>
+                          <button type="button" className="btn sm" style={{ background: C.chip }} disabled={pending} onClick={() => setAsk({ kind: "REJECTED", row: r })}>
                             {t.reject}
                           </button>
-                          <button type="submit" name="intent" value="APPROVED" className="btn sm" style={{ background: dz("17804F"), color: dz("FFFFFF") }} disabled={pending}>
+                          <button
+                            type="button"
+                            className="btn sm"
+                            style={{ background: dz("17804F"), color: dz("FFFFFF") }}
+                            disabled={pending}
+                            onClick={() => setAsk({ kind: "APPROVED", row: r })}
+                          >
                             {t.approve}
                           </button>
-                        </form>
+                        </div>
                       ) : (
                         <form action={formAction} className="acts" style={{ flexWrap: "nowrap", alignItems: "center" }}>
                           <span className="chip" style={{ background: CHIP[st].bg, color: CHIP[st].fg }}>
                             {chipText[st]}
                           </span>
+                          {canReopen(st) ? (
+                            <button type="button" className="btn sm" style={{ background: C.chip }} disabled={pending} onClick={() => setAsk({ kind: "REOPEN", row: r })}>
+                              {t.reopen}
+                            </button>
+                          ) : null}
                           {CHIP[st].again ? (
                             <>
                               <input type="hidden" name="id" value={r.id} />
@@ -213,6 +291,19 @@ export function TaleplerView({
         </div>
         {rows.length === 0 ? <div className="empty">{t.empty}</div> : null}
       </div>
+      <KalipOnay
+        open={ask !== null}
+        title={ask === null ? "" : fill(ask.kind === "APPROVED" ? t.approveAsk : ask.kind === "REJECTED" ? t.rejectAsk : t.reopenAsk, who)}
+        description={ask === null ? "" : fill(ask.kind === "APPROVED" ? t.approveAskBody : ask.kind === "REJECTED" ? t.rejectAskBody : t.reopenAskBody, who)}
+        confirmLabel={ask?.kind === "APPROVED" ? t.approveSend : ask?.kind === "REJECTED" ? t.reject : t.reopen}
+        cancelLabel={t.cancel}
+        variant={ask?.kind === "REJECTED" ? "danger" : "primary"}
+        loading={pending && ask !== null}
+        onConfirm={confirm}
+        onCancel={() => {
+          if (!pending) setAsk(null);
+        }}
+      />
     </>
   );
 }

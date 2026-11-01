@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { rowState, whenLabel, type DemoRequestRow } from "./view.tsx";
+import tr from "../../../messages/tr.json" with { type: "json" };
+import { canReopen, doneText, fill, rowState, whenLabel, type DemoRequestRow, type TaleplerLabels } from "./view.tsx";
 
 const now = new Date("2026-10-16T10:00:00+03:00");
 const base: DemoRequestRow = {
@@ -30,5 +31,32 @@ describe("T-995 talep durumu (Yonet.dc.html RST)", () => {
     expect(whenLabel(new Date("2026-10-16T08:05:00+03:00"), now, "BUGÜN", "DÜN", "tr")).toBe("BUGÜN 08:05");
     expect(whenLabel(new Date("2026-10-15T23:59:00+03:00"), now, "BUGÜN", "DÜN", "tr")).toBe("DÜN 23:59");
     expect(whenLabel(new Date("2026-10-12T16:45:00+03:00"), now, "BUGÜN", "DÜN", "tr")).toBe("12.10 16:45");
+  });
+});
+
+describe("T-1144 onay pencereleri ve geri açma", () => {
+  const t = (tr as unknown as { panel: { talepler: TaleplerLabels } }).panel.talepler;
+  it("yalnız reddedilmiş talep geri açılabilir", () => {
+    expect(canReopen(rowState({ ...base, status: "REJECTED", activation: null }, now))).toBe(true);
+    expect(canReopen(rowState({ ...base, status: "PENDING", decidedAt: null, activation: null }, now))).toBe(false);
+    for (const r of [base, { ...base, activatedAt: now }, { ...base, activation: null }]) expect(canReopen(rowState(r, now))).toBe(false);
+  });
+  it("onay sorusu kişi ve e-postayla; reddet ve geri aç tek soru", () => {
+    expect(fill(t.approveAsk, { name: "Ayşe Kaya", email: "ayse@ornek.invalid" })).toBe("Ayşe Kaya (ayse@ornek.invalid) adresine giriş bağlantısı gönderilsin mi?");
+    expect(t.approveSend).toBe("Gönder");
+    expect(t.cancel).toBe("Vazgeç");
+    expect(t.rejectAsk).toBe("Talep reddedilsin mi?");
+    expect(t.reject).toBe("Reddet");
+    expect(t.reopen).toBe("Geri aç");
+    expect(t.emailTaken).toBe("Bu e-posta için açık ya da onaylı bir talep zaten var");
+    expect(fill(t.reopenAskBody, { name: "A", company: "B" })).not.toMatch(/\{/);
+    expect(fill("{x} {y}", { x: "1" })).toBe("1 {y}");
+  });
+  it("sonuç balonu metni işleme ve teslim yoluna göre", () => {
+    expect(doneText({ intent: "APPROVED", delivery: "EMAIL", seq: 1 }, t)).toBe(t.doneEmail);
+    expect(doneText({ intent: "APPROVED", delivery: "SCREEN", seq: 1 }, t)).toBe(t.doneScreen);
+    expect(doneText({ intent: "REJECTED", seq: 1 }, t)).toBe(t.doneRejected);
+    expect(doneText({ intent: "REOPEN", seq: 1 }, t)).toBe(t.doneReopened);
+    expect(doneText({ intent: "REISSUE", delivery: "SCREEN", seq: 1 }, t)).toBe(t.doneAgain);
   });
 });

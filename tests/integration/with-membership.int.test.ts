@@ -1589,7 +1589,8 @@ describe(`wms_meta / wms_probe erişimi ve katalog (target=${env.target})`, () =
       "platform_customer_activity", "platform_decide_demo_request", "platform_demo_request_email", "platform_extend_trial",
       "platform_ingest_demo_request", "platform_is_operator", "platform_issue_activation", "platform_list_charges",
       "platform_list_customers", "platform_list_demo_requests", "platform_list_events", "platform_list_plans", "platform_mark_charge_paid",
-      "platform_prepare_activation_delivery", "platform_published_plans", "platform_save_plan", "platform_set_customer_status",
+      "platform_prepare_activation_delivery", "platform_published_plans", "platform_reopen_demo_request", // T-1144 0071: reddedilmiş talebi geri açma
+      "platform_save_plan", "platform_set_customer_status",
       "platform_site_get", "platform_site_preview", "platform_site_public", "platform_site_publish", "platform_site_save", // T-407 0046: satış sayfası içeriği
       "platform_support_get", "platform_support_list", "platform_support_messages", "platform_support_open_count", "platform_support_reply",
       "platform_support_set_status", // T-967 0054: destek gelen kutusu (operatör; tenant bağlamı işlev içinde, izolasyon politikasından)

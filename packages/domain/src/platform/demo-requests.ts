@@ -67,6 +67,12 @@ export function mapPlatformError(e: unknown): unknown {
   if (state === "42501") return wrap("NOT_FOUND"); // operatör değil: ekranın varlığı da sızdırılmaz
   if (state === "P0002") return wrap("NOT_FOUND");
   if (state === "55000") return wrap("VERSION_CONFLICT"); // zaten karara bağlanmış
+  if (state === "WD001") {
+    // T-1144 (0071): geri açılmak istenen talebin e-postasında açık ya da onaylı başka talep var.
+    const err = new AppError("VERSION_CONFLICT", { detail: "DEMO_EMAIL_TAKEN" });
+    err.cause = e;
+    return err;
+  }
   if (state === "22023") return wrap("VALIDATION_FAILED");
   return wrap("INTERNAL");
 }
@@ -269,6 +275,33 @@ export async function reissueActivation(
   try {
     const issued = await withUser(params.db, principal.userId, (tx) => issueInTx(tx, id, deps.mailConfig));
     return await deliverOrFallback(params.db, principal, id, issued, deps);
+  } catch (e) {
+    throw mapPlatformError(e);
+  }
+}
+
+/**
+ * T-1144 (0071): reddedilmiş talebi yeniden BEKLEMEDE'ye alır (sonra onaylanabilir). Operatör + MFA + yakın zamanda doğrulama (karar ile
+ * aynı sıra). Yalnız REJECTED → PENDING; onaylı talep VERSION_CONFLICT; aynı e-postada açık ya da onaylı başka talep varsa
+ * VERSION_CONFLICT / DEMO_EMAIL_TAKEN (ikinci deneme alanı açılmaz). İdempotent: zaten bekleyen talepte değişiklik ve olay yok.
+ * Karar alanları (decided_at/by) veritabanında temizlenir; olay `platform.demo_request.reopened` aynı transaction'da.
+ */
+export async function reopenDemoRequest(params: {
+  readonly db: AccessDbClient;
+  readonly principal: AccessPrincipal | null;
+  readonly id: unknown;
+  readonly recentAuth: () => Promise<void>;
+}): Promise<{ readonly status: "PENDING" }> {
+  const { id } = params;
+  principalOrThrow(params.principal);
+  if (typeof id !== "string" || !UUID.test(id)) throw new AppError("VALIDATION_FAILED");
+  const principal = await operatorWithRecentAuth(params);
+  try {
+    const rows = await withUser(params.db, principal.userId, (tx) =>
+      tx.execute<{ s: string }>(sql`SELECT wms_probe.platform_reopen_demo_request(${id}::uuid) AS s`),
+    );
+    if (rows[0]?.s !== "PENDING") throw new AppError("INTERNAL");
+    return { status: "PENDING" };
   } catch (e) {
     throw mapPlatformError(e);
   }

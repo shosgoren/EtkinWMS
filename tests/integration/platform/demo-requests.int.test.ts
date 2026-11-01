@@ -1,7 +1,8 @@
 // T-994 (ADR-026 §3, 0038): demo talepleri platform tablosu. Gerçek wms_app bağlantısı; migration rolü yalnız kurulum/temizlik.
 // Kanıtlanan: tablolara hiçbir uygulama rolünün doğrudan yetkisi yok; operatör veritabanında zorlanır (kod/ortam değil);
 // içe alma idempotent; karar yalnız PENDING'den bir kez; karar security_events'e kişisel veri olmadan yazılır; MFA ve yakın
-// zamanda doğrulama domain'de zorunlu. Fikstürler sentetik (G-09).
+// zamanda doğrulama domain'de zorunlu. T-1144 (0071): reddedilen talep geri açılır (yalnız REJECTED → PENDING, idempotent, karar alanları
+// temizlenir, olay yazılır). Fikstürler sentetik (G-09).
 import { randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -14,8 +15,10 @@ import {
   ingestDemoLeads,
   isPlatformOperator,
   listDemoRequests,
+  reopenDemoRequest,
 } from "../../../packages/domain/src/platform/demo-requests.ts";
 import { readIntEnv, readWorkerDatabaseUrl } from "../harness/env.ts";
+import { cleanupRegistry, newRegistry, seedWorld, type TenantWorld } from "../fixtures/tenants.ts";
 
 const env = readIntEnv(process.env);
 let app: DbClient;
@@ -94,7 +97,7 @@ describe("0038 yetki sınırı", () => {
          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'wms_probe' AND p.proname LIKE 'platform\\_%'`,
     );
-    expect(r.rows.length).toBe(39); // 0038: 4, 0039 (T-995): +10, 0041 (T-404): +5, 0042 (T-403): +5, 0043 (T-406): +3, 0046 (T-407): +5, 0047 (T-408): +1, 0054 (T-967): +6
+    expect(r.rows.length).toBe(40); // 0038: 4, 0039 (T-995): +10, 0041 (T-404): +5, 0042 (T-403): +5, 0043 (T-406): +3, 0046 (T-407): +5, 0047 (T-408): +1, 0054 (T-967): +6, 0071 (T-1144): +1
     for (const x of r.rows) expect(x, x.fn).toMatchObject({ owner: "wms_identity_probe", def: true, pub: false });
   });
 
@@ -241,5 +244,178 @@ describe("karar", () => {
     await expect(
       decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id: randomUUID(), decision: "REJECTED", recentAuth: ok }, deps),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("geri açma (T-1144, 0071)", () => {
+  const principal = (): { userId: string; mfaVerified: boolean } => ({ userId: operatorId, mfaVerified: true });
+  async function rejected(): Promise<string> {
+    const l = lead();
+    const id = JSON.parse(l).id as string;
+    await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
+    expect((await decideDemoRequest({ db: app, principal: principal(), id, decision: "REJECTED", recentAuth: ok }, deps)).decision).toBe("REJECTED");
+    return id;
+  }
+  const row = async (id: string) =>
+    (
+      await adm.query<{ status: string; decided_at: Date | null; decided_by: string | null; token: string | null }>(
+        "SELECT status, decided_at, decided_by, activation_token_hash AS token FROM wms_platform.demo_requests WHERE id = $1",
+        [id],
+      )
+    ).rows[0];
+  const reopenedEvents = async (id: string) =>
+    (
+      await adm.query<{ user_id: string; detail: Record<string, unknown> }>(
+        "SELECT user_id, detail FROM public.security_events WHERE event_type = 'platform.demo_request.reopened' AND detail ->> 'demo_request_id' = $1",
+        [id],
+      )
+    ).rows;
+
+  it("REJECTED → PENDING: karar alanları temizlenir, olay kişisel veri olmadan yazılır; sonra onaylanabilir", async () => {
+    const id = await rejected();
+    expect(await reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })).toEqual({ status: "PENDING" });
+    expect(await row(id)).toEqual({ status: "PENDING", decided_at: null, decided_by: null, token: null });
+    expect(await reopenedEvents(id)).toEqual([{ user_id: operatorId, detail: { demo_request_id: id } }]);
+    const listed = (await listDemoRequests({ db: app, principal: principal() })).find((r) => r.id === id);
+    expect(listed).toMatchObject({ status: "PENDING", decidedAt: null, activation: null });
+    const approved = await decideDemoRequest({ db: app, principal: principal(), id, decision: "APPROVED", recentAuth: ok }, deps);
+    expect(approved.decision).toBe("APPROVED");
+    expect((await row(id))?.status).toBe("APPROVED");
+  });
+
+  it("idempotent: ikinci geri açma değişiklik ve ikinci olay üretmez", async () => {
+    const id = await rejected();
+    await reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok });
+    expect(await reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })).toEqual({ status: "PENDING" });
+    expect((await row(id))?.status).toBe("PENDING");
+    expect(await reopenedEvents(id)).toHaveLength(1);
+    // Aynı anda iki dokunuş: satır kilidiyle sıraya girer, tek olay.
+    await decideDemoRequest({ db: app, principal: principal(), id, decision: "REJECTED", recentAuth: ok }, deps);
+    await Promise.all([1, 2].map(() => reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })));
+    expect((await row(id))?.status).toBe("PENDING");
+    expect(await reopenedEvents(id)).toHaveLength(2);
+  });
+
+  it("reddedilmemiş (onaylı) talep geri açılamaz: VERSION_CONFLICT, satır ve bağlantı değişmez, olay yok", async () => {
+    const l = lead();
+    const id = JSON.parse(l).id as string;
+    await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
+    await decideDemoRequest({ db: app, principal: principal(), id, decision: "APPROVED", recentAuth: ok }, deps);
+    const before = await row(id);
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    expect(await row(id)).toEqual(before);
+    expect(before?.token).toMatch(/^[0-9a-f]{64}$/);
+    expect(await reopenedEvents(id)).toEqual([]);
+  });
+
+  it("operatör olmayan NOT_FOUND; MFA'sız FORBIDDEN; yakın zamanda doğrulama reddi; bağlamsız wms_app 42501; olmayan talep NOT_FOUND; talep REJECTED kalır", async () => {
+    const id = await rejected();
+    await expect(reopenDemoRequest({ db: app, principal: { userId: otherId, mfaVerified: true }, id, recentAuth: ok })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(reopenDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: false }, id, recentAuth: ok })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      detail: "MFA_REQUIRED",
+    });
+    const reauth = async (): Promise<void> => {
+      throw Object.assign(new Error("reauth"), { reason: "REAUTH_REQUIRED" });
+    };
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: reauth })).rejects.toMatchObject({ code: "UNAUTHENTICATED", detail: "RECENT_AUTH_REQUIRED" });
+    const c = new pg.Client({ connectionString: env.databaseUrl });
+    await c.connect();
+    try {
+      await expect(c.query("SELECT wms_probe.platform_reopen_demo_request($1::uuid)", [id])).rejects.toMatchObject({ code: "42501" });
+    } finally {
+      await c.end();
+    }
+    for (const role of ["wms_auth", "wms_worker", "wms_ops"]) {
+      const r = await adm.query<{ x: boolean }>("SELECT has_function_privilege($1, 'wms_probe.platform_reopen_demo_request(uuid)', 'EXECUTE') AS x", [role]);
+      expect(r.rows[0]?.x, role).toBe(false);
+    }
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id: randomUUID(), recentAuth: ok })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect((await row(id))?.status).toBe("REJECTED");
+    expect(await reopenedEvents(id)).toEqual([]);
+  });
+});
+
+describe("geri açma — aynı e-posta ve tenant kullanıcısı (T-1144 security-reviewer MINOR-1/3)", () => {
+  const principal = (): { userId: string; mfaVerified: boolean } => ({ userId: operatorId, mfaVerified: true });
+  const reg = newRegistry();
+  let world: TenantWorld;
+  beforeAll(async () => {
+    world = await seedWorld(adm, reg, "T1144");
+  }, 60_000);
+  afterAll(async () => {
+    await cleanupRegistry(adm, reg);
+  }, 60_000);
+
+  /** 0057 öncesi yinelenen kayıt: aynı e-postanın ikinci satırı. Rezervasyon tetikleyicisi yalnız INSERT'te çalışır; satır benzersiz
+   * adresle eklenir, sonra migration rolü (tablo sahibi) e-postayı hedefe çevirir (DDL/tetikleyici kapatma yok). */
+  async function legacyCopy(email: string, st: "REJECTED" | "PENDING" | "APPROVED"): Promise<string> {
+    const id = randomUUID();
+    leadIds.push(id);
+    const decided = st !== "PENDING";
+    await adm.query(
+      `INSERT INTO wms_platform.demo_requests (id, received_at, name, company, email, status, decided_at, decided_by)
+       VALUES ($1, now(), 'Kopya Kişi', 'Kopya AŞ', $2, $3, CASE WHEN $4 THEN now() END, CASE WHEN $4 THEN $5::uuid END)`,
+      [id, `t1144-tmp-${randomBytes(6).toString("hex")}@example.test`, st, decided, operatorId],
+    );
+    await adm.query("UPDATE wms_platform.demo_requests SET email = $2 WHERE id = $1", [id, email]);
+    return id;
+  }
+  const status = async (id: string) => (await adm.query<{ status: string }>("SELECT status FROM wms_platform.demo_requests WHERE id = $1", [id])).rows[0]?.status;
+  const events = async (id: string) =>
+    Number((await adm.query<{ n: string }>("SELECT count(*) AS n FROM public.security_events WHERE event_type = 'platform.demo_request.reopened' AND detail ->> 'demo_request_id' = $1", [id])).rows[0]?.n);
+
+  it("aynı normalize e-postanın onaylı/etkin ya da bekleyen kopyası varken reddedilmiş kopya geri açılamaz (DEMO_EMAIL_TAKEN); kopyalar reddedilmişse açılır", async () => {
+    const email = `t1144-${randomBytes(4).toString("hex")}@example.test`;
+    const l = lead({ email });
+    const first = JSON.parse(l).id as string;
+    await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
+    await decideDemoRequest({ db: app, principal: principal(), id: first, decision: "APPROVED", recentAuth: ok }, deps);
+    const copy = await legacyCopy(email, "REJECTED");
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id: copy, recentAuth: ok })).rejects.toMatchObject({ code: "VERSION_CONFLICT", detail: "DEMO_EMAIL_TAKEN" });
+    expect(await status(copy)).toBe("REJECTED");
+    expect(await events(copy)).toBe(0);
+    // Bekleyen kopya da engeller (ikisi birden onaylanıp iki deneme alanı açılamaz).
+    const email2 = `t1144-${randomBytes(4).toString("hex")}@example.test`;
+    const pending = await legacyCopy(email2, "PENDING");
+    const rejected2 = await legacyCopy(email2, "REJECTED");
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id: rejected2, recentAuth: ok })).rejects.toMatchObject({ detail: "DEMO_EMAIL_TAKEN" });
+    // Diğer kopya reddedilince geri açma serbest; sonra ilk kopya bu kez engellenir.
+    await decideDemoRequest({ db: app, principal: principal(), id: pending, decision: "REJECTED", recentAuth: ok }, deps);
+    expect(await reopenDemoRequest({ db: app, principal: principal(), id: rejected2, recentAuth: ok })).toEqual({ status: "PENDING" });
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id: pending, recentAuth: ok })).rejects.toMatchObject({ detail: "DEMO_EMAIL_TAKEN" });
+    expect(await status(pending)).toBe("REJECTED");
+  });
+
+  it("aynı e-postanın iki reddedilmiş kopyası aynı anda geri açılırsa yalnız biri açılır (e-posta kilidi)", async () => {
+    const email = `t1144-${randomBytes(4).toString("hex")}@example.test`;
+    const a = await legacyCopy(email, "REJECTED");
+    const b = await legacyCopy(email, "REJECTED");
+    const out = await Promise.allSettled([a, b].map((id) => reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })));
+    expect(out.filter((o) => o.status === "fulfilled")).toHaveLength(1);
+    expect(out.filter((o) => o.status === "rejected").map((o) => (o as PromiseRejectedResult).reason)).toEqual([expect.objectContaining({ detail: "DEMO_EMAIL_TAKEN" })]);
+    expect([await status(a), await status(b)].sort()).toEqual(["PENDING", "REJECTED"]);
+  });
+
+  it("tenant sahibi ve üyesi (app.current_tenant_id kurulu) geri açamaz: domain NOT_FOUND, doğrudan çağrı 42501; talep REJECTED kalır", async () => {
+    const l = lead();
+    const id = JSON.parse(l).id as string;
+    await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
+    await decideDemoRequest({ db: app, principal: principal(), id, decision: "REJECTED", recentAuth: ok }, deps);
+    for (const userId of [world.ownerUserId, world.memberUserId]) {
+      await expect(reopenDemoRequest({ db: app, principal: { userId, mfaVerified: true }, id, recentAuth: ok })).rejects.toMatchObject({ code: "NOT_FOUND" });
+      const c = new pg.Client({ connectionString: env.databaseUrl });
+      await c.connect();
+      try {
+        await c.query("BEGIN");
+        await c.query("SELECT set_config('app.current_user_id', $1, true), set_config('app.current_tenant_id', $2, true)", [userId, world.tenantId]);
+        await expect(c.query("SELECT wms_probe.platform_reopen_demo_request($1::uuid)", [id])).rejects.toMatchObject({ code: "42501" });
+        await c.query("ROLLBACK");
+      } finally {
+        await c.end();
+      }
+    }
+    expect(await status(id)).toBe("REJECTED");
+    expect(await events(id)).toBe(0);
   });
 });

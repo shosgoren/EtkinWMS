@@ -126,6 +126,8 @@ sequenceDiagram
     actor M as Müşteri
     participant A as /activate/[token]
     O->>P: Onayla
+    P-->>O: "<ad> (<e-posta>) adresine giriş bağlantısı gönderilsin mi?" (Gönder / Vazgeç, T-1144)
+    O->>P: Gönder
     P->>DB: platform_decide_demo_request (APPROVED)
     P->>K: platform.activation.deliver işi (posta açıksa)
     K->>DB: yeni belirteç özeti yaz (activation_token_hash)
@@ -146,7 +148,8 @@ sequenceDiagram
 stateDiagram-v2
     [*] --> PENDING: Satış sitesinden talep
     PENDING --> APPROVED: Operatör onaylar
-    PENDING --> REJECTED: Operatör reddeder
+    PENDING --> REJECTED: Operatör reddeder ("Talep reddedilsin mi?")
+    REJECTED --> PENDING: Geri aç (T-1144, 0071; karar alanları temizlenir)
     APPROVED --> BaglantiGonderildi: activation_token_hash yazılır (EMAIL veya SCREEN)
     BaglantiGonderildi --> BaglantiGonderildi: Yeniden gönder (REISSUE, eski bağlantı geçersiz)
     BaglantiGonderildi --> Aktive: activated_at dolar (tenant açıldı)
@@ -292,8 +295,9 @@ stateDiagram-v2
 | UI Bileşeni / Buton / Alan | Tipi | Kullanıcı Aksiyonu | Tetiklenen API / Servis | Etkilenen DB Tablosu & Kolonu | İş Kuralı / Validasyon | Mevcut Durum |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Talep listesi (ad, firma, e-posta, sektör, mesaj, durum, bağlantı durumu) | Tablo | Görüntülenir | `listDemoRequests` → `platform_list_demo_requests` | `demo_requests` (`status`, `decided_at`, `activation_delivery`, `activation_expires_at`, `activated_at`) | Belirteç/özet asla dönmez | [TAMAMLANDI] |
-| "Onayla" | Buton | Tıklar | `demoRequestAction` (intent `APPROVED`) → `decideDemoRequest` → `platform_decide_demo_request` + `platform_issue_activation` | `demo_requests.status=APPROVED`, `decided_at`, `decided_by`; aktivasyon kolonları | Yakın zamanda doğrulama; posta açıksa e-posta işi (`platform.activation.deliver`), kapalıysa bağlantı **yalnız bu yanıtta, bir kez** ekranda | [TAMAMLANDI] |
-| "Reddet" | Buton | Tıklar | intent `REJECTED` | `demo_requests.status=REJECTED` | Karar geri alınmaz (`decided_*` dolu) | [TAMAMLANDI] |
+| "Onayla" | Buton | Tıklar → onay penceresi "<ad> (<e-posta>) adresine giriş bağlantısı gönderilsin mi?" (Gönder / Vazgeç, T-1144) | `demoRequestAction` (intent `APPROVED`) → `decideDemoRequest` → `platform_decide_demo_request` + `platform_issue_activation` | `demo_requests.status=APPROVED`, `decided_at`, `decided_by`; aktivasyon kolonları | Yakın zamanda doğrulama; posta açıksa e-posta işi (`platform.activation.deliver`), kapalıysa bağlantı **yalnız bu yanıtta, bir kez** ekranda | [TAMAMLANDI] |
+| "Reddet" | Buton | Tıklar → onay penceresi "Talep reddedilsin mi?" (Reddet / Vazgeç) | intent `REJECTED` | `demo_requests.status=REJECTED`, `decided_*` dolu | Onay sorar (T-1144); "Geri aç" ile geri alınabilir | [TAMAMLANDI] |
+| "Geri aç" (yalnız reddedilmiş talepte) | Buton | Tıklar → onay penceresi "Talep geri açılsın mı?" (Geri aç / Vazgeç) | intent `REOPEN` → `reopenDemoRequest` → `platform_reopen_demo_request` (0071) | `demo_requests.status=PENDING`, `decided_at`/`decided_by` NULL; `security_events` `platform.demo_request.reopened` | Operatör (DB) + MFA + yakın zamanda doğrulama; yalnız REJECTED → PENDING (onaylı talep `VERSION_CONFLICT`); idempotent (zaten bekleyende değişiklik/olay yok); aynı e-postanın (`lower(btrim)`) başka bir satırı bekleyen/onaylı/etkinse ret `VERSION_CONFLICT`/`DEMO_EMAIL_TAKEN` ("Bu e-posta için açık ya da onaylı bir talep zaten var"; eski yinelenen kopyadan ikinci deneme alanı açılmaz); sonuç balon + ses | [TAMAMLANDI] (T-1144) |
 | "Yeni bağlantı gönder" | Buton | Tıklar | intent `REISSUE` → `reissueActivation` | `activation_token_hash`, `activation_expires_at` (yenilenir) | Eski bağlantı geçersiz olur | [TAMAMLANDI] |
 
 ---
