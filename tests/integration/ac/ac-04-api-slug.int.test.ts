@@ -393,7 +393,7 @@ async function runLoader(
 describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
   it("@AC-04 custom label source: cross-tenant, missing slug, outsider and anonymous remain closed; own empty workspace renders without stock mutation", async () => {
     const beforeA = await snapshot(A), beforeB = await snapshot(B);
-    const source = JSON.stringify({kind:"PRODUCT",itemIds:[itemB.id]});
+    const source = JSON.stringify({kind:"PRODUCT",ids:[fx.B.item]});
     as(A.admin);
     const cross = await runLoader(CUSTOM_LABELS,B.slug,undefined,undefined,{source});
     as(A.admin);
@@ -401,11 +401,11 @@ describe("saha kabuğu ve etiket sayfaları (/t/<slug>)", () => {
     as(outsider.id);
     expect(await runLoader(CUSTOM_LABELS,B.slug,undefined,undefined,{source})).toEqual(cross);
     expect(cross).toEqual({outcome:"notFound"});
-    expect(JSON.stringify(cross)).not.toContain(itemB.name);
+    expect(JSON.stringify(cross)).not.toContain(B.name);
     as(null);
     expect((await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source})).to).toMatch(/^\/login\?next=/);
     as(A.admin);
-    const own = await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source:JSON.stringify({kind:"PRODUCT",itemIds:[itemA.id]})});
+    const own = await runLoader(CUSTOM_LABELS,A.slug,undefined,undefined,{source:JSON.stringify({kind:"PRODUCT",ids:[fx.A.item]})});
     expect(own.outcome).toBe("render");
     expect(JSON.stringify(own.value)).toContain("noTemplate");
     expect(await runLoader(CUSTOM_LABELS,A.slug)).toEqual({outcome:"notFound"});
