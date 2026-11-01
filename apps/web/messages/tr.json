@@ -1053,7 +1053,8 @@
       "printer_saved": "Yazıcı tercihi kaydedildi",
       "preference_changed": "Etiket yazıcısı seçildi",
       "asset_added": "Etiket logosu eklendi",
-      "print_prepared": "Etiket baskısı hazırlandı"
+      "print_prepared": "Etiket baskısı hazırlandı",
+      "guide_seen": "Etiket rehberi gösterildi"
     }
   },
   "auditLog": {
@@ -1089,7 +1090,8 @@
         "printer_saved": "Yazıcı tercihi kaydedildi",
         "preference_changed": "Etiket yazıcısı seçildi",
         "asset_added": "Etiket logosu eklendi",
-        "print_prepared": "Etiket baskısı hazırlandı"
+        "print_prepared": "Etiket baskısı hazırlandı",
+        "guide_seen": "Etiket rehberi gösterildi"
       },
       "member": {
         "invited": "Üye davet edildi",

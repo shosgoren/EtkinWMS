@@ -135,3 +135,17 @@ export async function exportLabelDesigns(p:LabelParams,input:{kind:"TEMPLATES"|"
   return finish(rows.slice(0,25),rows.length>25?(rows[24]?.id??null):null);
  });
 }
+
+/** User+membership+tenant introduction state. Uses the existing indexed immutable audit metadata, never a browser-only seen flag. */
+export async function getLabelGuideSeen(p:LabelParams):Promise<boolean>{
+ return runTenantQuery({...p,permission:'labels.view'},async(tx,m)=>{
+  const rows=await tx.execute(sql`SELECT id FROM public.audit_logs WHERE tenant_id=${m.tenantId}::uuid AND entity_id=${m.membershipId}::uuid AND actor_user_id=${m.userId}::uuid AND action='label.guide_seen' AND change_summary @> '{"guideVersion":1}'::jsonb LIMIT 1`);return rows.length>0;
+ });
+}
+export async function markLabelGuideSeen(p:LabelParams):Promise<void>{
+ return labelWrite(p,'labels.design',async(tx,m)=>{
+  if(!labelRights(m).view)throw new AppError('FORBIDDEN');
+  const rows=await tx.execute(sql`SELECT id FROM public.audit_logs WHERE tenant_id=${m.tenantId}::uuid AND entity_id=${m.membershipId}::uuid AND actor_user_id=${m.userId}::uuid AND action='label.guide_seen' AND change_summary @> '{"guideVersion":1}'::jsonb LIMIT 1`);
+  if(!rows[0])await labelAudit(tx,m,p,'label.guide_seen',m.membershipId,{guideVersion:1});
+ });
+}

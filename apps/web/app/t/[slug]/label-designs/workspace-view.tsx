@@ -12,15 +12,19 @@ import{KalipSecim}from"../kalip/secim.tsx";
 import{KalipDugme}from"../kalip/belge.tsx";
 import{KalipEtiketEditor}from"../kalip/etiket-editor.tsx";
 import{useCikisKorumasi}from"../kalip/cikis.tsx";
-import{labelSaveAction,labelPublishAction,labelAssignAction,labelArchiveAction,labelRestoreAction,labelLogoUploadAction,labelWorkspaceAction}from"./actions.ts";
+import{labelSaveAction,labelPublishAction,labelAssignAction,labelArchiveAction,labelRestoreAction,labelLogoUploadAction,labelWorkspaceAction,labelGuideSeenAction}from"./actions.ts";
+import{useKabuk}from"../kabuk/kabuk-bar.tsx";
+import{OP_GUIDE_EVENT}from"../kalip/rehber-plan.ts";
 import{LabelPrinters,LabelPrinterChoice}from"./printer-view.tsx";
 import{labelDeviceId,labelLogoPng}from"./label-client.ts";
-interface Props{readonly slug:string;readonly dark:boolean;readonly initial:LabelWorkspace;readonly detail:LabelTemplateDetail|null;readonly assets:Readonly<Record<string,string>>;readonly newContext:LabelContext|undefined;readonly context:LabelContext|undefined;readonly archived:boolean;readonly query:string;readonly after?:string;readonly printers:boolean;readonly printerId:string|undefined}
+interface Props{readonly guideSeen:boolean;readonly slug:string;readonly dark:boolean;readonly initial:LabelWorkspace;readonly detail:LabelTemplateDetail|null;readonly assets:Readonly<Record<string,string>>;readonly newContext:LabelContext|undefined;readonly context:LabelContext|undefined;readonly archived:boolean;readonly query:string;readonly after?:string;readonly printers:boolean;readonly printerId:string|undefined}
 const contextIcons={PRODUCT:LICON.box,RECEIPT:LICON.moveIn,LOCATION:LICON.raf,SHIPMENT:LICON.moveOut};
 export function LabelWorkspaceView(props:Props){
  const{slug,dark,initial,detail,newContext,context,archived,query,after}=props,t=useTranslations('labelEditor'),router=useRouter(),{say}=useKalipToast('form'),base=`/t/${encodeURIComponent(slug)}/label-designs`,home=`/t/${encodeURIComponent(slug)}`;
+ const kabuk=useKabuk(),guideStarted=useRef(false),guideAllowed=kabuk?.guides?.operations.includes("label")===true,guideOwner=kabuk?.guideOwner;
  const[data,setData]=useState(initial),[device,setDevice]=useState<string|null>(null),[q,setQ]=useState(query);
  useEffect(()=>{let active=true;const id=labelDeviceId();setDevice(id);void labelWorkspaceAction({slug,deviceId:id,...(context?{context}:{}),archived,q:query,...(after?{after}:{})}).then(r=>{if(active&&r.ok)setData(r.data);});return()=>{active=false;};},[slug,context,archived,query,after]);
+ useEffect(()=>{if(props.guideSeen||guideStarted.current||!guideAllowed||guideOwner!=null||!data.rights.design||props.printers||props.printerId!==undefined)return;const frame=requestAnimationFrame(()=>{const accepted=!window.dispatchEvent(new CustomEvent(OP_GUIDE_EVENT,{cancelable:true,detail:{guide:'label',automatic:true}}));if(accepted){guideStarted.current=true;void labelGuideSeenAction({slug}).catch(()=>undefined);}});return()=>cancelAnimationFrame(frame);},[props.guideSeen,props.printers,props.printerId,guideAllowed,guideOwner,data.rights.design,slug]);
  if(props.printers||props.printerId!==undefined)return<LabelPrinters slug={slug} dark={dark} data={data} device={device} editId={props.printerId}/>;
  if(detail||newContext)return<LabelEdit {...props} data={data} device={device}/>;
  const url=(params:Record<string,string>)=>base+'?'+new URLSearchParams(params).toString();

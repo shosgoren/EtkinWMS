@@ -1053,7 +1053,8 @@
       "printer_saved": "Printer profile saved",
       "preference_changed": "Label printer selected",
       "asset_added": "Label logo added",
-      "print_prepared": "Label print prepared"
+      "print_prepared": "Label print prepared",
+      "guide_seen": "Label introduction shown"
     }
   },
   "auditLog": {
@@ -1089,7 +1090,8 @@
         "printer_saved": "Printer profile saved",
         "preference_changed": "Label printer selected",
         "asset_added": "Label logo added",
-        "print_prepared": "Label print prepared"
+        "print_prepared": "Label print prepared",
+        "guide_seen": "Label introduction shown"
       },
       "member": {
         "invited": "Member invited",
