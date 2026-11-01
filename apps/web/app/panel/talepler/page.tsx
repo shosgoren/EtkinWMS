@@ -59,6 +59,21 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Pro
     yesterday: tt("yesterday"),
     empty: tt("empty"),
     error: tt.raw("error") as string,
+    reopen: tt("reopen"),
+    cancel: tt("cancel"),
+    approveAsk: tt.raw("approveAsk") as string,
+    approveAskBody: tt("approveAskBody"),
+    approveSend: tt("approveSend"),
+    rejectAsk: tt("rejectAsk"),
+    rejectAskBody: tt.raw("rejectAskBody") as string,
+    reopenAsk: tt("reopenAsk"),
+    reopenAskBody: tt.raw("reopenAskBody") as string,
+    doneEmail: tt("doneEmail"),
+    doneScreen: tt("doneScreen"),
+    doneRejected: tt("doneRejected"),
+    doneReopened: tt("doneReopened"),
+    doneAgain: tt("doneAgain"),
+    failed: tt("failed"),
   };
   const pending = rows.filter((r) => r.status === "PENDING").length;
   const dark = temaKoyu(await cookies());

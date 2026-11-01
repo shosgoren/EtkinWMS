@@ -924,6 +924,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
     "wms_probe.platform_mark_charge_paid", // T-406 migration 0043: operatör elle ödendi kaydı (geri alınmaz) + security_events, yalnızca wms_app
     "wms_probe.platform_prepare_activation_delivery", // T-995 migration 0039: e-postayla teslimde yeni belirteç özeti, yalnızca wms_worker
     "wms_probe.platform_published_plans", // T-404 migration 0041: yayındaki paketler (herkese açık bilgi, müşteri verisi yok), yalnızca wms_app
+    "wms_probe.platform_reopen_demo_request", // T-1144 migration 0071: operatör reddedilmiş talebi PENDING'e döndürür (idempotent) + security_events, yalnızca wms_app
     "wms_probe.platform_save_plan", // T-404 migration 0041: operatör paket kaydı (değişiklikte yeni sürüm) + security_events, yalnızca wms_app
     "wms_probe.platform_set_customer_status", // T-403 migration 0042: operatör askıya alır (gerekçe) / devam ettirir + security_events, yalnızca wms_app
     "wms_probe.platform_site_get", // T-407 migration 0046: operatöre düzenlenen satış sayfası içeriği + son yayın, yalnızca wms_app
@@ -988,6 +989,7 @@ describe("AC-04 DB — SECURITY DEFINER katalog taraması", () => {
       "wms_probe.platform_ingest_demo_request": [WORKER_ROLE],
       "wms_probe.platform_list_demo_requests": [APP_ROLE],
       "wms_probe.platform_decide_demo_request": [APP_ROLE],
+      "wms_probe.platform_reopen_demo_request": [APP_ROLE],
       "wms_probe.platform_activation_claim": [APP_ROLE],
       "wms_probe.platform_activation_consume": [APP_ROLE],
       "wms_probe.platform_activation_for_account_creation": [AUTH_ROLE],

@@ -274,6 +274,32 @@ export async function reissueActivation(
   }
 }
 
+/**
+ * T-1144 (0071): reddedilmiş talebi yeniden BEKLEMEDE'ye alır (sonra onaylanabilir). Operatör + MFA + yakın zamanda doğrulama (karar ile
+ * aynı sıra). Yalnız REJECTED → PENDING; onaylı talep VERSION_CONFLICT. İdempotent: zaten bekleyen talepte değişiklik ve olay yok.
+ * Karar alanları (decided_at/by) veritabanında temizlenir; olay `platform.demo_request.reopened` aynı transaction'da.
+ */
+export async function reopenDemoRequest(params: {
+  readonly db: AccessDbClient;
+  readonly principal: AccessPrincipal | null;
+  readonly id: unknown;
+  readonly recentAuth: () => Promise<void>;
+}): Promise<{ readonly status: "PENDING" }> {
+  const { id } = params;
+  principalOrThrow(params.principal);
+  if (typeof id !== "string" || !UUID.test(id)) throw new AppError("VALIDATION_FAILED");
+  const principal = await operatorWithRecentAuth(params);
+  try {
+    const rows = await withUser(params.db, principal.userId, (tx) =>
+      tx.execute<{ s: string }>(sql`SELECT wms_probe.platform_reopen_demo_request(${id}::uuid) AS s`),
+    );
+    if (rows[0]?.s !== "PENDING") throw new AppError("INTERNAL");
+    return { status: "PENDING" };
+  } catch (e) {
+    throw mapPlatformError(e);
+  }
+}
+
 /** Bir JSONL satırını doğrular; geçersizse `null` (satış sitesi `validateLead` ile aynı sınırlar). */
 export function parseDemoLead(line: string): DemoLeadRecord | null {
   let o: unknown;

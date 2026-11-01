@@ -127,10 +127,44 @@ if (!process.env.E2E_BASE_URL?.trim()) {
     await page.goto(`${panel}/talepler`);
     await expect(page.locator("tr", { hasText: requestName })).toBeVisible();
     const incoming = `T1027 yeni ${randomBytes(4).toString("hex")}`;
+    const incomingEmail = `${randomUUID()}@example.test`;
     psql("INSERT INTO wms_platform.demo_requests (id, received_at, name, company, email) VALUES ($1::uuid, now(), $2, 'E2E Otomatik', $3)",
-      [randomUUID(), incoming, `${randomUUID()}@example.test`]);
+      [randomUUID(), incoming, incomingEmail]);
     // goto/reload yok: açık listenin kendiliğinden değişmesi kabul ölçütüdür.
-    await expect(page.locator("tr", { hasText: incoming })).toBeVisible();
+    const row = page.locator("tr", { hasText: incoming });
+    await expect(row).toBeVisible();
     await expect(page).toHaveURL(`${panel}/talepler`);
+
+    // T-1144 (kullanıcı kararı 1 Kasım): Onayla / Reddet / Geri aç tek soruluk ortak onay penceresinden geçer; Vazgeç hiçbir şey yapmaz.
+    // Aynı oturumda (ikinci giriş TOTP kodunu yeniden kullanırdı). Onayı göndermek bu örnekte uygulama kökü (WMS_APP_URL) olmadığından
+    // yapılmaz; onay penceresinin sorusu ve Vazgeç denetlenir, onayın kendisi int testindedir (platform/demo-requests.int.test.ts).
+    const dialog = page.getByRole("dialog");
+    await row.getByRole("button", { name: "Reddet" }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: "Talep reddedilsin mi?" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Vazgeç" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(row).toHaveAttribute("data-status", "PENDING");
+
+    await row.getByRole("button", { name: "Reddet" }).click();
+    await dialog.getByRole("button", { name: "Reddet" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(row).toHaveAttribute("data-status", "REJECTED");
+    await expect(page.getByTestId("balon")).toContainText("Talep reddedildi");
+
+    await row.getByRole("button", { name: "Geri aç" }).click();
+    await expect(dialog.getByRole("heading", { name: "Talep geri açılsın mı?" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Geri aç" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(row).toHaveAttribute("data-status", "PENDING");
+    await expect(row.getByRole("button", { name: "Geri aç" })).toHaveCount(0);
+    await expect(page.getByTestId("balon")).toContainText("Talep geri açıldı");
+
+    await row.getByRole("button", { name: "Onayla" }).click();
+    await expect(dialog.getByRole("heading", { name: `${incoming} (${incomingEmail}) adresine giriş bağlantısı gönderilsin mi?` })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Gönder" })).toBeVisible();
+    await dialog.getByRole("button", { name: "Vazgeç" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(row).toHaveAttribute("data-status", "PENDING");
   });
 }

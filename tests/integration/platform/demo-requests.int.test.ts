@@ -1,7 +1,8 @@
 // T-994 (ADR-026 §3, 0038): demo talepleri platform tablosu. Gerçek wms_app bağlantısı; migration rolü yalnız kurulum/temizlik.
 // Kanıtlanan: tablolara hiçbir uygulama rolünün doğrudan yetkisi yok; operatör veritabanında zorlanır (kod/ortam değil);
 // içe alma idempotent; karar yalnız PENDING'den bir kez; karar security_events'e kişisel veri olmadan yazılır; MFA ve yakın
-// zamanda doğrulama domain'de zorunlu. Fikstürler sentetik (G-09).
+// zamanda doğrulama domain'de zorunlu. T-1144 (0071): reddedilen talep geri açılır (yalnız REJECTED → PENDING, idempotent, karar alanları
+// temizlenir, olay yazılır). Fikstürler sentetik (G-09).
 import { randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   ingestDemoLeads,
   isPlatformOperator,
   listDemoRequests,
+  reopenDemoRequest,
 } from "../../../packages/domain/src/platform/demo-requests.ts";
 import { readIntEnv, readWorkerDatabaseUrl } from "../harness/env.ts";
 
@@ -94,7 +96,7 @@ describe("0038 yetki sınırı", () => {
          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'wms_probe' AND p.proname LIKE 'platform\\_%'`,
     );
-    expect(r.rows.length).toBe(39); // 0038: 4, 0039 (T-995): +10, 0041 (T-404): +5, 0042 (T-403): +5, 0043 (T-406): +3, 0046 (T-407): +5, 0047 (T-408): +1, 0054 (T-967): +6
+    expect(r.rows.length).toBe(40); // 0038: 4, 0039 (T-995): +10, 0041 (T-404): +5, 0042 (T-403): +5, 0043 (T-406): +3, 0046 (T-407): +5, 0047 (T-408): +1, 0054 (T-967): +6, 0071 (T-1144): +1
     for (const x of r.rows) expect(x, x.fn).toMatchObject({ owner: "wms_identity_probe", def: true, pub: false });
   });
 
@@ -241,5 +243,94 @@ describe("karar", () => {
     await expect(
       decideDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: true }, id: randomUUID(), decision: "REJECTED", recentAuth: ok }, deps),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("geri açma (T-1144, 0071)", () => {
+  const principal = (): { userId: string; mfaVerified: boolean } => ({ userId: operatorId, mfaVerified: true });
+  async function rejected(): Promise<string> {
+    const l = lead();
+    const id = JSON.parse(l).id as string;
+    await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
+    expect((await decideDemoRequest({ db: app, principal: principal(), id, decision: "REJECTED", recentAuth: ok }, deps)).decision).toBe("REJECTED");
+    return id;
+  }
+  const row = async (id: string) =>
+    (
+      await adm.query<{ status: string; decided_at: Date | null; decided_by: string | null; token: string | null }>(
+        "SELECT status, decided_at, decided_by, activation_token_hash AS token FROM wms_platform.demo_requests WHERE id = $1",
+        [id],
+      )
+    ).rows[0];
+  const reopenedEvents = async (id: string) =>
+    (
+      await adm.query<{ user_id: string; detail: Record<string, unknown> }>(
+        "SELECT user_id, detail FROM public.security_events WHERE event_type = 'platform.demo_request.reopened' AND detail ->> 'demo_request_id' = $1",
+        [id],
+      )
+    ).rows;
+
+  it("REJECTED → PENDING: karar alanları temizlenir, olay kişisel veri olmadan yazılır; sonra onaylanabilir", async () => {
+    const id = await rejected();
+    expect(await reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })).toEqual({ status: "PENDING" });
+    expect(await row(id)).toEqual({ status: "PENDING", decided_at: null, decided_by: null, token: null });
+    expect(await reopenedEvents(id)).toEqual([{ user_id: operatorId, detail: { demo_request_id: id } }]);
+    const listed = (await listDemoRequests({ db: app, principal: principal() })).find((r) => r.id === id);
+    expect(listed).toMatchObject({ status: "PENDING", decidedAt: null, activation: null });
+    const approved = await decideDemoRequest({ db: app, principal: principal(), id, decision: "APPROVED", recentAuth: ok }, deps);
+    expect(approved.decision).toBe("APPROVED");
+    expect((await row(id))?.status).toBe("APPROVED");
+  });
+
+  it("idempotent: ikinci geri açma değişiklik ve ikinci olay üretmez", async () => {
+    const id = await rejected();
+    await reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok });
+    expect(await reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })).toEqual({ status: "PENDING" });
+    expect((await row(id))?.status).toBe("PENDING");
+    expect(await reopenedEvents(id)).toHaveLength(1);
+    // Aynı anda iki dokunuş: satır kilidiyle sıraya girer, tek olay.
+    await decideDemoRequest({ db: app, principal: principal(), id, decision: "REJECTED", recentAuth: ok }, deps);
+    await Promise.all([1, 2].map(() => reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })));
+    expect((await row(id))?.status).toBe("PENDING");
+    expect(await reopenedEvents(id)).toHaveLength(2);
+  });
+
+  it("reddedilmemiş (onaylı) talep geri açılamaz: VERSION_CONFLICT, satır ve bağlantı değişmez, olay yok", async () => {
+    const l = lead();
+    const id = JSON.parse(l).id as string;
+    await ingestDemoLeads({ db: worker, jsonl: `${l}\n` });
+    await decideDemoRequest({ db: app, principal: principal(), id, decision: "APPROVED", recentAuth: ok }, deps);
+    const before = await row(id);
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: ok })).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    expect(await row(id)).toEqual(before);
+    expect(before?.token).toMatch(/^[0-9a-f]{64}$/);
+    expect(await reopenedEvents(id)).toEqual([]);
+  });
+
+  it("operatör olmayan NOT_FOUND; MFA'sız FORBIDDEN; yakın zamanda doğrulama reddi; bağlamsız wms_app 42501; olmayan talep NOT_FOUND; talep REJECTED kalır", async () => {
+    const id = await rejected();
+    await expect(reopenDemoRequest({ db: app, principal: { userId: otherId, mfaVerified: true }, id, recentAuth: ok })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(reopenDemoRequest({ db: app, principal: { userId: operatorId, mfaVerified: false }, id, recentAuth: ok })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      detail: "MFA_REQUIRED",
+    });
+    const reauth = async (): Promise<void> => {
+      throw Object.assign(new Error("reauth"), { reason: "REAUTH_REQUIRED" });
+    };
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id, recentAuth: reauth })).rejects.toMatchObject({ code: "UNAUTHENTICATED", detail: "RECENT_AUTH_REQUIRED" });
+    const c = new pg.Client({ connectionString: env.databaseUrl });
+    await c.connect();
+    try {
+      await expect(c.query("SELECT wms_probe.platform_reopen_demo_request($1::uuid)", [id])).rejects.toMatchObject({ code: "42501" });
+    } finally {
+      await c.end();
+    }
+    for (const role of ["wms_auth", "wms_worker", "wms_ops"]) {
+      const r = await adm.query<{ x: boolean }>("SELECT has_function_privilege($1, 'wms_probe.platform_reopen_demo_request(uuid)', 'EXECUTE') AS x", [role]);
+      expect(r.rows[0]?.x, role).toBe(false);
+    }
+    await expect(reopenDemoRequest({ db: app, principal: principal(), id: randomUUID(), recentAuth: ok })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect((await row(id))?.status).toBe("REJECTED");
+    expect(await reopenedEvents(id)).toEqual([]);
   });
 });

@@ -35,9 +35,9 @@ const top = async (adm: pg.Client): Promise<string | undefined> =>
 
 it("0070 boşken geri alınır ve yeniden uygulanır; kart anahtarlı grup varken down reddedilir; izinli ortamda yalnız kart anahtarları silinir", async () => {
   await scratch(async (url, adm) => {
-    expect(await top(adm)).toBe("0070");
-    expect((await migrateDown({ url, to: "0069", wmsEnv: "staging" })).reverted).toEqual(["0070"]);
-    expect((await migrateUp({ url })).applied).toEqual(["0070"]);
+    expect(await top(adm)).toBe("0071");
+    expect((await migrateDown({ url, to: "0069", wmsEnv: "staging" })).reverted).toEqual(["0071", "0070"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0070", "0071"]);
 
     const w = await seedWorld(adm, newRegistry(), "M1142");
     const g = await adm.query<{ id: string }>("INSERT INTO public.permission_groups (tenant_id, name, grants, created_by) VALUES ($1, 'Kart', ARRAY['stock.post','items.edit','parties.create'], $2) RETURNING id", [
@@ -64,6 +64,6 @@ it("0070 boşken geri alınır ve yeniden uygulanır; kart anahtarlı grup varke
     ).rejects.toThrow(/permission_groups_grants_chk/);
     const force = await adm.query<{ f: boolean }>("SELECT relforcerowsecurity AS f FROM pg_class WHERE oid = 'public.permission_groups'::regclass");
     expect(force.rows[0]?.f).toBe(true);
-    expect((await migrateUp({ url })).applied).toEqual(["0070"]);
+    expect((await migrateUp({ url })).applied).toEqual(["0070", "0071"]);
   });
 });

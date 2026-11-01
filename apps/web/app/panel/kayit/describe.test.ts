@@ -12,6 +12,7 @@ group("işlem kaydı satırı", () => {
     expect(describe(ev("platform.tenant.suspended", { info: { reason: "2 dönem ödeme yok" } }), t, "tr")).toBe("Operatör · Motive Rubber askıya alındı · gerekçe: 2 dönem ödeme yok");
     expect(describe(ev("platform.charge.paid", { info: { period: "2026-10-01", method: "HAVALE" } }), t, "tr")).toBe("Operatör · Motive Rubber · Ekim 2026 ödemesi kaydedildi (havale)");
     expect(describe(ev("platform.demo_request.activated", { byOperator: false }), t, "tr")).toBe("Sistem · Deneme alanı açıldı · Motive Rubber");
+    expect(describe(ev("platform.demo_request.reopened"), t, "tr")).toBe("Operatör · Demo talebi geri açıldı · Motive Rubber"); // T-1144
     expect(describe(ev("platform.plan.saved", { info: { version: 2, published: true } }), t, "tr")).toBe("Operatör · Profesyonel paketi kaydedildi · sürüm 2 · yayında");
     expect(describe(ev("platform.yeni.tur"), t, "tr")).toBe("Operatör · platform.yeni.tur");
     expect(describe(ev("platform.tenant.resumed", { company: null }), t, "tr")).toBe("Operatör · [bilinmiyor] devam ettirildi");
