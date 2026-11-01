@@ -85,4 +85,7 @@ it("published-version back-reference is immediate by default and explicitly defe
   expect((await admin.query("SELECT 1 FROM public.label_templates WHERE tenant_id=$1",[B.tenantId])).rowCount).toBe(1);
  }finally{await admin.query("ROLLBACK");}
  expect((await admin.query("SELECT 1 FROM public.label_template_versions WHERE tenant_id=$1",[A.tenantId])).rowCount).toBe(1);
+ expect((await admin.query("SELECT version_id FROM public.label_defaults WHERE tenant_id=$1",[A.tenantId])).rows[0]?.version_id).toBe(a.version);
+ expect((await admin.query("SELECT version_id FROM public.label_print_jobs WHERE tenant_id=$1",[A.tenantId])).rows[0]?.version_id).toBe(a.version);
+ expect((await admin.query("SELECT printer_id FROM public.label_preferences WHERE tenant_id=$1",[A.tenantId])).rows[0]?.printer_id).toBe(a.printer);
 });
