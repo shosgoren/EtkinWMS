@@ -6,6 +6,8 @@ import { getAppDb } from "@wms/db";
 import { getParty, listParties, type PartyRow } from "@wms/domain/catalog/parties";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { cardRights, type CardRights } from "@wms/domain/identity/permissions";
+import { getSourceLinkedIds, getSourceLock } from "@wms/domain/integrations";
+import { KAYNAK_YOK, type KartKaynak } from "../kalip/kaynak-kilit.tsx";
 import { AppError } from "@wms/shared/errors";
 import { temaKoyu } from "../../../design/theme.ts";
 import { PARTIES_PAGE_SIZE } from "./list-page.ts";
@@ -31,6 +33,8 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
   let rights: CardRights = { create: false, edit: false, archive: false, import: false };
   let data: Awaited<ReturnType<typeof listParties>>;
   let editParty: PartyRow | null = null;
+  let kaynak: KartKaynak = KAYNAK_YOK;
+  let linkedIds: readonly string[] = [];
   try {
     const summary = await getMembershipSummary({ db: getAppDb(), principal });
     const current = summary.memberships.find((m) => m.slug === slug);
@@ -44,6 +48,10 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
         throw e;
       });
     }
+    // T-1201: "Paraşüt'ten al" bölümünde yeni cari kilitli; ekrandaki bağlı cariler (form ve arşiv kilidi). Yalnız gösterim.
+    const call = { db: getAppDb(), principal, tenantSlug: slug };
+    kaynak = await getSourceLock(call, "PARTY");
+    if (kaynak.managed) linkedIds = await getSourceLinkedIds(call, "PARTY", [...data.items.map((p) => p.id), ...(editParty === null ? [] : [editParty.id])]);
   } catch (e) {
     if (e instanceof AppError) {
       if (e.code === "UNAUTHENTICATED") redirect(`/login?next=${encodeURIComponent(returnTo)}`);
@@ -55,7 +63,7 @@ export default async function PartiesPage({ params, searchParams }: { params: Pr
   const jar = await cookies();
   return (
     <main className="flex w-full min-w-0 flex-col">
-      <PartiesView slug={slug} dark={temaKoyu(jar)} rights={rights} q={q} archived={archived} items={data.items} total={data.total} nextCursor={data.nextCursor} editParty={editParty} />
+      <PartiesView slug={slug} dark={temaKoyu(jar)} rights={rights} kaynak={kaynak} linkedIds={linkedIds} q={q} archived={archived} items={data.items} total={data.total} nextCursor={data.nextCursor} editParty={editParty} />
     </main>
   );
 }

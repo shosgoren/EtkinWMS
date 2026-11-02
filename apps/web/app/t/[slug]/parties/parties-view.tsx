@@ -18,6 +18,7 @@ import { KalipAlan, KalipAlanSira, KalipGrup } from "../kalip/form.tsx";
 import { KalipSecimGrubu } from "../kalip/secim.tsx";
 import { KalipKilitliDugme, useKartKilitGerekce } from "../kalip/kilitli.tsx";
 import type { KartYetki as CardRights } from "../kalip/kart-yetki.ts";
+import { KAYNAK_YOK, useKaynakKilit, useKaynakYeniUyarisi, type KartKaynak } from "../kalip/kaynak-kilit.tsx";
 import { KalipAra, KalipBos, KalipCipler, KalipKart, KalipKartListe, type KalipCip } from "../kalip/liste.tsx";
 import { KalipGorunumSec, KalipSonsuz, KalipSutunSec, KalipTablo, useKalipDerinlik, useKalipGorunum, useKalipSutunlar, type KalipSutun } from "../kalip/tablo.tsx";
 import { archivePartyAction, loadMorePartiesAction, savePartyAction, suggestPartyCodeAction } from "./actions.ts";
@@ -94,8 +95,14 @@ const ISSUE_FIELD: Record<string, keyof Form> = {
   EMAIL_INVALID: "email",
 };
 
-function PartyForm({ slug, dark, rights, party, onClose }: { slug: string; dark: boolean; rights: CardRights; party: PartyView | null; onClose: (msg?: string) => void }) {
+/** T-1201: Paraşüt'ün yazdığı cari alanları (domain `SOURCE_OWNED_FIELDS.PARTY`); teslimat Etkin'e özgü, açık kalır. */
+const SOURCE_OWNED: ReadonlySet<keyof Form> = new Set<keyof Form>(["code", "name", "kind", "taxNo", "taxOffice", "phone", "email", "city", "district", "address", "shortName"]);
+
+function PartyForm({ slug, dark, rights, kaynak, party, onClose }: { slug: string; dark: boolean; rights: CardRights; kaynak: KartKaynak; party: PartyView | null; onClose: (msg?: string) => void }) {
   const t = useTranslations("parties");
+  // T-1201: bağlı caride Paraşüt alanları ve arşiv kilitli (gerekçe yetki kilidinden önce); teslimat açık.
+  const kk = useKaynakKilit(slug, "parties", kaynak);
+  const owned = (k: keyof Form): string | undefined => (party !== null && kk.field && SOURCE_OWNED.has(k) ? kk.fieldReason : undefined);
   // T-1141: yeni cari `parties.create`, düzenleme `parties.edit`, arşiv / geri al `parties.archive` (yalnız gösterim; karar domain'de).
   const kilitGerekce = useKartKilitGerekce("parties");
   const canEdit = party === null ? rights.create : rights.edit;
@@ -141,7 +148,7 @@ function PartyForm({ slug, dark, rights, party, onClose }: { slug: string; dark:
     const auto = party === null && !touchedRef.current && suggested !== null && suggested.kind === f.kind && f.code === suggested.code;
     const body = { slug, ...f, ...(party === null ? (auto ? { autoCode: true } : {}) : { id: party.id, expectedVersion: party.version }) };
     const r = await savePartyAction(body);
-    if (!r.ok) return { ok: false, mesaj: r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code }) };
+    if (!r.ok) return { ok: false, mesaj: kk.hataMetni(r.error.detail) ?? (r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code })) };
     if (!r.data.ok) {
       const field = ISSUE_FIELD[r.data.issue];
       const text = t(`issue.${r.data.issue}`);
@@ -156,7 +163,7 @@ function PartyForm({ slug, dark, rights, party, onClose }: { slug: string; dark:
     const r = await archivePartyAction({ slug, id: party.id, expectedVersion: party.version, archived: !party.archived });
     setBusy(false);
     if (!r.ok) {
-      feedback.error(r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code }));
+      feedback.error(kk.hataMetni(r.error.detail) ?? (r.error.code === "VERSION_CONFLICT" ? t("conflict") : t("failed", { code: r.error.code })));
       return;
     }
     // Listeye geçiş (`onClose` → router.push) sunucudan taze okur; ayrıca `router.refresh()` çağrılmaz: geçişle yarışıp eski `?edit=`
@@ -190,6 +197,7 @@ function PartyForm({ slug, dark, rights, party, onClose }: { slug: string; dark:
         set(k, e.target.value);
       }}
       readOnly={!canEdit}
+      kilitli={owned(k)}
       maxLength={extra.maxLength}
       inputMode={extra.inputMode}
       autoComplete="off"
@@ -204,7 +212,7 @@ function PartyForm({ slug, dark, rights, party, onClose }: { slug: string; dark:
       label={t("f.kind")}
       value={f.kind}
       color={KIND_VISUAL[f.kind].color}
-      disabled={!canEdit}
+      disabled={!canEdit || owned("kind") !== undefined}
       onPick={(id) => {
         if (yeni && !touchedRef.current && id !== f.kind) {
           setSuggested(null);
@@ -245,7 +253,7 @@ function PartyForm({ slug, dark, rights, party, onClose }: { slug: string; dark:
       footer={
         party !== null ? (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <KalipKilitliDugme kilitli={!rights.archive} gerekce={kilitGerekce("archive")} className="btn n" aria-busy={busy || undefined} onClick={() => { if (!busy) void onArchive(); }} data-testid="party-archive">
+            <KalipKilitliDugme kilitli={!rights.archive || kk.archive} gerekce={kk.archive ? kk.archiveReason : kilitGerekce("archive")} className="btn n" aria-busy={busy || undefined} onClick={() => { if (!busy) void onArchive(); }} data-testid="party-archive">
               {party.archived ? t("restore") : t("archive")}
             </KalipKilitliDugme>
           </div>
@@ -292,6 +300,8 @@ export function PartiesView({
   slug,
   dark,
   rights,
+  kaynak = KAYNAK_YOK,
+  linkedIds = [],
   q,
   archived,
   items: ilkCariler,
@@ -303,6 +313,9 @@ export function PartiesView({
   dark: boolean;
   /** T-1141: kart bölümü yetkileri (yalnız gösterim; karar domain'de). */
   rights: CardRights;
+  /** T-1201: cari bölümü Paraşüt'ten alınıyorsa yeni cari kilitli; bağlı carilerin kimlikleri (yalnız gösterim). */
+  kaynak?: KartKaynak;
+  linkedIds?: readonly string[];
   q: string;
   archived: boolean;
   items: readonly PartyView[];
@@ -321,12 +334,18 @@ export function PartiesView({
   const [kind, setKind] = useState<Kind | "">("");
   const { say, node: toast } = useKalipToast("liste");
   const editId = params.get("edit");
-  const kilitGerekce = useKartKilitGerekce("parties");
-  const isNew = params.get("new") === "1" && rights.create;
+  const kilitGerekceYetki = useKartKilitGerekce("parties");
+  const kk = useKaynakKilit(slug, "parties", kaynak);
+  const kilitGerekce = (a: "create" | "edit" | "archive"): string => (a === "create" && kk.create ? kk.createReason : kilitGerekceYetki(a));
+  const canCreate = rights.create && !kk.create;
+  const isNew = params.get("new") === "1" && canCreate;
+  useKaynakYeniUyarisi(params.get("new") === "1" && kk.create, kk.createReason, kk.eylem);
   // T-1058: kaydırınca eklenen sayfalar (sunucunun ilk sayfasının devamı); arama / arşiv değişince (yeni ilk sayfa) sıfırlanır.
-  const [ek, setEk] = useState<{ readonly bas: readonly PartyView[]; readonly rows: readonly PartyView[]; readonly cursor: string | null }>({ bas: ilkCariler, rows: [], cursor: nextCursor });
-  const guncel = ek.bas === ilkCariler ? ek : { bas: ilkCariler, rows: [], cursor: nextCursor };
+  // T-1201: sonraki sayfaların Paraşüt bağlılığı da sayfayla birlikte gelir (`linked`).
+  const [ek, setEk] = useState<{ readonly bas: readonly PartyView[]; readonly rows: readonly PartyView[]; readonly linked: readonly string[]; readonly cursor: string | null }>({ bas: ilkCariler, rows: [], linked: [], cursor: nextCursor });
+  const guncel = ek.bas === ilkCariler ? ek : { bas: ilkCariler, rows: [], linked: [], cursor: nextCursor };
   if (guncel !== ek) setEk(guncel);
+  const linked = useMemo(() => new Set([...linkedIds, ...guncel.linked].map((id) => id.toLowerCase())), [linkedIds, guncel.linked]);
   // Sonraki sayfalar arada kaymış olabilir: aynı cari iki kez çizilmez.
   const items = useMemo(() => {
     const ilk = new Set(ilkCariler.map((p) => p.id));
@@ -337,7 +356,7 @@ export function PartiesView({
     if (sonrakiImlec === null) return true;
     const r = await loadMorePartiesAction({ slug, q, archived, after: sonrakiImlec });
     if (!r.ok) return false;
-    setEk((o) => (o.bas !== ilkCariler ? o : { bas: o.bas, rows: [...o.rows, ...r.data.items], cursor: r.data.nextCursor }));
+    setEk((o) => (o.bas !== ilkCariler ? o : { bas: o.bas, rows: [...o.rows, ...r.data.items], linked: [...o.linked, ...r.data.linkedIds], cursor: r.data.nextCursor }));
     return true;
   }, [sonrakiImlec, slug, q, archived, ilkCariler]);
   // Kayda girip geri dönünce aynı uzunluk (sunucudan taze; yalnız sayı hatırlanır).
@@ -374,7 +393,7 @@ export function PartiesView({
   };
 
   if (isNew || editing !== undefined) {
-    return <PartyForm key={editing?.id ?? "new"} slug={slug} dark={dark} rights={rights} party={editing ?? null} onClose={close} />;
+    return <PartyForm key={editing?.id ?? "new"} slug={slug} dark={dark} rights={rights} kaynak={{ ...kaynak, linked: editing !== undefined && linked.has(editing.id.toLowerCase()) }} party={editing ?? null} onClose={close} />;
   }
 
   const shown = kind === "" ? items : items.filter((p) => p.kind === kind);
@@ -397,7 +416,7 @@ export function PartiesView({
         back: { href: base, aria: t("back") },
         homeNav: { href: base, aria: t("home") },
         // T-1141: yetkisiz "Yeni cari" gizlenmez; kilitli ana işlem (kilit ikonu + "yetkin yok · yöneticine sor" balonu).
-        main: { label: t("newShort"), aria: t("new"), d: LICON.plus, onClick: () => open(null), locked: !rights.create, disabledReason: kilitGerekce("create"), testId: "party-new" },
+        main: { label: t("newShort"), aria: t("new"), d: LICON.plus, onClick: () => open(null), locked: !canCreate, disabledReason: kilitGerekce("create"), lockedAction: kk.create ? kk.eylem : undefined, testId: "party-new" },
       }}
       overlays={toast}
     >
@@ -416,7 +435,8 @@ export function PartiesView({
             <KalipBos
               title={t("empty")}
               iconD={ICON.d}
-              action={rights.create ? { label: t("firstParty"), kind: "add", onClick: () => open(null) } : { label: tr("home"), href: base, kind: "go" }}
+              {...(kk.create ? { hint: kk.createReason } : {})}
+              action={canCreate ? { label: t("firstParty"), kind: "add", onClick: () => open(null) } : kk.create && kk.eylem !== undefined ? { label: kk.eylem.etiket, kind: "go", onClick: () => void kk.eylem?.yap() } : { label: tr("home"), href: base, kind: "go" }}
             />
           ) : q === "" && kind === "" && archived ? (
             // T-1037: boş arşiv bir arama sonucu değildir — "Arşivde cari yok" + etkin carilere dön.
@@ -449,7 +469,7 @@ export function PartiesView({
               const meta = [t(`kind.${p.kind}`), p.city, p.phone, p.archived ? t("archived") : null].filter((x): x is string => x !== null && x !== "").join(" · ");
               return (
                 <KalipKart key={p.id} index={i} name={p.name} code={p.code} meta={meta} d={v.d} color={v.color} href={`${list}/${encodeURIComponent(p.id)}`} aria={`${p.name} · ${p.code} · ${meta}`} testId="party-card">
-                  <span hidden data-party={p.code} />
+                  <span hidden data-party={p.code} data-kaynak={kaynak.managed && linked.has(p.id.toLowerCase()) ? "parasut" : undefined} />
                 </KalipKart>
               );
             })}

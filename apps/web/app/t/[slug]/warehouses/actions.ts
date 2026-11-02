@@ -23,6 +23,7 @@ import type { LocationKindValue } from "@wms/domain/warehouse";
 import type { Permission } from "@wms/domain/identity/permissions";
 import { createProductionGuard, limitVerifiedTenant, type ActionContext } from "../../../../lib/action-guard.ts";
 import { loadWarehousesPage } from "./list-page.ts";
+import { getSourceLinkedIds } from "@wms/domain/integrations";
 
 const guardedAction = createProductionGuard(() => headers());
 
@@ -142,8 +143,11 @@ export async function loadMoreWarehousesAction(raw: unknown) {
   return guardedAction({ schema: moreWarehousesSchema }, async (input, ctx) => {
     const principal = ctx.principal;
     if (principal === null) throw new Error("unreachable: principal required");
-    const page = await loadWarehousesPage({ db: getAppDb(), principal, tenantSlug: input.slug }, { q: input.q, archived: input.archived, after: input.after });
-    return { rows: page.rows, nextAfter: page.nextAfter };
+    const call = { db: getAppDb(), principal, tenantSlug: input.slug };
+    const page = await loadWarehousesPage(call, { q: input.q, archived: input.archived, after: input.after });
+    // T-1201: ilk sayfayla aynı — sayfadaki Paraşüt'e bağlı depolar tek toplu okumayla (bölüm "Paraşüt'ten al" değilse boş).
+    const linkedIds = page.rows.length === 0 ? [] : await getSourceLinkedIds(call, "WAREHOUSE", page.rows.map((w) => w.id));
+    return { rows: page.rows, nextAfter: page.nextAfter, linkedIds };
   })(raw);
 }
 

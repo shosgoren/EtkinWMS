@@ -23,7 +23,7 @@ import { useYolSpot } from "../yolculuk/spot.ts";
 import { KabukKisayol } from "./kisayol.tsx";
 import { kilitliDokunus } from "../kalip/kilitli.tsx";
 import { LICON } from "../../../design/kalip-icons.ts";
-import { buyukHarf, feedback, kucukHarf } from "@wms/ui";
+import { buyukHarf, feedback, kucukHarf, type BalonEylem } from "@wms/ui";
 
 export interface KabukContextValue {
   /** T-1026: iki rehber motoru aynı anda çizilmez; sunucudan gelen izin değildir. */
@@ -108,6 +108,8 @@ export interface KabukMain {
    * (`kalip/kilitli.tsx` `kilitliDokunus`, neden `disabledReason`). Geçici pasiflik (değişiklik yok, bekleniyor) `disabled` ile kalır.
    */
   readonly locked?: boolean;
+  /** T-1201: kilitliyken balondaki tek eylem (ör. "Şimdi eşitle"); yalnız `locked` ile. */
+  readonly lockedAction?: BalonEylem | undefined;
   /** Kaydedilmemiş değişiklik sayısı (ALTIN-KURAL: değişiklik varsa ana işlemde sayı rozeti). */
   readonly badge?: number;
 }
@@ -350,7 +352,7 @@ export function KabukBar({ dark, home = false, back, homeNav, main, spot: spotPr
                   onClick={() => {
                     if (center.busy === true) return;
                     if (center.locked === true) {
-                      kilitliDokunus(center.disabledReason);
+                      kilitliDokunus(center.disabledReason, center.lockedAction);
                       return;
                     }
                     if (center.disabled === true) {

@@ -38,3 +38,6 @@ export { countFlowRecords, CARD_FLOWS, type CardFlow, type FlowRecordCount } fro
 // T-1138: Paraşüt anlık bildirim (webhook) alıcısı, tek kart olayı, kayıt ve kademeli zamanlayıcı.
 export { receiveParasutWebhook, runWebhookEvent, parseWebhookBody, verifySignature, matchSignature, signedFields, webhookEventKey, WEBHOOK_BODY_MAX, WEBHOOK_CONSUMER, type ReceiveResult, type WebhookEventResult, type ConsumeOnce } from "./webhook.ts";
 export { registerParasutWebhooks, getWebhookStatus, enqueueScheduledIntegrations, parasutWebhookUrl, PARASUT_WEBHOOK_PATH, CADENCE, type WebhookView, type WebhookStatus } from "./webhook-register.ts";
+
+// T-1201: "Paraşüt'ten al" bölüm kilidi (yeni kart / sağlayıcı alanı / arşiv) — ekran okuması; karar katalog/depo komutlarında.
+export { getSourceLock, getSourceLinkedIds, SOURCE_OWNED_FIELDS, SOURCE_FLOW, type SourceCard, type SourceLockView, type SourceLockScreen } from "./source-guard.ts";

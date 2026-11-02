@@ -532,6 +532,12 @@
     "validation_failed_code_mismatchAction": "Type the 6-digit code shown on the terminal again; after 3 wrong tries the QR is renewed.",
     "validation_failed_site_invalid": "Sales page text is invalid.",
     "validation_failed_site_invalidAction": "Keep the headline within 80, the highlighted line within 60 and the subtitle within 400 characters; do not use < or >.",
+    "validation_failed_source_managed_create": "This section comes from Paraşüt; a new card cannot be opened here.",
+    "validation_failed_source_managed_createAction": "Open the new card in Paraşüt; it arrives here within a few minutes.",
+    "validation_failed_source_managed_field": "Comes from Paraşüt — change it in Paraşüt.",
+    "validation_failed_source_managed_fieldAction": "This detail changes in Paraşüt; it arrives here within a few minutes.",
+    "validation_failed_source_managed_archive": "Archive it in Paraşüt; Etkin follows automatically.",
+    "validation_failed_source_managed_archiveAction": "Archiving comes from Paraşüt.",
     "validation_failed_image_invalid": "This file is not an image or its type is not supported.",
     "validation_failed_image_invalidAction": "Choose a JPEG, PNG or WebP photo (SVG and HEIC are not accepted).",
     "validation_failed_image_too_large": "The image is too large.",
@@ -1818,6 +1824,12 @@
       "internalAction": "Try again shortly; if it continues, send the error code to support.",
       "validation_failed_plan_limit": "You have reached your plan's item limit.",
       "validation_failed_plan_limitAction": "Archive items you no longer use, or contact us to upgrade your plan.",
+      "validation_failed_source_managed_create": "Products come from Paraşüt; a new product cannot be opened here.",
+      "validation_failed_source_managed_createAction": "Open the new product in Paraşüt; it arrives here within a few minutes.",
+      "validation_failed_source_managed_field": "Comes from Paraşüt — change it in Paraşüt.",
+      "validation_failed_source_managed_fieldAction": "Name and code change in Paraşüt; they arrive here within a few minutes.",
+      "validation_failed_source_managed_archive": "Archive it in Paraşüt; Etkin follows automatically.",
+      "validation_failed_source_managed_archiveAction": "Archiving comes from Paraşüt.",
       "validation_failed_image_invalid": "This file is not an image or its type is not supported.",
       "validation_failed_image_invalidAction": "Choose a JPEG, PNG or WebP photo (SVG and HEIC are not accepted).",
       "validation_failed_image_too_large": "The image is too large.",
@@ -2071,7 +2083,13 @@
       "validation_failed_code_ambiguous": "This old code appears in the history of more than one location, so it is unclear which one you mean.",
       "validation_failed_code_ambiguousAction": "Search using the location's current code.",
       "validation_failed_plan_limit": "You have reached your plan's warehouse limit.",
-      "validation_failed_plan_limitAction": "Archive a warehouse you no longer use, or contact us to upgrade your plan."
+      "validation_failed_plan_limitAction": "Archive a warehouse you no longer use, or contact us to upgrade your plan.",
+      "validation_failed_source_managed_create": "Warehouses come from Paraşüt; a new warehouse cannot be opened here.",
+      "validation_failed_source_managed_createAction": "Open the new warehouse in Paraşüt; it arrives here within a few minutes.",
+      "validation_failed_source_managed_field": "Comes from Paraşüt — change it in Paraşüt.",
+      "validation_failed_source_managed_fieldAction": "Name and code change in Paraşüt; shelf locations stay editable here.",
+      "validation_failed_source_managed_archive": "Archive it in Paraşüt; Etkin follows automatically.",
+      "validation_failed_source_managed_archiveAction": "Archiving comes from Paraşüt."
     },
     "codeEdit": {
       "button": "Change code",
@@ -3016,6 +3034,10 @@
       "PAIR_PENDING": {
         "reason": "Product {code} has an unfinished opening document for shelf {shelf} (with another quantity).",
         "fix": "To continue the unfinished import write the SAME quantity as the earlier file, or delete the row."
+      },
+      "SOURCE_MANAGED": {
+        "reason": "Products come from Paraşüt: a new product or a Paraşüt product's name cannot be changed here.",
+        "fix": "Open or change the product in Paraşüt; it arrives here within a few minutes. Remove this row from the file."
       }
     },
     "noRows": "The file has no data rows yet. Add at least one row to the template, then choose the file again."
@@ -4640,7 +4662,8 @@
       "TEXT_TOO_LONG": "A cell is too long",
       "DELIVERY_UNKNOWN": "Delivery not understood (own staff / carrier)",
       "CODE_DUPLICATE_FILE": "This code appears earlier in the file",
-      "UNKNOWN": "Row could not be read"
+      "UNKNOWN": "Row could not be read",
+      "SOURCE_MANAGED": "Accounts come from Paraşüt: new accounts and Paraşüt fields cannot be changed here"
     },
     "partyIssueFix": "THIS ROW IS SKIPPED · FIX AND UPLOAD AGAIN",
     "partyWarning": {
@@ -4673,7 +4696,8 @@
       "IN_USE": "Shelf has stock; type can't change",
       "CODE_TAKEN": "This code is in use",
       "TOO_MANY": "Warehouse shelf limit exceeded",
-      "UNKNOWN": "Row could not be read"
+      "UNKNOWN": "Row could not be read",
+      "SOURCE_MANAGED": "Warehouses come from Paraşüt: new warehouses and Paraşüt warehouse names cannot be changed here"
     }
   },
   "parties": {
@@ -7045,5 +7069,19 @@
       "DESIGN_INVALID": "Label fields or code dimensions are not suitable. Check the design."
     },
     "preparing": "Preparing labels. Please wait."
+  },
+  "kaynakKilit": {
+    "create": {
+      "items": "Products come from Paraşüt. Open the new product in Paraşüt; it arrives here within a few minutes.",
+      "parties": "Accounts come from Paraşüt. Open the new account in Paraşüt; it arrives here within a few minutes.",
+      "warehouses": "Warehouses come from Paraşüt. Open the new warehouse in Paraşüt; it arrives here within a few minutes."
+    },
+    "field": "Comes from Paraşüt — change it in Paraşüt",
+    "archive": "Archive it in Paraşüt; Etkin follows automatically",
+    "linkedNote": "This card comes from Paraşüt: its name and code change in Paraşüt, and archiving comes from Paraşüt. The other details here are yours.",
+    "sync": "Sync now",
+    "syncQueued": "Sync started; it arrives here within a few minutes.",
+    "syncBusy": "A sync is already running; it arrives within a few minutes.",
+    "syncFailed": "Could not start the sync · check the Integrations screen."
   }
 }

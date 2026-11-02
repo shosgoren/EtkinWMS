@@ -50,8 +50,27 @@ export async function refExternal(tx: AccessTx, c: ApplyContext, kind: EntityKin
   return r[0]?.external_id ?? null;
 }
 
-/** Eşleme ekler; iki yönlü tekillik DB'dedir (çakışmada `false`, kayıt değişmez). */
+/**
+ * T-1201 (güvenlik incelemesi MINOR-1): kart satırı eşleme öncesi kilitlenir ve hâlâ etkin mi yeniden denetlenir. Eşleme adayı düz SELECT
+ * ile seçilir; arada kullanıcı kartı arşivlemiş olabilir (bağlı + arşivli kart ne kullanıcıca ne eşitlemece geri açılabilirdi). Kilit
+ * kart komutlarınınkiyle çakışır (ürün `FOR UPDATE`, cari UPDATE, depo `FOR NO KEY UPDATE`): biri öbürünü bekler; sıra akış → kart
+ * (eşitleme ve komutlar akış satırını önce alır). `FOR NO KEY UPDATE` stok komutlarının FK KEY SHARE'iyle çakışmaz (stok kilidi değildir, I-15).
+ */
+async function lockActiveCard(tx: AccessTx, c: ApplyContext, kind: EntityKind, entityId: string): Promise<boolean> {
+  const r =
+    kind === "ITEM"
+      ? await tx.execute<{ ok: boolean }>(sql`SELECT status = 'ACTIVE' AS ok FROM public.items WHERE tenant_id = ${c.tenantId}::uuid AND id = ${entityId}::uuid FOR NO KEY UPDATE`)
+      : kind === "PARTY"
+        ? await tx.execute<{ ok: boolean }>(sql`SELECT archived_at IS NULL AS ok FROM public.parties WHERE tenant_id = ${c.tenantId}::uuid AND id = ${entityId}::uuid FOR NO KEY UPDATE`)
+        : kind === "WAREHOUSE"
+          ? await tx.execute<{ ok: boolean }>(sql`SELECT status = 'ACTIVE' AS ok FROM public.warehouses WHERE tenant_id = ${c.tenantId}::uuid AND id = ${entityId}::uuid FOR NO KEY UPDATE`)
+          : [{ ok: true }];
+  return r[0]?.ok === true;
+}
+
+/** Eşleme ekler; iki yönlü tekillik DB'dedir (çakışmada `false`, kayıt değişmez). Kart kilitlenir; etkin değilse eşlenmez (`false`). */
 export async function link(tx: AccessTx, c: ApplyContext, kind: EntityKind, entityId: string, externalId: string, externalCode: string | null = null): Promise<boolean> {
+  if (!(await lockActiveCard(tx, c, kind, entityId))) return false;
   const r = await tx.execute<{ id: string }>(
     sql`INSERT INTO public.external_refs (tenant_id, id, system, entity_type, entity_id, external_id, external_code)
         VALUES (${c.tenantId}::uuid, ${randomUUID()}::uuid, ${c.system}, ${kind}, ${entityId}::uuid, ${externalId}, ${externalCode})

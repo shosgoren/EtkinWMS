@@ -254,7 +254,10 @@ describe("(2) tek yönler ve kalıcı red", () => {
     const p = await party(W, "C-DELTA", "Delta", "7401");
     await flow(W, "CONTACTS", "PULL");
     await sync(W, id, "CONTACTS");
-    await editParty(W, p, { name: "Delta Yerel" });
+    // T-1201: almada bağlı carinin Paraşüt alanı ekrandan/komuttan değişmez; kural dışı (doğrudan SQL) yerel değişiklik de hiç gönderilmez.
+    const cur = (await q<{ version: number }>("SELECT version FROM public.parties WHERE id = $1", [p]))[0]!;
+    await expect(saveParty(admin(W), { id: p, expectedVersion: Number(cur.version), code: "C-DELTA", name: "Delta Yerel" })).rejects.toMatchObject({ code: "VALIDATION_FAILED", detail: "SOURCE_MANAGED_FIELD" });
+    await adm.query("UPDATE public.parties SET name = 'Delta Yerel' WHERE id = $1", [p]);
     await sync(W, id, "CONTACTS");
     expect(puts()).toBe(0);
     expect((await partyRow(p))?.name).toBe("Delta"); // almada Paraşüt değeri geçerlidir
@@ -416,18 +419,28 @@ describe("(6) güvenlik incelemesi (PR 278 @ 4963bf3, MINOR-1…5) ve kiracı y�
     expect(await state(W, "PARTY", p)).toMatchObject({ source_managed_archive: true });
     // Kullanıcı geri açar: Paraşüt'te hâlâ arşivli olsa da sistem yeniden arşivlemez.
     const ver = async () => Number((await q<{ v: number }>("SELECT version AS v FROM public.parties WHERE id = $1", [p]))[0]?.v);
+    // T-1201: "Paraşüt'ten al" yönünde bağlı cari/depo arşivlenmez / geri açılmaz; sahiplik kuralı (MINOR-3) iki yönlüde geçerli kalır.
+    await expect(setPartyArchived(admin(W), { id: p, expectedVersion: await ver(), archived: false })).rejects.toMatchObject({ detail: "SOURCE_MANAGED_ARCHIVE" });
+    await expect(archiveWarehouse(admin(W), { warehouseId: wh })).rejects.toMatchObject({ detail: "SOURCE_MANAGED_ARCHIVE" });
+    expect((await partyRow(p))?.archived).toBe(true);
+    await flow(W, "CONTACTS", "BOTH");
     await setPartyArchived(admin(W), { id: p, expectedVersion: await ver(), archived: false });
     expect(await state(W, "PARTY", p)).toMatchObject({ source_managed_archive: false });
+    await flow(W, "CONTACTS", "PULL");
     await sync(W, id, "CONTACTS");
     expect((await partyRow(p))?.archived).toBe(false);
+    await flow(W, "CONTACTS", "BOTH");
     // Kullanıcı yeniden arşivler; Paraşüt'te etkin olunca açılmaz (kullanıcının arşivi).
     await setPartyArchived(admin(W), { id: p, expectedVersion: await ver(), archived: true });
+    await flow(W, "CONTACTS", "PULL");
     contact("8101").attributes.archived = false;
     await sync(W, id, "CONTACTS");
     expect((await partyRow(p))?.archived).toBe(true);
     // Depo: sistem arşivledi; kullanıcı arşivi sahiplenir → Paraşüt'te etkin olunca açılmaz.
     expect(await state(W, "WAREHOUSE", wh)).toMatchObject({ source_managed_archive: true });
+    await flow(W, "WAREHOUSES", "BOTH");
     expect(await archiveWarehouse(admin(W), { warehouseId: wh })).toEqual({ archived: true });
+    await flow(W, "WAREHOUSES", "PULL");
     expect(await state(W, "WAREHOUSE", wh)).toMatchObject({ source_managed_archive: false });
     fake.warehouses[0]!.attributes.archived = false;
     await sync(W, id, "WAREHOUSES");

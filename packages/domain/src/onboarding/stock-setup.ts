@@ -13,6 +13,7 @@ import type { CatalogCommandParams } from "../catalog/units.ts";
 import { createUnit } from "../catalog/units.ts";
 import { createLocation, createWarehouse, listWarehouses, normalizeCode, type WarehouseCallParams } from "../warehouse/index.ts";
 import type { SectorTemplate } from "./templates.ts";
+import { isSourceManaged } from "../integrations/source-guard.ts";
 
 export type SetupCallParams = WarehouseCallParams & Pick<CatalogCommandParams, "requestId">;
 
@@ -45,15 +46,20 @@ async function ensureWarehouse(
   params: SetupCallParams,
   w: { readonly code: string; readonly name: string },
 ): Promise<{ readonly id: string; readonly archived: boolean; readonly created: boolean }> {
+  let managed = false;
   try {
     const r = await createWarehouse(params, w);
     return { id: r.warehouseId, archived: false, created: true };
   } catch (e) {
-    if (!isCodeTaken(e)) throw e;
+    // T-1201: depolar Paraşüt'ten alınıyorsa şablon deposu açılmaz; kabul/sevk yerleri Paraşüt'ten gelen ilk etkin depoya kurulur
+    // (raf yerleri Etkin'e özgüdür). Hiç depo gelmemişse adım reddedilir (önce eşitleme).
+    if (isSourceManaged(e)) managed = true;
+    else if (!isCodeTaken(e)) throw e;
   }
   const code = normalizeCode(w.code);
   const page = await listWarehouses(params, { includeArchived: true });
-  const hit = page.items.find((x) => x.code === code);
+  const hit = page.items.find((x) => x.code === code) ?? (managed ? page.items.find((x) => x.status === "ACTIVE") : undefined);
+  if (hit === undefined && managed) throw new AppError("VALIDATION_FAILED", { detail: "SOURCE_MANAGED_CREATE" });
   if (hit === undefined) throw new AppError("INTERNAL"); // CODE_TAKEN ama görünmüyor: depo kapsamı dışı (beklenmez)
   return { id: hit.id, archived: hit.status === "ARCHIVED", created: false };
 }

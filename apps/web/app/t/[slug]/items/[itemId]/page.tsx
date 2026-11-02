@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getAppDb } from "@wms/db";
 import { addDecimal, compareDecimal, getItem, getItemFixedState, listItemBarcodes, listItemConversions, listItemImages, listItemStockPolicies } from "@wms/domain/catalog";
 import { listUnits } from "@wms/domain/catalog/units";
-import { getProductSourceInfo } from "@wms/domain/integrations";
+import { getProductSourceInfo, getSourceLock } from "@wms/domain/integrations";
 import { getItemStockCard, getItemStockPivot, listItemMoves, listItemTracking } from "@wms/domain/stock";
 import { listAudit } from "@wms/domain/audit/audit-query";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
@@ -67,6 +67,8 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
     const baseUnit = units.find((u) => u.id === item.baseUnitId);
     // T-968: stok özeti (Nerede? + son hareketler) — okunamazsa bölümler çizilmez, kart yine açılır.
     const sourceInfo = await getProductSourceInfo(call, item.id);
+    // T-1201: "Paraşüt'ten al" bölümünde bağlı ürünün kaynak kilidi (ad, kod, arşiv) — yalnız gösterim; karar domain komutunda.
+    const kaynak = await getSourceLock(call, "ITEM", item.id);
     const stockCard = await getItemStockCard(call, item.id).catch(() => null);
     // T-1200: görseller ve kapsamdaki depoların min / maks kayıtları (okunamazsa boş; kart yine açılır).
     const images = await listItemImages(call, item.id).catch(() => []);
@@ -97,6 +99,7 @@ export default async function ItemDetailPage({ params, searchParams }: { params:
           slug={slug}
           dark={dark}
           rights={rights}
+          kaynak={kaynak}
           quick={{ label: can("stock.view"), count: can("document.create"), transfer: can("stock.post") }}
           stockCard={stockCard}
           tabData={tabData}

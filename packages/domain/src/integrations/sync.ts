@@ -118,6 +118,8 @@ interface RunCtx {
   readonly productBinding: LifecycleBinding|null;
   /** T-1140: cari / depo yaşam döngüsü bağlamları (akış alıyorsa ve bağlantı OAuth ise). */
   readonly cardBindings: Readonly<Record<"CONTACTS" | "WAREHOUSES", LifecycleBinding | null>>;
+  /** T-1201 (inceleme): akış satırını AYNI transaction'da güncelleyen alma sayfası (imleç) için akış kilidi `FOR NO KEY UPDATE` (guardFlow). */
+  readonly inTenantPage?: RunTx;
 }
 
 const errCode = (e: unknown): string => {
@@ -184,7 +186,10 @@ async function pull(rc: RunCtx, kind: "products" | "contacts" | "warehouses"): P
   for (let n = 0; n < SYNC_LIMITS.pagesPerRun; n++) {
     const p = await rc.deps.client.list(rc.token, rc.companyId, kind, page);
     const next = p.items.length === 0 || page >= p.totalPages ? null : page + 1;
-    await rc.deps.inTenant(async (tx) => {
+    // T-1201 (inceleme): sayfa transaction'ı kartları kilitleyip sonda akış satırının imlecini günceller; akış satırını baştan
+    // `FOR NO KEY UPDATE` alır (guardFlow `inTenantPage`) ki akışı FOR SHARE tutup kartı bekleyen kart komutuyla kilitlenme döngüsü oluşmasın
+    // (komut bu kısa sayfanın arkasında bekler; sıra her yerde akış → kart).
+    await (rc.inTenantPage ?? rc.deps.inTenant)(async (tx) => {
       if(binding&&!(await assertLifecycleBinding(tx,binding)))throw new IntegrationStateError("NOT_CONNECTED");
       const barcodeSetting = kind === "products" ? await tx.execute<{ enabled: boolean }>(sql`SELECT pull_product_barcodes AS enabled FROM public.integrations WHERE tenant_id=${rc.tenantId}::uuid AND id=${rc.integrationId}::uuid`) : [];
       const ac = { ...rc.ac, pullProductBarcodes: barcodeSetting[0]?.enabled === true };
@@ -687,15 +692,21 @@ async function pushShipments(rc: RunCtx): Promise<void> {
  */
 function guardFlow(rc: RunCtx): RunCtx {
   const inner = rc.deps.inTenant;
-  const inTenant: RunTx = (fn) =>
+  /**
+   * `share`: varsayılan (yön değişikliğini bekletir, kart komutlarıyla çakışmaz). `noKeyUpdate` (T-1201 inceleme): aynı transaction'da akış
+   * satırını güncelleyen alma sayfası — kilit baştan alınır; sonraki imleç UPDATE'i yükseltme gerektirmez, akışı FOR SHARE tutan kart komutu
+   * sayfanın arkasında bekler (akış → kart sırası korunur, döngü yok).
+   */
+  const guarded = (mode: "share" | "noKeyUpdate"): RunTx => (fn) =>
     inner(async (tx) => {
       const r = await tx.execute<{ ok: boolean }>(sql`
         SELECT (enabled AND direction = ${rc.flow.direction}) AS ok FROM public.integration_flows
-         WHERE tenant_id = ${rc.tenantId}::uuid AND integration_id = ${rc.integrationId}::uuid AND flow = ${rc.flow.flow} FOR SHARE`);
+         WHERE tenant_id = ${rc.tenantId}::uuid AND integration_id = ${rc.integrationId}::uuid AND flow = ${rc.flow.flow}
+         ${mode === "share" ? sql`FOR SHARE` : sql`FOR NO KEY UPDATE`}`);
       if (r[0]?.ok !== true) throw new FlowBlockedError("FLOW_CHANGED");
       return fn(tx);
     });
-  return { ...rc, deps: { ...rc.deps, inTenant } };
+  return { ...rc, deps: { ...rc.deps, inTenant: guarded("share") }, inTenantPage: guarded("noKeyUpdate") };
 }
 
 async function runFlow(input: RunCtx): Promise<void> {

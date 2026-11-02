@@ -7,6 +7,8 @@ import { ITEM_CARD_TYPES } from "@wms/domain/catalog";
 import type { listUnits } from "@wms/domain/catalog/units";
 import { getMembershipSummary } from "@wms/domain/identity/member-queries";
 import { cardRights, type CardRights } from "@wms/domain/identity/permissions";
+import { getSourceLock } from "@wms/domain/integrations";
+import type { KartKaynak } from "../kalip/kaynak-kilit.tsx";
 import { AppError } from "@wms/shared/errors";
 import { LICON } from "../../../design/kalip-icons.ts";
 import { temaKoyu } from "../../../design/theme.ts";
@@ -67,12 +69,15 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
   let nextCursor: string | null;
   let total: number | undefined;
   let rights: CardRights;
+  let kaynak: KartKaynak;
   let stock: Record<string, ItemStockView> = {};
   try {
     const summary = await getMembershipSummary({ db, principal });
     const current = summary.memberships.find((m) => m.slug === slug);
     if (current === undefined) notFound();
     rights = cardRights(current.roles, current.grants, "items");
+    // T-1201: ürün bölümü Paraşüt'ten alınıyorsa "Yeni" kilitli + "Şimdi eşitle" (yalnız gösterim; karar domain komutunda).
+    kaynak = await getSourceLock(call, "ITEM");
     const page = await loadItemsPage(call, { q, status, cardType, after, ...extra });
     rows = page.rows;
     units = page.units;
@@ -103,6 +108,7 @@ export default async function ItemsPage({ params, searchParams }: { params: Prom
         slug={slug}
         dark={dark}
         rights={rights}
+        kaynak={kaynak}
         items={rows}
         stock={stock}
         units={units.filter((u) => u.status === "ACTIVE").map((u) => ({ id: u.id, code: u.code, name: u.name }))}

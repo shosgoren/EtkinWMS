@@ -8,12 +8,15 @@
 //   entegrasyon işareti). Bağlı sistemden gelen (external_refs ITEM) üründe temel birim ayrıca kilitli. Kullanılmışsa `IN_USE`.
 //   Karar ürün satırı `FOR UPDATE` kilitliyken DB'de verilir; 0065 tetikleyicisi aynı tanımla doğrudan SQL'i de reddeder.
 // - `archiveItem`: pozitif bakiye ya da açık (ACTIVE) rezervasyon varsa `IN_USE`. Kullanılmış kart silinmez; DELETE yoktur (05 §Geri alma).
+// - T-1201: ürün bölümü "Paraşüt'ten al" yönündeyse (integrations/source-guard.ts) yeni ürün açılmaz (`SOURCE_MANAGED_CREATE`); Paraşüt'e bağlı
+//   üründe ad ve kod değişmez (`SOURCE_MANAGED_FIELD`), ürün arşivlenmez (`SOURCE_MANAGED_ARCHIVE`). Akış satırı ürün satırından ÖNCE kilitlenir.
 import { sql } from "drizzle-orm";
 import type { ItemCardType, PickPolicy, TrackingMode } from "@wms/db";
 import { appendAudit } from "@wms/db";
 import { AppError } from "@wms/shared/errors";
 import { runTenantCommand, runTenantQuery, type AccessTx } from "../identity/access.ts";
 import { loadItem, parseCode, parseName, parseUuid, type CatalogCommandParams, type ItemHeader } from "./units.ts";
+import { assertSourceCreateAllowed, readSourceRule, sourceLinked, sourceManagedError } from "../integrations/source-guard.ts";
 
 const TRACKING: readonly TrackingMode[] = ["NONE", "LOT", "SERIAL", "LOT_AND_SERIAL"];
 const PICK: readonly PickPolicy[] = ["FIFO", "FEFO"];
@@ -107,6 +110,7 @@ export async function createItem(params: CatalogCommandParams, input: CreateItem
   const cardType = input.cardType === undefined ? DEFAULT_CARD_TYPE : parseCardType(input.cardType);
   const { requestId, writePermission, ...access } = params;
   return runTenantCommand({ ...access, permission: writePermission ?? "items.create" }, async (tx, actor) => {
+    await assertSourceCreateAllowed(tx, actor.tenantId, "ITEM");
     const unit = await tx.execute<{ status: string }>(
       sql`SELECT status FROM public.units WHERE tenant_id = ${actor.tenantId}::uuid AND id = ${baseUnitId}::uuid`,
     );
@@ -193,8 +197,13 @@ export async function updateItem(params: CatalogCommandParams, input: UpdateItem
   // T-981b: Excel "Güncelle" kipi (`onboarding/import-apply`) ad güncellemesini `data.import` ile yapar (createItem ile aynı T-421 kuralı).
   const { requestId, writePermission, ...access } = params;
   return runTenantCommand({ ...access, permission: writePermission ?? "items.edit" }, async (tx, actor) => {
+    const rule = await readSourceRule(tx, actor.tenantId, "ITEM", { lock: true });
     const cur = await loadItem(tx, actor.tenantId, itemId, "update");
     if (cur === undefined) throw new AppError("NOT_FOUND");
+    // T-1201: Paraşüt'e bağlı üründe ad ve kod Paraşüt'ündür (PULL); diğer alanlar (toplama, kart türü, takip, hassasiyet) Etkin'de açık.
+    if (((name !== undefined && name !== cur.name) || (code !== undefined && code !== cur.code)) && (await sourceLinked(tx, actor.tenantId, "ITEM", itemId, rule))) {
+      throw sourceManagedError("FIELD");
+    }
     const newTracking = trackingMode ?? (cur.tracking_mode as TrackingMode);
     const newBase = baseUnitId ?? cur.base_unit_id;
     const newScale = quantityScale ?? cur.quantity_scale;
@@ -276,8 +285,11 @@ export async function archiveItem(params: CatalogCommandParams, input: { readonl
   const itemId = parseUuid(input.itemId);
   const { requestId, ...access } = params;
   return runTenantCommand({ ...access, permission: "items.archive" }, async (tx, actor) => {
+    const rule = await readSourceRule(tx, actor.tenantId, "ITEM", { lock: true });
     const cur = await loadItem(tx, actor.tenantId, itemId, "update");
     if (cur === undefined) throw new AppError("NOT_FOUND");
+    // T-1201: bağlı ürün Paraşüt'te arşivlenir; Etkin yaşam döngüsüyle kendiliğinden uyar (T-1140). Arşivliyi "arşivde tut" da dahil.
+    if (await sourceLinked(tx, actor.tenantId, "ITEM", itemId, rule)) throw sourceManagedError("ARCHIVE");
     if (cur.status === "ARCHIVED") {
       const rows=await tx.execute(sql`UPDATE public.items SET source_managed_archive=false WHERE tenant_id=${actor.tenantId}::uuid AND id=${itemId}::uuid AND source_managed_archive RETURNING id`);
       if(rows.length)await appendAudit(tx,{action:"item.archived",actorUserId:actor.userId,entityType:"item",entityId:itemId,requestId:requestId??null,changeSummary:{code:cur.code,ownership:"local"}});

@@ -44,6 +44,7 @@ import { KalipAlan, KalipGrup, KalipKilit, KalipSabit } from "../../kalip/form.t
 import { approx, fmtGun, fmtQty, stockTone } from "../../kalip/format.ts";
 import { KalipSecim, KalipSecimGrubu } from "../../kalip/secim.tsx";
 import { KalipKilitliDugme, useKartKilitGerekce } from "../../kalip/kilitli.tsx";
+import { KAYNAK_YOK, useKaynakKilit, type KartKaynak } from "../../kalip/kaynak-kilit.tsx";
 import { gorselGonder, KalipKartGorsel, type KalipGorsel } from "../../kalip/gorsel.tsx";
 import type { KartYetki as CardRights } from "../../kalip/kart-yetki.ts";
 import { kdz } from "../../kalip/tokens.ts";
@@ -224,7 +225,7 @@ function itemErr(e: ServerError, tr: (k: string) => string, field: (key: string)
 
 /** Ürün kartı düzenleme — TAM EKRAN FORM (`?edit=1`): ad, kart türü ve çıkış kuralı; sabit alanlar (temel birim, hassasiyet, takip)
  * yalnız hiç kullanılmamış üründe seçilebilir (T-1129), aksi kilitli satırlar + neden. */
-function ItemEditForm({ slug, dark, item, fixed, units, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; fixed: ItemFixedView; units: readonly UnitOption[]; onBack: () => void; onDone: () => void }) {
+function ItemEditForm({ slug, dark, item, fixed, units, nameLock, onBack, onDone }: { slug: string; dark: boolean; item: ItemDetailItem; fixed: ItemFixedView; units: readonly UnitOption[]; /** T-1201: ad Paraşüt'ten geliyorsa gerekçe (alan kilitli, değer gönderilmez). */ nameLock?: string | undefined; onBack: () => void; onDone: () => void }) {
   const t = useTranslations("items");
   const td = useTranslations("items.detail");
   const tk = useTranslations("items.detail.k");
@@ -246,7 +247,8 @@ function ItemEditForm({ slug, dark, item, fixed, units, onBack, onDone }: { slug
     const r = await updateItemAction({
       slug,
       itemId: item.id,
-      name: v.name,
+      // T-1201: kilitli ad gönderilmez (sunucu yine bağlı üründe ad değişikliğini reddeder).
+      ...(nameLock === undefined ? { name: v.name } : {}),
       pickPolicy: v.pick,
       cardType: v.cardType,
       // T-1129: yalnız değişen sabit alan gönderilir (değişmeyen alan sunucuda kullanım denetimine girmez).
@@ -286,7 +288,7 @@ function ItemEditForm({ slug, dark, item, fixed, units, onBack, onDone }: { slug
       preview={<KalipOnizleme name={v.name} code={item.code} d={vis.d} color={vis.color} kind={tc(v.cardType)} rows={[{ k: t("form.baseUnit"), v: unitCode }, { k: t("form.pick"), v: tp(v.pick) }]} />}
     >
       <KalipGrup title={tk("editSection")} sub={tk("editSub")} d={vis.d} color={vis.color}>
-        <KalipAlan label={`${t("form.name")} *`} name="name" value={v.name} onChange={(e) => set("name", e.target.value)} autoComplete="off" maxLength={512} />
+        <KalipAlan label={`${t("form.name")} *`} name="name" value={v.name} onChange={(e) => set("name", e.target.value)} autoComplete="off" maxLength={512} kilitli={nameLock} data-testid="item-edit-name" />
         <KalipSecimGrubu
           name="cardType"
           label={t("form.cardType")}
@@ -705,6 +707,7 @@ export function ItemDetail({
   slug,
   dark,
   rights,
+  kaynak = KAYNAK_YOK,
   quick,
   stockCard,
   tabData = { kind: "none" },
@@ -723,6 +726,8 @@ export function ItemDetail({
   dark: boolean;
   /** T-1141: kart bölümü yetkileri (yalnız gösterim; karar domain'de). */
   rights: CardRights;
+  /** T-1201: Paraşüt'ten alınan bölümde bağlı ürünün kaynak kilidi (yalnız gösterim; karar domain'de). */
+  kaynak?: KartKaynak;
   quick: ItemQuickAccess;
   stockCard: ItemStockCardView | null;
   tabData?: ItemTabData;
@@ -748,6 +753,7 @@ export function ItemDetail({
   const tc = useTranslations("items.cardType");
   const tk = useTranslations("items.detail.k");
   const terr = useTranslations("items.errors");
+  const tkk = useTranslations("kaynakKilit");
   const locale = useLocale();
   const router = useRouter();
   const params = useSearchParams();
@@ -762,6 +768,12 @@ export function ItemDetail({
   const canArchive = rights.archive && active;
   const kilitGerekce = useKartKilitGerekce("items");
   const editLocked = active && !rights.edit;
+  // T-1201: ürün Paraşüt'e bağlı ve bölüm "Paraşüt'ten al": ad, kod ve arşiv Paraşüt'ündür (gerekçe yetki kilidinden önce gelir).
+  const kk = useKaynakKilit(slug, "items", kaynak);
+  const codeLocked = !writable || kk.field;
+  const codeReason = kk.field ? kk.fieldReason : kilitGerekce("edit");
+  const archiveLocked = !canArchive || kk.archive;
+  const archiveReason = kk.archive ? kk.archiveReason : kilitGerekce("archive");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<ServerError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -771,7 +783,9 @@ export function ItemDetail({
   const [undoing, setUndoing] = useState(false);
   const otherUnits = units.filter((u) => u.id !== item.baseUnitId);
   // Açık tam ekran form adresten okunur (yalnız yazma yetkisi ve aktif ürün; yoksa kart görünür).
-  const form = writable ? (FORMS.find((f) => params.get(f) === "1") ?? null) : null;
+  const form0 = writable ? (FORMS.find((f) => params.get(f) === "1") ?? null) : null;
+  // T-1201: kod değiştirme formu bağlı üründe açılmaz (eski bağlantı / adres).
+  const form = form0 === "kod" && kk.field ? null : form0;
   const open = (f: ItemForm): void => {
     feedback.minor();
     setError(null);
@@ -987,7 +1001,7 @@ export function ItemDetail({
   const fixedLock = fixed.usage === null ? undefined : td("lockedInUse", { reason: td(`fixedUsage.${fixed.usage}`) });
   const unitLock = fixedLock ?? (fixed.sourceLinked ? td("sourceUnitLocked") : undefined);
   const bilgiler: KalipBilgi[] = [
-    { key: "name", etiket: t("form.name"), deger: item.name, d: SICON.ad, ton: "mavi" },
+    { key: "name", etiket: t("form.name"), deger: item.name, d: SICON.ad, ton: "mavi", ...(kk.field ? { kilit: kk.fieldReason } : {}) },
     {
       key: "code",
       etiket: tk("infoCode"),
@@ -997,8 +1011,8 @@ export function ItemDetail({
       ...(active
         ? {
             islem: (
-              <KalipKilitliDugme kilitli={!writable} gerekce={kilitGerekce("edit")} kilitIkonu={false} onClick={() => open("kod")} aria-label={td("codeEdit.for", { name: item.name })} title={td("codeEdit.button")} data-testid="item-code-edit">
-                <Ico d={writable ? SICON.kalem : LICON.lock} size={18} />
+              <KalipKilitliDugme kilitli={codeLocked} gerekce={codeReason} kilitIkonu={false} onClick={() => open("kod")} aria-label={td("codeEdit.for", { name: item.name })} title={codeLocked ? codeReason : td("codeEdit.button")} data-testid="item-code-edit">
+                <Ico d={codeLocked ? LICON.lock : SICON.kalem} size={18} />
               </KalipKilitliDugme>
             ),
           }
@@ -1061,7 +1075,7 @@ export function ItemDetail({
   const secili = sekmeler.some((s) => s.id === sekme) ? sekme : "genel";
   const sekmeHref = (id: string): string => (id === "genel" ? itemPath : `${itemPath}?sekme=${id}`);
 
-  if (form === "edit") return <ItemEditForm key="edit" slug={slug} dark={dark} item={item} fixed={fixed} units={units} onBack={() => back()} onDone={() => back(td("done.saved"))} />;
+  if (form === "edit") return <ItemEditForm key="edit" slug={slug} dark={dark} item={item} fixed={fixed} units={units} nameLock={kk.field ? kk.fieldReason : undefined} onBack={() => back()} onDone={() => back(td("done.saved"))} />;
   if (form === "conv") return <ConversionForm key="conv" slug={slug} dark={dark} item={item} units={otherUnits} conversions={conversions} onBack={() => back()} onDone={() => back(td("done.conversion"))} />;
   if (form === "minmax" && policies.length > 0) return <MinMaxForm key="minmax" slug={slug} dark={dark} item={item} policies={policies} onBack={() => back()} onDone={() => back(tk("mmSaved"))} />;
   if (form === "barcode") return <BarcodeForm key="barcode" slug={slug} dark={dark} item={item} units={otherUnits} onBack={() => back()} onDone={() => back(td("done.barcodeAdded"))} />;
@@ -1102,6 +1116,7 @@ export function ItemDetail({
       {error ? <ServerErrorBanner error={error} returnTo={returnTo} /> : null}
       {editLocked ? <p className="sr">{kilitGerekce("edit")}</p> : null}
       {active ? null : <KalipKartNot metin={td("archivedNote")} d={SICON.arsiv} renk="gri" testId="item-archived-note" />}
+      {kk.field ? <KalipKartNot metin={tkk("linkedNote")} d={SICON.kilit} renk="parasut" testId="item-source-note" /> : null}
     </>
   );
   let ana: ReactNode;
@@ -1297,10 +1312,10 @@ export function ItemDetail({
               {tk("editAria")}
             </KalipKilitliDugme>
             <KalipKilitliDugme
-              kilitli={!canArchive}
-              gerekce={kilitGerekce("archive")}
+              kilitli={archiveLocked}
+              gerekce={archiveReason}
               className="btn"
-              style={actBtn("C62828", !canArchive)}
+              style={actBtn("C62828", archiveLocked)}
               aria-busy={busy === "archive" || undefined}
               aria-describedby="arsiv-ipucu"
               onClick={() => {
@@ -1381,7 +1396,7 @@ export function ItemDetail({
       </KalipEkran>
 
       <KalipOnay
-        open={archiveOpen && canArchive}
+        open={archiveOpen && canArchive && !kk.archive}
         title={td("confirmArchive.title", { name: item.name })}
         description={td("confirmArchive.description", { name: item.name, code: item.code })}
         confirmLabel={td("confirmArchive.button")}

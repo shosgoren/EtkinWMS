@@ -33,7 +33,12 @@ async function row(id:string,w=A){return (await adm.query("SELECT status,source_
 it("archives an unused source card and restores only integration-owned archives",async()=>{
  const id=await fresh("unused");await observe("unused",{exists:true,archived:true});expect(await row(id)).toMatchObject({status:"ARCHIVED",source_managed_archive:true,source_disposition:"ARCHIVED"});
  await observe("unused",{exists:true,archived:false});expect(await row(id)).toMatchObject({status:"ACTIVE",source_disposition:"NONE"});
- await observe("unused",{exists:true,archived:true});await archiveItem(params(),{itemId:id});await observe("unused",{exists:true,archived:false});expect(await row(id)).toMatchObject({status:"ARCHIVED",source_managed_archive:false});
+ await observe("unused",{exists:true,archived:true});
+ // T-1201: "Paraşüt'ten al" yönünde bağlı ürünün arşivi kullanıcıya kapalı; sahiplik kuralı iki yönlüde geçerli.
+ await expect(archiveItem(params(),{itemId:id})).rejects.toMatchObject({detail:"SOURCE_MANAGED_ARCHIVE"});
+ await adm.query("UPDATE integration_flows SET direction='BOTH' WHERE tenant_id=$1 AND flow='PRODUCTS'",[A.tenantId]);
+ try{await archiveItem(params(),{itemId:id});}finally{await adm.query("UPDATE integration_flows SET direction='PULL' WHERE tenant_id=$1 AND flow='PRODUCTS'",[A.tenantId]);}
+ await observe("unused",{exists:true,archived:false});expect(await row(id)).toMatchObject({status:"ARCHIVED",source_managed_archive:false});
 });
 it("requires two spaced exact-identity missing observations and exposes removed separately",async()=>{
  const id=await fresh("missing"),t=Date.now();await observe("missing",{exists:false},t);expect((await row(id)).status).toBe("ACTIVE");

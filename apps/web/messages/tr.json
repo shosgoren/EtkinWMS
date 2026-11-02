@@ -532,6 +532,12 @@
     "validation_failed_code_mismatchAction": "Terminal ekranındaki 6 haneli kodu yeniden yazın; 3 yanlışta QR yenilenir.",
     "validation_failed_site_invalid": "Satış sayfası metni geçersiz.",
     "validation_failed_site_invalidAction": "Başlık 80, vurgulu satır 60, alt metin 400 karakteri geçmesin; < ve > kullanmayın.",
+    "validation_failed_source_managed_create": "Bu bölüm Paraşüt'ten geliyor; yeni kart burada açılmaz.",
+    "validation_failed_source_managed_createAction": "Yeni kartı Paraşüt'te aç; birkaç dakika içinde buraya gelir.",
+    "validation_failed_source_managed_field": "Paraşüt'ten geliyor — Paraşüt'te değiştir.",
+    "validation_failed_source_managed_fieldAction": "Bu bilgi Paraşüt'te değişir; birkaç dakika içinde buraya gelir.",
+    "validation_failed_source_managed_archive": "Paraşüt'te arşivle; Etkin kendiliğinden uyar.",
+    "validation_failed_source_managed_archiveAction": "Arşiv Paraşüt'ten gelir.",
     "validation_failed_image_invalid": "Bu dosya bir görsel değil ya da türü desteklenmiyor.",
     "validation_failed_image_invalidAction": "JPEG, PNG ya da WebP fotoğraf seç (SVG ve HEIC olmaz).",
     "validation_failed_image_too_large": "Görsel çok büyük.",
@@ -1818,6 +1824,12 @@
       "internalAction": "Biraz sonra yeniden dene; sürerse hata kodunu destek ekibine ilet.",
       "validation_failed_plan_limit": "Paketinizin ürün (kalem) sınırına ulaştınız.",
       "validation_failed_plan_limitAction": "Kullanmadığınız ürünleri arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin.",
+      "validation_failed_source_managed_create": "Ürünler Paraşüt'ten geliyor; yeni ürün burada açılmaz.",
+      "validation_failed_source_managed_createAction": "Yeni ürünü Paraşüt'te aç; birkaç dakika içinde buraya gelir.",
+      "validation_failed_source_managed_field": "Paraşüt'ten geliyor — Paraşüt'te değiştir.",
+      "validation_failed_source_managed_fieldAction": "Ad ve kod Paraşüt'te değişir; birkaç dakika içinde buraya gelir.",
+      "validation_failed_source_managed_archive": "Paraşüt'te arşivle; Etkin kendiliğinden uyar.",
+      "validation_failed_source_managed_archiveAction": "Arşiv Paraşüt'ten gelir.",
       "validation_failed_image_invalid": "Bu dosya bir görsel değil ya da türü desteklenmiyor.",
       "validation_failed_image_invalidAction": "JPEG, PNG ya da WebP fotoğraf seç (SVG ve HEIC olmaz).",
       "validation_failed_image_too_large": "Görsel çok büyük.",
@@ -2071,7 +2083,13 @@
       "validation_failed_code_ambiguous": "Bu eski kod birden çok lokasyonun geçmişinde var; hangisi olduğu anlaşılamıyor.",
       "validation_failed_code_ambiguousAction": "Lokasyonun güncel kodunu yazarak ara.",
       "validation_failed_plan_limit": "Paketinizin depo sınırına ulaştınız.",
-      "validation_failed_plan_limitAction": "Kullanmadığınız depoyu arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin."
+      "validation_failed_plan_limitAction": "Kullanmadığınız depoyu arşivleyin ya da paketinizi yükseltmek için bizimle iletişime geçin.",
+      "validation_failed_source_managed_create": "Depolar Paraşüt'ten geliyor; yeni depo burada açılmaz.",
+      "validation_failed_source_managed_createAction": "Yeni depoyu Paraşüt'te aç; birkaç dakika içinde buraya gelir.",
+      "validation_failed_source_managed_field": "Paraşüt'ten geliyor — Paraşüt'te değiştir.",
+      "validation_failed_source_managed_fieldAction": "Ad ve kod Paraşüt'te değişir; raf yerleri burada açık.",
+      "validation_failed_source_managed_archive": "Paraşüt'te arşivle; Etkin kendiliğinden uyar.",
+      "validation_failed_source_managed_archiveAction": "Arşiv Paraşüt'ten gelir."
     },
     "codeEdit": {
       "button": "Kodu değiştir",
@@ -3016,6 +3034,10 @@
       "PAIR_PENDING": {
         "reason": "{code} ürünü {shelf} rafı için tamamlanmamış bir açılış belgesi var (başka miktarla).",
         "fix": "Yarım kalan işlemi sürdürmek için önceki dosyayla AYNI miktarı yaz ya da satırı sil."
+      },
+      "SOURCE_MANAGED": {
+        "reason": "Ürünler Paraşüt'ten geliyor: yeni ürün ya da Paraşüt'ten gelen ürünün adı buradan değişmez.",
+        "fix": "Ürünü Paraşüt'te aç ya da değiştir; birkaç dakika içinde buraya gelir. Bu satırı dosyadan çıkar."
       }
     },
     "noRows": "Dosyada henüz veri satırı yok. Şablona en az bir satır ekle, sonra dosyayı yeniden seç."
@@ -4640,7 +4662,8 @@
       "TEXT_TOO_LONG": "Bir hücre çok uzun",
       "DELIVERY_UNKNOWN": "Teslimat anlaşılamadı (kendi personelim / kargo firması)",
       "CODE_DUPLICATE_FILE": "Bu kod dosyada daha önce var",
-      "UNKNOWN": "Satır okunamadı"
+      "UNKNOWN": "Satır okunamadı",
+      "SOURCE_MANAGED": "Cariler Paraşüt'ten geliyor: yeni cari ve Paraşüt'ten gelen alan buradan değişmez"
     },
     "partyIssueFix": "BU SATIR ATLANIR · DÜZELTİP YENİDEN YÜKLE",
     "partyWarning": {
@@ -4673,7 +4696,8 @@
       "IN_USE": "Rafta stok var; tür değiştirilemez",
       "CODE_TAKEN": "Bu kod kullanımda",
       "TOO_MANY": "Depodaki raf sınırı aşılıyor",
-      "UNKNOWN": "Satır okunamadı"
+      "UNKNOWN": "Satır okunamadı",
+      "SOURCE_MANAGED": "Depolar Paraşüt'ten geliyor: yeni depo ve Paraşüt'ten gelen depo adı buradan değişmez"
     }
   },
   "parties": {
@@ -7045,5 +7069,19 @@
       "DESIGN_INVALID": "Etiket alanı veya kod ölçüsü uygun değil. Tasarımı kontrol et."
     },
     "preparing": "Etiket hazırlanıyor; biraz bekle."
+  },
+  "kaynakKilit": {
+    "create": {
+      "items": "Ürünler Paraşüt'ten geliyor. Yeni ürünü Paraşüt'te aç; birkaç dakika içinde buraya gelir.",
+      "parties": "Cariler Paraşüt'ten geliyor. Yeni cariyi Paraşüt'te aç; birkaç dakika içinde buraya gelir.",
+      "warehouses": "Depolar Paraşüt'ten geliyor. Yeni depoyu Paraşüt'te aç; birkaç dakika içinde buraya gelir."
+    },
+    "field": "Paraşüt'ten geliyor — Paraşüt'te değiştir",
+    "archive": "Paraşüt'te arşivle; Etkin kendiliğinden uyar",
+    "linkedNote": "Bu kart Paraşüt'ten geliyor: adı ve kodu Paraşüt'te değişir, arşivi Paraşüt'ten gelir. Buradaki diğer bilgiler sende.",
+    "sync": "Şimdi eşitle",
+    "syncQueued": "Eşitleme başladı; birkaç dakika içinde buraya gelir.",
+    "syncBusy": "Eşitleme zaten sürüyor; birkaç dakika içinde gelir.",
+    "syncFailed": "Eşitleme başlatılamadı · Entegrasyonlar ekranına bak."
   }
 }

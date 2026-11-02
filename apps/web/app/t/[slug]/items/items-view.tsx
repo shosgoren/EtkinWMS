@@ -25,6 +25,7 @@ import { KalipAlan, KalipGrup, KalipSabit } from "../kalip/form.tsx";
 import { KalipSecim, KalipSecimGrubu } from "../kalip/secim.tsx";
 import { useKartKilitGerekce } from "../kalip/kilitli.tsx";
 import type { KartYetki as CardRights } from "../kalip/kart-yetki.ts";
+import { KAYNAK_YOK, useKaynakKilit, useKaynakYeniUyarisi, type KartKaynak } from "../kalip/kaynak-kilit.tsx";
 import { eskiSurumBildir, eskiSurumMu, eylem } from "../kalip/surum.tsx";
 import { ItemFiltersView } from "./filters-view.tsx";
 import { extraFilterParams, type ItemExtraFilters } from "./filters.ts";
@@ -47,6 +48,10 @@ const DETAILED = [
   "validation_failed_in_use",
   "validation_failed_plan_limit",
   "validation_failed_unit_conversion_invalid",
+  // T-1201: bölüm Paraşüt'ten alınıyor.
+  "validation_failed_source_managed_create",
+  "validation_failed_source_managed_field",
+  "validation_failed_source_managed_archive",
   // T-1200: ürün görseli ve min / maks.
   "validation_failed_image_invalid",
   "validation_failed_image_too_large",
@@ -121,6 +126,8 @@ export interface ItemListView {
   readonly barcode?: string;
   /** T-1200: "Görsel" sütunu — kapak küçük resmi (`data:` adresi) ve görsel sayısı; görselsiz üründe yok. */
   readonly image?: { readonly thumb: string | null; readonly count: number };
+  /** T-1201: ürün bölümü "Paraşüt'ten al" ve ürün Paraşüt'e bağlı (ilk ve sonraki sayfalar aynı okumadan; ad/kod/arşiv kartta kilitli). */
+  readonly sourceLinked?: true;
 }
 
 /** Kod önerisi yanıt süresi sınırı; aşılırsa kod alanı açılır (T-259). */
@@ -414,6 +421,7 @@ export function ItemsView({
   slug,
   dark,
   rights,
+  kaynak = KAYNAK_YOK,
   items: ilkItems,
   stock: ilkStock,
   units,
@@ -425,6 +433,8 @@ export function ItemsView({
   dark: boolean;
   /** T-1141: kart bölümü yetkileri (yalnız gösterim; karar domain'de). */
   rights: CardRights;
+  /** T-1201: ürün bölümü Paraşüt'ten alınıyorsa yeni ürün kilitli (yalnız gösterim; karar domain'de). */
+  kaynak?: KartKaynak;
   items: readonly ItemListView[];
   stock: Readonly<Record<string, ItemStockView>>;
   units: readonly UnitOption[];
@@ -493,9 +503,14 @@ export function ItemsView({
   const sutunSecim = useKalipSutunlar<ItemsSatir>("items", sutunlar);
 
   // T-990: ekleme tam ekran formdur; adres `?new=1` (rehberin büyük düğmesi de buraya gelir). Geri listeye döner.
-  const canCreate = rights.create;
-  const kilitGerekce = useKartKilitGerekce("items");
+  // T-1201: kaynak kilidi yetki kilidinden önce söylenir (daha özel: yetki verilse de açılmaz).
+  const kk = useKaynakKilit(slug, "items", kaynak);
+  const canCreate = rights.create && !kk.create;
+  const kilitGerekceYetki = useKartKilitGerekce("items");
+  const kilitGerekce = (a: "create" | "edit" | "archive"): string => (a === "create" && kk.create ? kk.createReason : kilitGerekceYetki(a));
   const creating = params.get("new") === "1" && canCreate;
+  // T-1201: `?new=1` (rehber, ses, eski bağlantı) yönetilen bölümde formu açmaz; nedeni bir kez söylenir.
+  useKaynakYeniUyarisi(params.get("new") === "1" && kk.create, kk.createReason, kk.eylem);
   const openCreate = (): void => {
     feedback.minor();
     router.push(`${base}?new=1`);
@@ -642,6 +657,7 @@ export function ItemsView({
             d: LICON.plus,
             locked: !canCreate,
             disabledReason: kilitGerekce("create"),
+            lockedAction: kk.create ? kk.eylem : undefined,
             onClick: openCreate,
             testId: "items-add",
           },
@@ -727,7 +743,7 @@ export function ItemsView({
             <>
               <KalipBos
                 title={t("empty")}
-                hint={canCreate ? t("emptyAction") : t("emptyReadOnly")}
+                hint={canCreate ? t("emptyAction") : kk.create ? kk.createReason : t("emptyReadOnly")}
                 iconD={LICON.box}
                 action={
                   canCreate
@@ -736,7 +752,9 @@ export function ItemsView({
                         kind: "add",
                         onClick: openCreate,
                       }
-                    : { label: tr("home"), href: home, kind: "go" }
+                    : kk.create && kk.eylem !== undefined
+                      ? { label: kk.eylem.etiket, kind: "go", onClick: () => void kk.eylem?.yap() }
+                      : { label: tr("home"), href: home, kind: "go" }
                 }
               />
             </>
@@ -781,7 +799,7 @@ export function ItemsView({
                     aria={tk("cardAria", { name: it.name, code: it.code, qty, unit: it.baseUnitCode, state })}
                     testId="item-card"
                   >
-                    <span hidden data-status={it.status} data-card-type={it.cardType} />
+                    <span hidden data-status={it.status} data-card-type={it.cardType} data-kaynak={it.sourceLinked === true ? "parasut" : undefined} />
                   </KalipKart>
                 );
               })}
